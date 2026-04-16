@@ -1,0 +1,44 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and temp
+*.log
+logs/
+.tmp/
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Java
+*.class
+*.jar
+target/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Debian/package artifacts
+*.deb
+*.gz
+VPS-MAKER-BOT/deb/
+
+# Convex generated output
+panel_implementation/convex/_generated/
+
+# Cursor/editor generated config
+panel_implementation/.cursor/

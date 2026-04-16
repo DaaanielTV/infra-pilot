@@ -1,73 +1,43 @@
-# VPS Maker Bot
+# VPS Automation Bot
 
-## Manual Installation
-
-Follow these steps to set up your VPS Maker Bot manually:
-
-1. **Install Dependencies**  
-    Execute the following command to install the required Python packages:
-    ```
-    pip install -r requirements.txt
-    ```
-
-2. **Create a Dockerfile**  
-    Create your Dockerfile:
-    ```
-    touch Dockerfile
-    ```
-
-3. **Build the Docker Image**  
-    Build the Docker image with the tag `ubuntu-22.04-with-tmate`:
-    ```
-    docker build -t ubuntu-22.04-with-tmate .
-    ```
-
-4. **Run the Bot**  
-    Start the bot by executing:
-    ```
-    python3 bot.py
-    ```
-    **Note:** Remember to add your token to the configuration.
-
-*Setup complete!*
-
-## Automated Installation
-
-Update your installation process using the automated script:
-
-- **Using cURL:**
-  ```
-  bash <(curl -s https://raw.githubusercontent.com/DaaanielTV/dmh-hosting/refs/heads/main/VPS-MAKER-BOT/install.sh)
-  ```
-
-- **Using wget:**
-  ```
-  bash <(wget -qO- https://raw.githubusercontent.com/DaaanielTV/dmh-hosting/refs/heads/main/VPS-MAKER-BOT/install.sh)
-  ```
+Python-based automation bot for VPS lifecycle and host monitoring tasks.
 
 ## Features
 
-- **SYSTEMD Integration**
-- **Administrative Commands**
-- **Real VPS Management:** Automatically handles VPS deployments and optimizes storage usage.
-- **Easy Setup Process**
-- **Node Auto Deletion:** Automatically deletes nodes when VPS storage is fully utilized.
-- **CPU & GPU Crypto Autobanning:** Protects your system by banning unauthorized crypto operations when `anti.sh` is enabled.
-- **Additional Commands and Package Integrations Coming Soon!**
+- Administrative command handlers for VPS operations.
+- Resource monitoring helpers.
+- Docker-based runtime option.
+- Optional anti-crypto abuse helper script (`anti.sh`).
 
-## OS Supported Versions
+## Installation
 
-| Version | Status               |
-| ------- | -------------------- |
-| u22.04  | :white_check_mark:   |
-| d12     | :white_check_mark:   |
-| u20.04  | :white_check_mark:   |
-| d11     | :white_check_mark:   |
+### Manual
 
-## Reporting a Vulnerability
+```bash
+pip install -r requirements.txt
+docker build -t ubuntu-22.04-with-tmate .
+python3 bot.py
+```
 
-If you discover a vulnerability:
-- Please report it promptly.
-- Expect an update on the report status.
-- Follow the provided guidelines for secure and responsible disclosure.
-  
+> Configure your bot token and required runtime settings before startup.
+
+### Automated
+
+Run the local installer script:
+
+```bash
+bash install.sh
+```
+
+## Supported OS Targets
+
+| Version | Status |
+| ------- | ------ |
+| Ubuntu 22.04 | ✅ |
+| Debian 12 | ✅ |
+| Ubuntu 20.04 | ✅ |
+| Debian 11 | ✅ |
+
+## Security
+
+If you identify a vulnerability, report it privately to maintainers.

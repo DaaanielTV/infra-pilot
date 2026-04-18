@@ -1,6 +1,6 @@
 # Development Workflow & Contributing
 
-This guide helps you contribute code and improvements to Gemini.
+This guide helps you contribute code and improvements to Infra Pilot.
 
 ## 🌳 Git Workflow
 

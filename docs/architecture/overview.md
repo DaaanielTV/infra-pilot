@@ -2,7 +2,7 @@
 
 ## 📐 Design Philosophy
 
-Gemini follows a **distributed microservices architecture** with clear separation of concerns, enabling independent scaling, deployment, and development of services.
+Infra Pilot follows a **distributed microservices architecture** with clear separation of concerns, enabling independent scaling, deployment, and development of services.
 
 ### Core Principles
 

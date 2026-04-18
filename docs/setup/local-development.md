@@ -1,6 +1,6 @@
 # Local Development Setup
 
-Get the Gemini platform running on your local machine in 15 minutes.
+Get the Infra Pilot platform running on your local machine in 15 minutes.
 
 ## ⚙️ Prerequisites
 

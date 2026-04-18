@@ -19,8 +19,8 @@ jobs:
         service:
           - name: orchestrator-agent
             path: services/orchestrator-agent
-          - name: management-dashboard
-            path: services/management-dashboard
+          - name: management-panel
+            path: services/management-panel
           - name: discord-service
             path: services/discord-service
           - name: service-core
@@ -91,10 +91,10 @@ jobs:
           # Update deployments
           kubectl set image deployment/orchestrator-agent \
             orchestrator-agent=${{ env.REGISTRY }}/${{ github.repository }}/orchestrator-agent:sha-${{ github.sha }} \
-            -n gemini-staging --record
+            -n infra-pilot-staging --record
           
           # Monitor rollout
-          kubectl rollout status deployment/orchestrator-agent -n gemini-staging
+          kubectl rollout status deployment/orchestrator-agent -n infra-pilot-staging
         env:
           KUBECONFIG_STAGING: ${{ secrets.KUBE_CONFIG_STAGING }}
 
@@ -120,10 +120,10 @@ jobs:
           # Update deployments
           kubectl set image deployment/orchestrator-agent \
             orchestrator-agent=${{ env.REGISTRY }}/${{ github.repository }}/orchestrator-agent:${{ github.ref_name }} \
-            -n gemini --record
+            -n infra-pilot --record
           
           # Monitor rollout
-          kubectl rollout status deployment/orchestrator-agent -n gemini
+          kubectl rollout status deployment/orchestrator-agent -n infra-pilot
       
       - name: Create GitHub Release
         uses: actions/create-release@v1

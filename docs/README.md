@@ -1,6 +1,6 @@
 # Documentation Index
 
-Welcome to the Gemini Infrastructure Orchestration Platform documentation.
+Welcome to the Infra Pilot Infrastructure Orchestration Platform documentation.
 
 ## 📑 Quick Navigation
 
@@ -41,7 +41,7 @@ Welcome to the Gemini Infrastructure Orchestration Platform documentation.
 
 ## 🎯 Getting Started
 
-**New to Gemini?** Start here:
+**New to Infra Pilot?** Start here:
 
 1. [Local Development Setup](setup/local-development.md) - 15 minutes
 2. [System Overview](architecture/overview.md) - Understand the architecture

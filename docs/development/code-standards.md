@@ -1,6 +1,6 @@
 # Code Standards & Best Practices
 
-Maintain consistency and quality across Gemini services.
+Maintain consistency and quality across Infra Pilot services.
 
 ## 🐍 Python Standards (Orchestrator Agent)
 

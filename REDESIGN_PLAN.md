@@ -1,8 +1,10 @@
-# Infra Pilot: Professional Architecture Redesign
+# Infra Pilot: Architecture Redesign Reference
 
 **Document Version:** 1.0  
-**Status:** Architecture Proposal  
-**Date:** April 2026  
+**Status:** Historical Reference - Implementation Complete  
+**Date:** April 2026
+
+> **Note:** This document outlines the architectural redesign. The project name **Infra Pilot** was selected (not Gemini). The new structure and branding have been implemented - see [README.md](README.md) for current state.  
 
 ---
 

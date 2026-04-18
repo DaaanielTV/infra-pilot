@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-Deploy Gemini to production environments with confidence.
+Deploy Infra Pilot to production environments with confidence.
 
 ## 🚀 Deployment Options
 

@@ -92,7 +92,7 @@ jobs:
       
       - name: Run pytest
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/gemini_test
+          DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
           REDIS_URL: redis://localhost:6379
         run: |
           pytest ${{ env.SERVICE_PATH }}/tests/ \

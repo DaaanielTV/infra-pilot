@@ -1,39 +1,292 @@
 # Contributing to Infra Pilot
 
-Thanks for your interest in contributing.
+Thanks for your interest in contributing to **Infra Pilot**! This document provides guidelines and instructions for contributing code, documentation, and improvements.
 
-## Ground Rules
+## Table of Contents
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Commit Guidelines](#commit-guidelines)
+- [Pull Request Process](#pull-request-process)
+- [Code Standards](#code-standards)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Security](#security)
 
-- Be respectful and follow the Code of Conduct.
-- Keep pull requests focused and easy to review.
-- Avoid unrelated refactors in feature/bugfix PRs.
+---
+
+## Code of Conduct
+
+Please review and adhere to our [Code of Conduct](CODE_OF_CONDUCT.md). We are committed to providing a welcoming and inclusive environment for all contributors.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Git
+- Docker & Docker Compose (recommended)
+- One or more of: Java 8+, Python 3.9+, Node.js 18+
+- 4GB RAM minimum
+
+### Setup Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/DaaanielTV/infra-pilot.git
+cd infra-pilot
+
+# Run the setup script
+./scripts/setup.sh
+
+# Verify installation
+./scripts/test.sh
+```
+
+### Project Structure
+
+```
+infra-pilot/
+├── services/                   # All service code
+│   ├── service-core/          # Java server manager
+│   ├── orchestrator-agent/    # Python orchestration engine
+│   ├── discord-service/       # Node.js Discord bot
+│   └── management-panel/      # React dashboard
+├── docs/                      # Documentation
+├── scripts/                   # Utility scripts
+├── .github/
+│   ├── workflows/            # CI/CD pipelines
+│   └── ISSUE_TEMPLATE/       # Issue templates
+└── README.md                  # This is your entry point
+```
+
+---
 
 ## Development Workflow
 
-1. Fork the repository and create a branch from `main`.
-2. Make your change with clear commits.
-3. Run relevant checks/tests locally for the affected component.
-4. Update documentation if behavior/configuration changes.
-5. Open a pull request with:
-   - clear summary
-   - testing notes
-   - any migration or operational impact
+### 1. Create a Feature Branch
 
-## Commit Guidance
+```bash
+git checkout -b feature/your-feature-name
+# or for bug fixes:
+git checkout -b fix/issue-description
+```
 
-Use concise, imperative commit messages, e.g.:
+### 2. Make Changes
 
-- `docs: refresh root readme and setup instructions`
-- `chore: remove committed build artifacts`
-- `fix: correct env var handling in discord module`
+- Work in the relevant service directory
+- Follow code standards (see [Code Standards](#code-standards))
+- Write tests for new functionality
+- Keep commits focused and logical
 
-## Pull Request Checklist
+### 3. Test Your Changes
 
-- [ ] Code builds/runs for touched components
-- [ ] Docs updated where needed
-- [ ] No generated artifacts or secrets committed
-- [ ] `.env` files are not committed (use templates)
+Before submitting a PR, ensure your changes work:
+
+```bash
+# Test all services
+./scripts/test.sh
+
+# Or test a specific service
+cd services/orchestrator-agent
+pytest tests/
+
+cd services/management-panel
+npm run test
+
+cd services/service-core
+mvn test
+
+cd services/discord-service
+npm run test
+```
+
+### 4. Commit with Clear Messages
+
+See [Commit Guidelines](#commit-guidelines) below.
+
+### 5. Push and Open a Pull Request
+
+```bash
+git push origin feature/your-feature-name
+```
+
+Then create a pull request on GitHub. Use the PR template and provide:
+- Clear description of changes
+- Reference to related issues (if any)
+- Testing notes
+- Any migration or operational impact
+
+---
+
+## Commit Guidelines
+
+Use clear, imperative commit messages that describe what the change does:
+
+**Good examples:**
+- `feat: add server provisioning API endpoint`
+- `fix: correct environment variable handling in discord service`
+- `docs: update setup instructions for macOS`
+- `refactor: simplify orchestrator resource allocation logic`
+- `test: add integration tests for VPS provisioning`
+- `chore: update dependencies to latest versions`
+
+**Format:**
+```
+<type>: <short description>
+
+<optional detailed explanation>
+```
+
+**Types:**
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation changes
+- `refactor`: Code refactoring without feature/bug changes
+- `perf`: Performance improvements
+- `test`: Test additions or fixes
+- `chore`: Dependency updates, tooling changes
+
+---
+
+## Pull Request Process
+
+1. **Update your branch** with latest main:
+   ```bash
+   git fetch origin
+   git rebase origin/main
+   ```
+
+2. **Run tests locally** to ensure nothing breaks:
+   ```bash
+   ./scripts/test.sh
+   ```
+
+3. **Create descriptive PR title** following the same format as commits:
+   - ✅ `feat: add user authentication to dashboard`
+   - ❌ `Fix stuff`
+
+4. **Fill out the PR template** completely
+
+5. **Link related issues** (use `Closes #123` in description)
+
+6. **Be responsive** to review comments and questions
+
+### PR Checklist
+
+- [ ] Code builds/runs for touched services
+- [ ] All tests pass (`./scripts/test.sh`)
+- [ ] Documentation is updated (if needed)
+- [ ] No debug statements or temporary code
+- [ ] No secrets or credentials committed (use `.env.example` templates)
+- [ ] Commit messages are clear and follow guidelines
+
+---
+
+## Code Standards
+
+All code must follow our standards documented in [docs/development/code-standards.md](docs/development/code-standards.md).
+
+**Quick summary:**
+- **Python:** Follow PEP 8, use type hints where possible
+- **JavaScript/TypeScript:** Use ESLint configuration in service directories
+- **Java:** Follow standard Java conventions, use Maven formatting
+- **General:** Keep code DRY, well-commented, and testable
+
+Run linting in your service:
+
+```bash
+cd services/management-panel
+npm run lint
+
+cd services/orchestrator-agent
+pylint src/
+
+# Java formats automatically with Maven
+cd services/service-core
+mvn spotless:apply
+```
+
+---
+
+## Testing
+
+All new features must include tests. We follow these principles:
+
+### Service-Specific Testing
+
+**Python (Orchestrator Agent):**
+```bash
+cd services/orchestrator-agent
+pytest tests/ -v
+```
+
+**JavaScript/Node.js (Services):**
+```bash
+cd services/discord-service
+npm run test
+
+cd services/management-panel
+npm run test
+```
+
+**Java (Service Core):**
+```bash
+cd services/service-core
+mvn test
+```
+
+### Coverage Requirements
+
+- Aim for >80% code coverage on new code
+- Critical paths should approach 100%
+- Run coverage reports:
+  ```bash
+  ./scripts/test.sh --coverage
+  ```
+
+---
+
+## Documentation
+
+When contributing code, update documentation as needed:
+
+1. **README updates** - If you add new features or change setup
+2. **Service documentation** - Update service-specific docs in `services/<service>/README.md`
+3. **Code comments** - For complex logic, explain the "why" not just "what"
+4. **Architecture docs** - If you make structural changes, update [docs/architecture/](docs/architecture/)
+5. **API docs** - If you add endpoints, document them in [docs/api/](docs/api/)
+
+Keep documentation clear, concise, and up-to-date.
+
+---
 
 ## Security
 
-Do not open public issues for sensitive vulnerabilities. Share details privately with maintainers first.
+**Never commit:**
+- Secret keys or API keys
+- Database credentials
+- Passwords or authentication tokens
+- Private configuration
+
+**Instead:**
+- Use `.env.example` templates
+- Document required environment variables
+- Add secrets via CI/CD secret management
+
+**Found a vulnerability?**
+
+Please report security issues privately to maintainers rather than opening a public issue. Email security details to the project maintainers.
+
+---
+
+## Questions or Need Help?
+
+- **Documentation:** Check [docs/](docs/) first
+- **GitHub Issues:** [Create an issue](https://github.com/DaaanielTV/infra-pilot/issues)
+- **GitHub Discussions:** [Ask in discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
+
+---
+
+Thank you for contributing to Infra Pilot! 🚀

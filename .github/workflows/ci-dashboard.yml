@@ -1,20 +1,20 @@
-name: CI - Management Dashboard (TypeScript)
+name: CI - Management Panel (TypeScript)
 
 on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'services/management-dashboard/**'
+      - 'services/management-panel/**'
       - '.github/workflows/ci-dashboard.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'services/management-dashboard/**'
+      - 'services/management-panel/**'
 
 env:
-  SERVICE_PATH: services/management-dashboard
+  SERVICE_PATH: services/management-panel
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/management-dashboard
+  IMAGE_NAME: ${{ github.repository }}/management-panel
 
 jobs:
   lint:

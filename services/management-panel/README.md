@@ -1,6 +1,6 @@
-# Web Panel Implementation
+# Web Panel Implementation (Cosmic Infra Branding)
 
-Frontend + backend prototype for server panel functionality.
+Frontend + backend prototype for server panel functionality. Branded UI uses Cosmic Infra tokens and UI kit.
 
 ## Stack
 

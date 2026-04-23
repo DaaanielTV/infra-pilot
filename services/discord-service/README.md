@@ -17,6 +17,11 @@ Create and provision Pterodactyl servers from Discord workflows.
 - A Discord bot application
 - A reachable Pterodactyl panel
 
+## Branding
+- Cosmic Infra branding is applied across the Infra Pilot UI. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
+- Logo variants are available, with a simple selector implemented in the management panel to switch between default and alt IP lockup designs.
+- UI elements reuse the branding tokens for consistency (buttons, inputs, cards).
+
 ## Installation
 
 ```bash

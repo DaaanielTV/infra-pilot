@@ -48,3 +48,7 @@ python src/resource_tracker.py
 - `GET /api/metrics/dashboard` - Unified dashboard metrics
 - `GET /api/config` - Get shared config
 - `PUT /api/config` - Update shared config
+
+## Branding
+- Cosmic Infra branding is the unified identity used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
+- This service participates in branding across the UI and docs. Logo variants exist and can be surfaced through shared branding assets.

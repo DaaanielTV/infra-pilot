@@ -51,4 +51,6 @@ python src/resource_tracker.py
 
 ## Branding
 - Cosmic Infra branding is the unified identity used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
+- Alternate logo variants exist and can be surfaced via branding assets. A simple selector is exposed in the management panel to switch variants at runtime.
+- Cosmic Infra branding is the unified identity used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
 - This service participates in branding across the UI and docs. Logo variants exist and can be surfaced through shared branding assets.

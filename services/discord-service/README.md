@@ -55,3 +55,7 @@ Environment variables include:
 ## License
 
 This module is distributed under the repository GPLv3 license.
+
+## Branding
+- Cosmic Infra branding is used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
+- Alternate logo variants exist and can be surfaced in the branding assets. Use the runtime selector in the management panel to switch logo variants if needed.

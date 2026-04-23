@@ -1,0 +1,15 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Infra Pilot logo alt" role="img">
+  <defs>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EC4899"/>
+      <stop offset="100%" stop-color="#6C5CE7"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="20" fill="#14101f"/>
+  <g transform="translate(18,14)">
+    <circle cx="28" cy="28" r="22" fill="none" stroke="url(#g2)" stroke-width="6"/>
+    <path d="M15 45 L48 20" stroke="url(#g2)" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <text x="8" y="68" font-family="Arial, sans-serif" font-size="34" fill="url(#g2)">IP</text>
+  </g>
+  <circle cx="74" cy="78" r="28" fill="none" stroke="url(#g2)" stroke-width="6" opacity="0.6" />
+</svg>

@@ -1,0 +1,22 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Lint
+        run: bash tools/lint-all.sh
+      - name: Run all tests
+        run: bash tools/run-all-tests.sh

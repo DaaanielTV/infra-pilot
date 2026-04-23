@@ -1,0 +1,78 @@
+const axios = require('axios');
+
+const INTEGRATION_SERVICE_URL = process.env.INTEGRATION_SERVICE_URL || 'http://localhost:9000';
+
+async function notifyIntegration(eventType, data) {
+  try {
+    await axios.post(`${INTEGRATION_SERVICE_URL}/api/notifications/server-event`, {
+      event_type: eventType,
+      server_name: data.serverName,
+      details: data
+    });
+    console.log(`[Integration] Notified: ${eventType}`);
+  } catch (error) {
+    console.error(`[Integration] Failed to notify:`, error.message);
+  }
+}
+
+async function notifyServerCreated(serverName, serverId) {
+  return notifyIntegration('server_created', { serverName, serverId });
+}
+
+async function notifyServerStarted(serverName, serverId) {
+  return notifyIntegration('server_started', { serverName, serverId });
+}
+
+async function notifyServerStopped(serverName, serverId) {
+  return notifyIntegration('server_stopped', { serverName, serverId });
+}
+
+async function notifyServerDeleted(serverName, serverId) {
+  return notifyIntegration('server_deleted', { serverName, serverId });
+}
+
+async function notifyServerError(serverName, serverId, error) {
+  return notifyIntegration('server_error', { serverName, serverId, error });
+}
+
+async function syncUserToIntegration(userData) {
+  try {
+    const response = await axios.post(`${INTEGRATION_SERVICE_URL}/api/users`, userData);
+    console.log(`[Integration] User synced: ${userData.email}`);
+    return response.data;
+  } catch (error) {
+    console.error(`[Integration] User sync failed:`, error.message);
+    return null;
+  }
+}
+
+async function getUnifiedMetrics() {
+  try {
+    const response = await axios.get(`${INTEGRATION_SERVICE_URL}/api/metrics/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error(`[Integration] Metrics fetch failed:`, error.message);
+    return null;
+  }
+}
+
+async function broadcastNotification(message) {
+  try {
+    await axios.post(`${INTEGRATION_SERVICE_URL}/api/notifications`, message);
+    console.log(`[Integration] Notification broadcast`);
+  } catch (error) {
+    console.error(`[Integration] Broadcast failed:`, error.message);
+  }
+}
+
+module.exports = {
+  notifyIntegration,
+  notifyServerCreated,
+  notifyServerStarted,
+  notifyServerStopped,
+  notifyServerDeleted,
+  notifyServerError,
+  syncUserToIntegration,
+  getUnifiedMetrics,
+  broadcastNotification
+};

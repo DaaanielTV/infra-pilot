@@ -41,3 +41,8 @@ bash install.sh
 ## Security
 
 If you identify a vulnerability, report it privately to maintainers.
+
+## Branding
+- Cosmic Infra branding is the unified identity used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
+- Alternate logo variants exist and can be surfaced via branding assets. A simple selector is exposed in the management panel to switch variants at runtime.
+- Cosmic Infra branding is the unified identity for Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE. Logo variants available via branding assets.

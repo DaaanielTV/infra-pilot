@@ -2,16 +2,71 @@ import { Authenticated, Unauthenticated, useQuery, useMutation, useAction } from
 import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
+import BrandLogo from "../../../branding/BrandLogo";
+import { ThemeToggle } from "./ThemeToggle";
+import { NavBar } from "./components/NavBar";
+import { Tooltip } from "./components/Tooltip";
+import LogoVariantToggle from "./components/LogoVariantToggle";
+import ThemeModeSelector from "./components/ThemeModeSelector";
+import { useEffect } from "react";
 import { Toaster, toast } from "sonner";
 import { useState } from "react";
 
 export default function App() {
+  // Light/Dark system preference support: apply on initial load and listen for changes
+  useEffect(() => {
+    try {
+      const mode = (typeof window !== 'undefined' ? (localStorage.getItem('infra_pilot_theme_mode') ?? 'system') : 'system') as string;
+      if (mode === 'system') {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = (e: MediaQueryListEvent) => {
+          if (e.matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        };
+        // set initial theme
+        if (mq.matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        // listen for changes
+        if (typeof mq.addEventListener === 'function') {
+          mq.addEventListener('change', apply);
+        } else if (typeof mq.addListener === 'function') {
+          mq.addListener(apply);
+        }
+        return () => {
+          if (typeof mq.removeEventListener === 'function') {
+            mq.removeEventListener('change', apply);
+          } else if (typeof mq.removeListener === 'function') {
+            mq.removeListener(apply);
+          }
+        };
+      }
+    } catch (e) {
+      // ignore if environment doesn't support matchMedia
+    }
+  }, []);
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm p-4 flex justify-between items-center border-b">
-        <h2 className="text-xl font-semibold accent-text">Game Panel</h2>
-        <SignOutButton />
+      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-4 border-b">
+        <div className="flex items-center gap-3">
+          <BrandLogo size={40} />
+          <span className="text-xl font-semibold text-brand-primary">Infra Pilot</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Tooltip text="Toggle system/light/dark override">
+            <ThemeToggle />
+          </Tooltip>
+          <LogoVariantToggle />
+          <ThemeModeSelector />
+          <SignOutButton />
+        </div>
       </header>
+      <NavBar />
       <main className="flex-1 p-8">
         <div className="max-w-6xl mx-auto">
           <Content />

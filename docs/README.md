@@ -37,7 +37,9 @@ Welcome to the Infra Pilot Infrastructure Orchestration Platform documentation.
 - [Discord Webhooks](api/discord-webhooks.md)
 - [Dashboard API](api/dashboard-api.md)
 
----
+Branding
+- Cosmic Infra branding documented at docs/branding.md
+
 
 ## 🎯 Getting Started
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 # Infra Pilot - Development Environment Setup Script
-# 
+#
 # This script sets up all services for local development.
 # Supports multiple languages: Java, Python, Node.js, TypeScript
 
-set -e
+set -euo pipefail
 
 echo "🚀 Infra Pilot Development Setup"
 echo "=================================="
@@ -16,6 +16,20 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+OFFLINE=false
+for arg in "$@"; do
+  case "$arg" in
+    --offline)
+      OFFLINE=true
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      echo "Usage: $0 [--offline]"
+      exit 1
+      ;;
+  esac
+done
 
 # Configuration
 SERVICES=(
@@ -53,23 +67,22 @@ check_command() {
 # Check prerequisites
 echo ""
 log_info "Checking prerequisites..."
+if [ "$OFFLINE" = true ]; then
+    log_info "Offline mode enabled: package installation steps are skipped"
+fi
 
 MISSING_DEPS=0
 
 if ! check_command git; then MISSING_DEPS=1; fi
 if ! check_command docker; then log_warning "Docker not found - using local setup"; fi
 
-# Check language-specific tools
-if [ ! -d "$SERVICES_PATH/service-core" ]; then
-    if ! check_command java; then log_warning "Java not found - skipping service-core setup"; fi
-    if ! check_command mvn; then log_warning "Maven not found - skipping service-core setup"; fi
-fi
-
+if ! check_command java; then log_warning "Java not found - skipping service-core setup"; fi
+if ! check_command mvn; then log_warning "Maven not found - skipping service-core setup"; fi
 if ! check_command python3; then log_warning "Python 3 not found - skipping orchestrator-agent setup"; fi
 if ! check_command node; then log_warning "Node.js not found - skipping Node.js services setup"; fi
 if ! check_command npm; then log_warning "npm not found - skipping Node.js services setup"; fi
 
-if [ $MISSING_DEPS -eq 1 ]; then
+if [ "$MISSING_DEPS" -eq 1 ]; then
     log_error "Missing critical dependencies"
     exit 1
 fi
@@ -94,11 +107,15 @@ for service in "${SERVICES[@]}"; do
     if [ "$SERVICE_NAME" == "service-core" ]; then
         # Java/Maven setup
         if command -v mvn &> /dev/null && command -v java &> /dev/null; then
-            cd "$service"
-            log_info "Installing Maven dependencies..."
-            mvn clean install -q -DskipTests || log_warning "Maven setup failed for $SERVICE_NAME"
+            pushd "$service" > /dev/null
+            if [ "$OFFLINE" = false ]; then
+                log_info "Installing Maven dependencies..."
+                mvn clean install -q -DskipTests || log_warning "Maven setup failed for $SERVICE_NAME"
+            else
+                log_warning "Offline mode: skipping Maven dependency install"
+            fi
             log_success "$SERVICE_NAME setup complete"
-            cd - > /dev/null
+            popd > /dev/null
         else
             log_warning "Skipping $SERVICE_NAME (Java/Maven not available)"
         fi
@@ -106,21 +123,22 @@ for service in "${SERVICES[@]}"; do
     elif [ "$SERVICE_NAME" == "orchestrator-agent" ]; then
         # Python setup
         if command -v python3 &> /dev/null; then
-            cd "$service"
+            pushd "$service" > /dev/null
             log_info "Creating Python virtual environment..."
             python3 -m venv venv || log_warning "Could not create venv"
-            
-            # Activate venv and install dependencies
-            if [ -f "venv/bin/activate" ]; then
+
+            if [ "$OFFLINE" = false ] && [ -f "venv/bin/activate" ]; then
                 # shellcheck disable=SC1091
                 source venv/bin/activate
                 log_info "Installing Python dependencies..."
-                pip install -q -r requirements.txt 2>/dev/null || log_warning "pip install failed"
+                pip install -r requirements.txt || log_warning "pip install failed"
                 deactivate
+            elif [ "$OFFLINE" = true ]; then
+                log_warning "Offline mode: skipping Python dependency install"
             fi
-            
+
             log_success "$SERVICE_NAME setup complete"
-            cd - > /dev/null
+            popd > /dev/null
         else
             log_warning "Skipping $SERVICE_NAME (Python not available)"
         fi
@@ -128,11 +146,24 @@ for service in "${SERVICES[@]}"; do
     elif [ "$SERVICE_NAME" == "discord-service" ] || [ "$SERVICE_NAME" == "management-panel" ]; then
         # Node.js/npm setup
         if command -v npm &> /dev/null; then
-            cd "$service"
-            log_info "Installing npm dependencies..."
-            npm install --silent 2>/dev/null || log_warning "npm install failed"
+            pushd "$service" > /dev/null
+            if [ ! -f "package.json" ]; then
+                log_warning "No package.json found for $SERVICE_NAME, skipping npm setup"
+                popd > /dev/null
+                continue
+            fi
+            if [ "$OFFLINE" = false ]; then
+                log_info "Installing npm dependencies..."
+                if [ -f "package-lock.json" ]; then
+                    npm ci || log_warning "npm ci failed"
+                else
+                    npm install || log_warning "npm install failed"
+                fi
+            else
+                log_warning "Offline mode: skipping npm install"
+            fi
             log_success "$SERVICE_NAME setup complete"
-            cd - > /dev/null
+            popd > /dev/null
         else
             log_warning "Skipping $SERVICE_NAME (Node.js/npm not available)"
         fi

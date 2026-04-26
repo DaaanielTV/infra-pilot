@@ -30,6 +30,7 @@ Welcome to the Infra Pilot Infrastructure Orchestration Platform documentation.
 - [Testing Strategy](development/testing-strategy.md) - Testing best practices
 - [Code Standards](development/code-standards.md) - Coding conventions
 - [Debugging Tips](development/debugging-tips.md) - Troubleshooting dev issues
+- [AI Assistant Playbook](development/ai-assistant-playbook.md) - Practical guardrails for AI contributors
 
 ### 📡 API Documentation
 - [Service Core API](api/service-core-api.md)

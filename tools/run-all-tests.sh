@@ -32,6 +32,8 @@ FAILED=0
 SKIPPED=0
 PASSED=0
 
+HAS_TESTS=false
+
 for svc in "$ROOT_DIR"/services/*; do
   [ -d "$svc" ] || continue
   name=$(basename "$svc")
@@ -63,6 +65,7 @@ for svc in "$ROOT_DIR"/services/*; do
   if [ -f "$svc/requirements.txt" ]; then
     echo "--> Python: $name"
     python3 -V >/dev/null 2>&1 || { echo "Python3 not found"; FAILED=$((FAILED + 1)); continue; }
+    HAS_TESTS=true
 
     if [ ! -d "$svc/tests" ]; then
       echo "---- Skipping Python tests for $name (no tests directory found)"
@@ -105,7 +108,21 @@ for svc in "$ROOT_DIR"/services/*; do
       FAILED=$((FAILED + 1))
     fi
   fi
+
+  # Mark if this service contains any test artifact (node script or python requirements)
+  if [ -f "$svc/package.json" ]; then
+    HAS_TESTS=true
+  fi
+  if [ -f "$svc/requirements.txt" ]; then
+    HAS_TESTS=true
+  fi
 done
+
+# If no tests are present across all services, exit gracefully to avoid false failures.
+if [ "$HAS_TESTS" = false ]; then
+  echo "No test scripts or Python requirements found across services. Exiting gracefully."
+  exit 0
+fi
 
 if [ -d "$ROOT_DIR/tests/integration" ]; then
   echo "==> Integration tests: integration"

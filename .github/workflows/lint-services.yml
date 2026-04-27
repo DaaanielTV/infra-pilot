@@ -1,0 +1,30 @@
+name: Lint Services
+
+on:
+  push:
+    branches: [ main, master, main-renovate ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies for root (optional)
+        run: |
+          if [ -f package.json ]; then
+            npm ci --silent || true
+          fi
+
+      - name: Lint all services
+        run: |
+          chmod +x tools/lint-all.sh
+          ./tools/lint-all.sh

@@ -1,16 +1,23 @@
 {
+  "root": true,
   "env": {
-    "browser": false,
     "node": true,
-    "es6": true
+    "es2021": true,
+    "commonjs": true
   },
-  "extends": ["eslint:recommended"],
   "parserOptions": {
-    "ecmaVersion": 2020,
+    "ecmaVersion": 2021,
     "sourceType": "module"
   },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/"
+  ],
   "rules": {
-    "no-unused-vars": ["warn", {"argsIgnorePattern": "^_"}],
-    "no-console": "off"
+    // Add project-wide lint rules here as needed. Start with a minimal baseline.
   }
 }

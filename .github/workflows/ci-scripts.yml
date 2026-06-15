@@ -20,7 +20,7 @@ jobs:
     name: ShellCheck
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -33,7 +33,7 @@ jobs:
     name: Verify Scripts Syntax
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check bash syntax
         run: |

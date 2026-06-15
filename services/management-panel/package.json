@@ -54,7 +54,7 @@
     "@playwright/test": "^1.60.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/express": "^5.0.6",
-    "@types/node": "^22.13.10",
+    "@types/node": "^25.9.3",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^6.0.2",

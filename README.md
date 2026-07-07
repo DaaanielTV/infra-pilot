@@ -16,13 +16,64 @@
 
 </p>
 
-**Infra Pilot** is a developer-first, self-hosted infrastructure orchestration platform — a modern alternative to Pterodactyl. It provides a unified web dashboard, CLI tool, and Discord bot for managing Docker-based servers, containers, and game servers.
+**Infra Pilot** is a developer-first, self-hosted infrastructure orchestration platform — a modern alternative to Pterodactyl.
+
+## CLI-First Architecture
+
+Infra Pilot has been redesigned around a **CLI-first** architecture. The CLI is the single source of truth for all functionality. The Web Dashboard and Discord Bot are wrappers that invoke CLI commands internally, eliminating code duplication.
+
+```
+User               CLI (Typer)          API Client         Backend
+ |                    |                    |                  |
+ |-- ipilot server --|                    |                  |
+ |  list --output    |-- ApiClient.list --|                  |
+ |  json             |  _servers()        |---- HTTP GET --->|
+ |                    |                    |                  |
+ |<-- JSON output ---|<-- JSON response --|<-- response -----|
+ |                    |                    |                  |
+ |    Web Dashboard / Discord Bot          |                  |
+ |       (subprocess ipilot ...)          |                  |
+```
+
+### Key Design Principles
+
+1. **CLI is Core** — Every feature is accessible via `ipilot <command>`
+2. **Web & Discord are Wrappers** — Both call `ipilot ... --output json` via subprocess
+3. **Auto-Generated Docs** — CLI reference is generated from code, always in sync
+4. **Rich Terminal Output** — Tables, colors, progress bars via Rich library
+5. **Shell Completion** — Built-in for bash, zsh, fish, powershell
+6. **Type-Safe** — Typer framework uses type hints for validation and IDE support
+
+### Quick Example
+
+```bash
+# List servers
+ipilot server list
+
+# List servers as JSON (for piping to jq)
+ipilot server list --output json | jq '.[].name'
+
+# Create a server
+ipilot server create myapp --type nodejs --memory 1024
+
+# Use a config profile
+ipilot --profile prod server list
+
+# Check energy consumption
+ipilot energy current
+
+# Install shell completion
+ipilot completion install
+
+# Enter interactive REPL
+ipilot interactive
+```
 
 ## Core Features
 
-- **Web Dashboard** — React 19 management panel with real-time metrics, logs, and container lifecycle management
-- **CLI Tool** — `ipilot` command-line interface for scripting and automation
-- **Discord Bot** — Provision and manage servers directly from Discord
+- **Web Dashboard** — React 19 management panel (calls CLI for all operations)
+- **CLI Tool** — `ipilot` — 100+ command groups, 500+ subcommands (Typer framework)
+- **Discord Bot** — Provision and manage servers directly from Discord (calls CLI)
 - **Orchestration** — Health monitoring, backup management, alerting, and task scheduling
 - **Container Lifecycle** — Create, start, stop, restart, clone, and snapshot containers
 - **Modpack Installer** — One-click game server modpack deployment

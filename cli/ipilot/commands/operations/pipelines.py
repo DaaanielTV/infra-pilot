@@ -1,0 +1,35 @@
+import builtins
+import typer
+from ...client import ApiClient
+from ...config import load_config
+from ...output.formatters import print_output
+
+_list_type = builtins.list
+
+app = typer.Typer(help="CI/CD pipeline commands")
+
+
+def _get_client(ctx: typer.Context) -> ApiClient:
+    config = load_config(profile=ctx.obj.get("profile"))
+    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+
+
+@app.command()
+def list(ctx: typer.Context):
+    """List all infrastructure pipelines"""
+    client = _get_client(ctx)
+    result = client.infra_pipeline_list()
+    data = result if isinstance(result, _list_type) else result.get("pipelines", result)
+    print_output(data, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def run(
+    ctx: typer.Context,
+    pipeline_id: str = typer.Argument(..., help="Pipeline ID"),
+    branch: str = typer.Option(None, "--branch", help="Branch to run"),
+):
+    """Run an infrastructure pipeline"""
+    client = _get_client(ctx)
+    result = client.infra_pipeline_run(pipeline_id, branch)
+    print_output(result, ctx.obj.get("output", "table"))

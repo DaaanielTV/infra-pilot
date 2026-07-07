@@ -1,0 +1,67 @@
+import builtins
+import typer
+from ...client import ApiClient
+from ...config import load_config
+from ...output.formatters import print_output
+
+_list_type = builtins.list
+
+app = typer.Typer(help="Chaos engineering commands")
+
+
+def _get_client(ctx: typer.Context) -> ApiClient:
+    config = load_config(profile=ctx.obj.get("profile"))
+    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+
+
+@app.command()
+def experiments(ctx: typer.Context):
+    """List chaos experiments"""
+    client = _get_client(ctx)
+    result = client.chaos_experiments()
+    data = result if isinstance(result, _list_type) else result.get("experiments", result)
+    print_output(data, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def create(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="Experiment name"),
+    target: str = typer.Argument(..., help="Target resource"),
+    fault_type: str = typer.Argument(..., help="Type of fault to inject"),
+):
+    """Create a new chaos experiment"""
+    client = _get_client(ctx)
+    result = client.chaos_create(name, target, fault_type)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def run(
+    ctx: typer.Context,
+    experiment_id: str = typer.Argument(..., help="Experiment ID"),
+):
+    """Run a chaos experiment"""
+    client = _get_client(ctx)
+    result = client.chaos_run(experiment_id)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def stop(
+    ctx: typer.Context,
+    experiment_id: str = typer.Argument(..., help="Experiment ID"),
+):
+    """Stop a running chaos experiment"""
+    client = _get_client(ctx)
+    result = client.chaos_stop(experiment_id)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def faults(ctx: typer.Context):
+    """List available fault types"""
+    client = _get_client(ctx)
+    result = client.chaos_faults()
+    data = result if isinstance(result, _list_type) else result.get("faults", result)
+    print_output(data, ctx.obj.get("output", "table"))

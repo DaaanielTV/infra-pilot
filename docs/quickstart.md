@@ -1,2 +1,0 @@
-- quickstart for the design tokens and design system skeleton
-- step-by-step guide to bootstrap the starter in your project

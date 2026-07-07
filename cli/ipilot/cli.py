@@ -3852,10 +3852,9 @@ def cmd_training_assignments(args):
     print_output([{"id": "assign-1", "user": "jdoe", "module": "Phishing", "status": "completed"}], args.output)
 
 
-def main():
-    parser = build_parser()
-    args = parser.parse_args()
-
+def main_inner(args, parser=None):
+    if parser is None:
+        parser = build_parser()
     cmd_map = {
         'login': cmd_login,
         'logout': cmd_logout,
@@ -4974,6 +4973,11 @@ if args.command in sub_router:
     else:
         parser.print_help()
 
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    main_inner(args, parser)
 
 if __name__ == '__main__':
     main()

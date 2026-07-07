@@ -1,2 +1,0 @@
-[console_scripts]
-ipilot = ipilot.main:app

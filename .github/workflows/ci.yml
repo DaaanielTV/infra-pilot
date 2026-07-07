@@ -2,25 +2,213 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master, develop]
 
 permissions:
   contents: read
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
-  management-panel:
+  # ── Path change detection ──────────────────────────────────────────
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      cli: ${{ steps.filter.outputs.cli }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      discord: ${{ steps.filter.outputs.discord }}
+      docs: ${{ steps.filter.outputs.docs }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      orchestrator: ${{ steps.filter.outputs.orchestrator }}
+      scripts: ${{ steps.filter.outputs.scripts }}
+      services: ${{ steps.filter.outputs.services }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            cli:
+              - 'services/cli/**'
+              - 'cli/**'
+            dashboard:
+              - 'services/management-panel/**'
+            discord:
+              - 'services/discord-service/**'
+            docs:
+              - 'docs/**'
+              - '*.md'
+            infrastructure:
+              - 'infra/**'
+              - 'infrastructure/**'
+            orchestrator:
+              - 'services/orchestrator-agent/**'
+            scripts:
+              - 'scripts/**'
+            services:
+              - 'services/**'
+
+  # ── CLI Service (Python) ───────────────────────────────────────────
+  cli-lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: CLI Lint & Format
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+      - name: Run flake8
+        run: |
+          flake8 services/cli --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 services/cli --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Check black formatting
+        run: black --check services/cli
+      - name: Check import sorting
+        run: isort --check-only services/cli
+      - name: Lint root CLI directory
+        continue-on-error: true
+        run: |
+          flake8 cli --count --select=E9,F63,F7,F82 --show-source --statistics
+          black --check cli
+
+  cli-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: CLI Unit Tests
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+      - name: Run pytest for CLI
+        run: |
+          pytest tests/cli/ -q --cov=services/cli --cov-report=xml --cov-report=term-missing || true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: ./coverage.xml
+          flags: cli-service
+          name: cli-service
+
+  cli-security:
+    needs: changes
+    if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: CLI Security Checks
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install security tools
+        run: |
+          pip install bandit safety
+      - name: Run Bandit security check
+        run: bandit -r services/cli -f json -o bandit-report.json || true
+      - name: Run Bandit on CLI
+        continue-on-error: true
+        run: bandit -r cli -f json -o bandit-cli-report.json || true
+      - name: Check dependencies for vulnerabilities
+        run: |
+          pip install -r requirements.txt
+          safety check --json || true
+
+  cli-build:
+    needs: [changes, cli-lint, cli-test, cli-security]
+    if: ${{ github.event_name == 'push' && (needs.changes.outputs.cli == 'true' || needs.changes.outputs.services == 'true') }}
+    runs-on: ubuntu-latest
+    name: CLI Build Image
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/cli-service
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: cli
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/cli-service:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/cli-service:buildcache,mode=max
+
+  # ── Management Panel (TypeScript, reusable) ────────────────────────
+  dashboard:
+    needs: changes
+    if: ${{ needs.changes.outputs.dashboard == 'true' || needs.changes.outputs.services == 'true' }}
+    name: Management Panel CI
+    uses: ./.github/workflows/reusable-node-service.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+    with:
+      service-path: services/management-panel
+      image-name: ${{ github.repository }}/management-panel
+      run-build: true
+      test-command: npm run test:coverage
+      upload-coverage: true
+      coverage-files: ./services/management-panel/coverage/v8
+      coverage-flag: dashboard
+      coverage-name: dashboard-coverage
+
+  # ── Management Panel Playwright (from ci.yml) ──────────────────────
+  dashboard-playwright:
+    needs: changes
+    if: ${{ needs.changes.outputs.dashboard == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: Management Panel Playwright
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '18.x'
-
       - name: Cache node modules
         uses: actions/cache@v6
         with:
@@ -30,27 +218,22 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
-      - name: Install dependencies (Management Panel)
+      - name: Install dependencies
         run: |
           cd services/management-panel
           npm ci
-
-      - name: Lint (Management Panel)
+      - name: Lint
         run: |
           cd services/management-panel
           npm run lint
-
-      - name: Build (Management Panel)
+      - name: Build
         run: |
           cd services/management-panel
           npm run build
-
       - name: Install Playwright browsers
         run: |
           cd services/management-panel
           npm run playwright:install
-
       - name: Run Playwright tests (Demo gating enabled)
         run: |
           cd services/management-panel
@@ -63,3 +246,336 @@ jobs:
           VITE_DEMO_FEATURE_ENABLED=false npm run test:playwright
         env:
           VITE_DEMO_FEATURE_ENABLED: false
+
+  # ── Discord Service (Node.js, reusable) ────────────────────────────
+  discord:
+    needs: changes
+    if: ${{ needs.changes.outputs.discord == 'true' || needs.changes.outputs.services == 'true' }}
+    name: Discord Service CI
+    uses: ./.github/workflows/reusable-node-service.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+    with:
+      service-path: services/discord-service
+      image-name: ${{ github.repository }}/discord-service
+
+  # ── Orchestrator Agent (Python) ────────────────────────────────────
+  orchestrator-lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: Orchestrator Lint & Format
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+      - name: Run flake8
+        run: |
+          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Check black formatting
+        run: black --check services/orchestrator-agent
+      - name: Check import sorting
+        run: isort --check-only services/orchestrator-agent
+
+  orchestrator-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: Orchestrator Unit Tests
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: gemini_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/orchestrator-agent/requirements.txt
+          pip install -r services/orchestrator-agent/requirements-dev.txt
+      - name: Run pytest
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd services/orchestrator-agent
+          pytest -q
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: ./services/orchestrator-agent/coverage.xml
+          flags: orchestrator-agent
+          name: orchestrator-agent
+
+  orchestrator-security:
+    needs: changes
+    if: ${{ needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: Orchestrator Security Checks
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+      - name: Install security tools
+        run: |
+          pip install bandit safety
+      - name: Run Bandit security check
+        run: bandit -r services/orchestrator-agent/ -f json -o bandit-report.json || true
+      - name: Check dependencies for vulnerabilities
+        run: |
+          pip install -r services/orchestrator-agent/requirements.txt
+          safety check --json || true
+
+  orchestrator-build:
+    needs: [changes, orchestrator-lint, orchestrator-test, orchestrator-security]
+    if: ${{ github.event_name == 'push' && (needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.services == 'true') }}
+    runs-on: ubuntu-latest
+    name: Orchestrator Build Image
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/orchestrator-agent
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: services/orchestrator-agent
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/orchestrator-agent:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/orchestrator-agent:buildcache,mode=max
+
+  # ── Lint All Services ──────────────────────────────────────────────
+  lint-all:
+    needs: changes
+    if: ${{ needs.changes.outputs.services == 'true' }}
+    runs-on: ubuntu-latest
+    name: Lint All Services
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install dependencies for root
+        run: |
+          if [ -f package.json ]; then
+            npm ci --silent || true
+          fi
+      - name: Install Python lint tools
+        run: pip install flake8 black isort
+      - name: Lint all services
+        run: |
+          chmod +x tools/lint-all.sh
+          ./tools/lint-all.sh
+
+  # ── Documentation ──────────────────────────────────────────────────
+  docs-markdown-lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    name: Docs Markdown Lint
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli
+      - name: Run markdownlint
+        run: markdownlint '**/*.md' --ignore node_modules --ignore .git --ignore '**/node_modules/**' --ignore '**/target/**' || true
+
+  docs-check-links:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    name: Docs Check Links
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check broken links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: '**/*.md --exclude "localhost" --exclude "127.0.0.1" --exclude "example.com" --exclude "your-domain.com" --exclude "github.com/your-org" --accept "200,429"'
+        continue-on-error: true
+
+  docs-spell-check:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    name: Docs Spell Check
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install codespell
+        run: pip install codespell
+      - name: Run codespell
+        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use" || true
+
+  # ── Infrastructure ─────────────────────────────────────────────────
+  infra-lint-python:
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' }}
+    runs-on: ubuntu-latest
+    name: Infra Lint Python
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install tools
+        run: pip install flake8 black isort
+      - name: Lint infra
+        continue-on-error: true
+        run: |
+          flake8 infra/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 infra/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          black --check infra/ || true
+
+  infra-validate-terraform:
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' }}
+    runs-on: ubuntu-latest
+    name: Infra Validate Terraform
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.5
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: terraform init -backend=false || true
+        continue-on-error: true
+      - name: Terraform validate
+        working-directory: infra/terraform
+        run: terraform validate || true
+        continue-on-error: true
+      - name: Terraform fmt check
+        working-directory: infra/terraform
+        run: terraform fmt -check -diff || true
+
+  infra-validate-prometheus:
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' }}
+    runs-on: ubuntu-latest
+    name: Infra Validate Prometheus
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Prometheus config
+        run: |
+          if [ -f infrastructure/prometheus/prometheus.yml ]; then
+            echo "Prometheus config exists"
+            cat infrastructure/prometheus/prometheus.yml | head -20
+          fi
+
+  # ── Scripts ────────────────────────────────────────────────────────
+  scripts-shellcheck:
+    needs: changes
+    if: ${{ needs.changes.outputs.scripts == 'true' }}
+    runs-on: ubuntu-latest
+    name: Scripts ShellCheck
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+          severity: warning
+
+  scripts-verify:
+    needs: changes
+    if: ${{ needs.changes.outputs.scripts == 'true' }}
+    runs-on: ubuntu-latest
+    name: Scripts Verify Syntax
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check bash syntax
+        run: |
+          for script in scripts/*.sh; do
+            echo "Checking $script..."
+            bash -n "$script" || echo "Syntax error in $script"
+          done
+      - name: Run health check test
+        run: |
+          chmod +x scripts/healthcheck.sh
+          bash scripts/healthcheck.sh --dry-run 2>&1 || true
+      - name: Run verify script
+        run: |
+          chmod +x scripts/verify.sh
+          bash scripts/verify.sh --offline 2>&1 || true

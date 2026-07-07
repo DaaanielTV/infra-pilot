@@ -1,99 +1,36 @@
-# 02 – First Deployment: Server erstellen in 3 Minuten
+# First Deployment
 
-Dieses Beispiel zeigt, wie du über die CLI einen Server deployst.
-
-## Voraussetzungen
-
-- Infra-Pilot läuft (siehe [Installation](01-Installation))
-- Du hast einen API-Key (im Management Panel unter Settings)
-
-## 1. CLI konfigurieren
+## 1. Configure & Login
 
 ```bash
-# API-URL setzen (lokal = http://localhost:3001)
 ipilot config set api_url http://localhost:3001
-
-# Mit API-Key authentifizieren
-ipilot login dein-api-key
+ipilot login <your-api-key>
 ```
 
-**Expected Output:**
-```
-┌──────────────────────────┐
-│ status                   │
-├──────────────────────────┤
-│ Logged in successfully   │
-└──────────────────────────┘
-```
-
-## 2. Verfügbare Server anzeigen
+## 2. Create a Server
 
 ```bash
-ipilot server list
+ipilot server create --name my-first-server --type web --memory 2048
 ```
 
-**Expected Output:**
-```
-┌──────┬──────┬──────┬────────┐
-│ id   │ name │ type │ status │
-├──────┼──────┼──────┼────────┤
-└──────┴──────┴──────┴────────┘
-(no servers)
-```
-
-## 3. Server erstellen
+## 3. Check Status
 
 ```bash
-ipilot server create --name mein-erster-server --type web --memory 2048
+ipilot server status <server-id>
 ```
 
-**Expected Output:**
-```
-┌────────────┬──────────────────────────────────────┐
-│ field      │ value                                │
-├────────────┼──────────────────────────────────────┤
-│ id         │ srv_abc123                           │
-│ name       │ mein-erster-server                   │
-│ type       │ web                                  │
-│ memory     │ 2048 MB                              │
-│ status     │ creating                             │
-│ created_at │ 2026-06-09T19:00:00Z                 │
-└────────────┴──────────────────────────────────────┘
-```
+Status changes to `running` when ready.
 
-## 4. Status prüfen
+## 4. Delete (Cleanup)
 
 ```bash
-ipilot server status srv_abc123
+ipilot server delete <server-id>
 ```
 
-Sobald der Status `running` anzeigt, ist dein Server bereit.
+## Via Dashboard
 
-## 5. Server wieder löschen (Cleanup)
-
-```bash
-ipilot server delete srv_abc123
-```
-
-**Expected Output:**
-```
-┌──────────┬──────────────────────────────────────┐
-│ status   │ Server srv_abc123 deleted             │
-└──────────┴──────────────────────────────────────┘
-```
-
-## Alternativ: Über das Management Panel
-
-Öffne http://localhost:5173, klicke auf **"Server erstellen"** und folge dem Wizard – kein CLI nötig.
-
-## Fehlerbehebung
-
-| Problem | Lösung |
-|---------|--------|
-| `Connection failed` | Prüfe ob `docker compose ps` alle Services zeigt |
-| `Unauthorized` | `ipilot login` erneut ausführen |
-| Server bleibt `creating` | Prüfe die Logs: `docker compose logs orchestrator-agent` |
+Open http://localhost:5173 and click **"Server erstellen"**.
 
 ---
 
-*Stand: Mai 2026 · [CLI-Referenz](05-CLI-Reference)*
+*[CLI Reference](05-CLI-Reference)*

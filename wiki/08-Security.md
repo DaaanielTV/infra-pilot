@@ -1,83 +1,34 @@
-# 08 – Security
+# Security
 
-## Welche Daten gehen an LLM-APIs?
+## LLM Data
 
-Infra-Pilot bietet verschiedene AI/ML-Features (AI Assistant, Log Anomaly Detection, Capacity Forecasting, etc.). Wenn aktiviert, werden folgende Daten an den konfigurierten LLM-Provider gesendet:
+If AI features are enabled, server metadata, logs, or config may be sent to the configured LLM API.
 
-| Feature | Daten | LLM-Kontakt |
-|---------|-------|-------------|
-| **AI Assistant** | Server-Status, Konfiguration, deine Chat-Nachrichten | Ja |
-| **Log Anomaly Detection** | Container-Logs (Auszüge) | Ja (konfigurierbar) |
-| **AI Capacity Forecaster** | Metriken, Zeitreihen, Auslastungsdaten | Ja |
-| **AI Config Advisor** | Infrastruktur-Konfiguration | Ja |
-| **AI Code Review Bot** | PR-Diffs aus GitHub | Ja |
-
-**Standard-Provider:** OpenAI (GPT-4) – konfigurierbar via `AI_API_ENDPOINT` und `AI_API_KEY` in der `.env`.
-
-### Lokaler Modus (keine Datenverlassen die Maschine)
-
-Setze in der `.env`:
+**Local mode** (no data leaves the machine):
 ```env
 AI_API_ENDPOINT=http://localhost:1234/v1
 AI_API_KEY=not-needed
 AI_MODEL=llama3-8b
 ```
 
-Kompatibel mit Ollama, LM Studio, llama.cpp und jedem OpenAI-kompatiblen lokalen Endpunkt.
-
 ## Telemetry
 
-Infra-Pilot erhebt **keine** Telemetrie. Es gibt kein Tracking, keine Analytics-Dienste und kein Phone-Home. Du musst nichts deaktivieren – es ist standardmäßig aus.
+None. No tracking, analytics, or phone-home. Opt-in only if changed in future.
 
-Sollte sich das in Zukunft ändern, wird dies explizit in den Release-Notes kommuniziert und es gibt einen Opt-out per `.env`-Variable.
+## Secrets
 
-## Umgang mit Secrets
+- `.env` is gitignored — never committed
+- Use env vars or a secrets manager (Vault supported)
+- TLS for transport, Fernet encryption at rest
 
-### `.env` / `.tfvars`
+## Security Features
 
-- `.env` ist in `.gitignore` – wird nie committed
-- Secrets gehören **nicht** in Versionskontrolle
-- Nutze Umgebungsvariablen oder einen Secrets-Manager (HashiCorp Vault wird unterstützt)
+JWT auth · RBAC · 2FA/TOTP · WebAuthn/Passkeys · PAM (JIT access) · Audit trail
 
-### Verschlüsselung
+## Reporting
 
-- **Transport:** TLS/SSL für alle externen API-Endpunkte
-- **Speicher:** Secrets können via `SECRETS_ENCRYPTION_KEY` (Fernet-Verschlüsselung) gespeichert werden
-- **JWT-Tokens:** Secure Token Handling im CLI – Token wird lokal in `~/.ipilot/config.json` gespeichert
-
-### Empfohlene Secrets-Strategie
-
-```
-1. KEINE Secrets in Code oder Config committed
-2. .env.example ohne echte Werte
-3. In Produktion: Vault / Secret-Store verwenden
-4. Rotation: 'ipilot secrets rotate' für regelmäßige Rotation
-```
-
-## Security-Scans (CI/CD)
-
-| Tool | Scannt | Ausführung |
-|------|--------|-----------|
-| `bandit` | Python-Code auf Sicherheitslücken | GitHub Actions |
-| `safety` | Python-Dependencies auf CVEs | GitHub Actions |
-| `npm audit` | JS-Dependencies auf CVEs | GitHub Actions |
-| `trivy` | Docker-Images | GitHub Actions |
-
-## Sicherheits-Features im Überblick
-
-- **JWT-Authentifizierung** mit Token-basierten Sessions
-- **RBAC** (Role-Based Access Control) für alle Operationen
-- **2FA/TOTP** und **WebAuthn/Passkey** für Admin-Accounts
-- **PAM** (Privileged Access Management) mit Just-in-Time-Freigaben
-- **Audit-Trail** – Append-only Log für alle Mutationen
-- **Breach Notification** – GDPR-konformes 72h-Benachrichtigungs-Tracking
-
-## Security-Vorfälle melden
-
-**Öffne keine öffentlichen Issues für Sicherheitslücken!**
-
-Melde Vorfälle per E-Mail an die Maintainer (siehe [`SECURITY.md`](https://github.com/daaanieltv/infra-pilot/blob/main/SECURITY.md)). Wir bestätigen den Eingang innerhalb von 48h und arbeiten an einem Fix.
+**Do not** open public issues. Email maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). 48h acknowledgment.
 
 ---
 
-*Stand: Mai 2026 · [SECURITY.md](https://github.com/daaanieltv/infra-pilot/blob/main/SECURITY.md)*
+*[SECURITY.md](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)*

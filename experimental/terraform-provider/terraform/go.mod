@@ -1,4 +1,4 @@
-module github.com/infra-pilot/terraform-provider-infrapilot
+module github.com/drosemann/terraform-provider-infrapilot
 
 go 1.21
 

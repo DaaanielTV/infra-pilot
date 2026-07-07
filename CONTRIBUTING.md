@@ -1,125 +1,40 @@
-# Contributing to Infra Pilot
+# Contributing
 
-Thank you for considering contributing. All contributions are welcome — bug fixes, features, docs, or discussions.
-
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Branch Naming](#branch-naming)
-- [Commit Style](#commit-style)
-- [Pull Request Workflow](#pull-request-workflow)
-- [PR Checklist](#pr-checklist)
-- [Test Requirements](#test-requirements)
-
-## Code of Conduct
-
-Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We expect all contributors to foster a welcoming and inclusive environment.
+All contributions welcome — bug fixes, features, docs, or discussions.
 
 ## Getting Started
 
-1. **Fork** the repository and clone your fork locally.
-2. Add the upstream repo as a remote:
-
-   ```bash
-   git remote add upstream https://github.com/DaaanielTV/infra-pilot.git
-   ```
-
-3. Create a branch from `main` following the naming convention below.
-4. Make your changes and ensure all existing and new tests pass.
-5. Push your branch and open a Pull Request against `main`.
+1. Fork the repo, clone your fork
+2. Add upstream: `git remote add upstream https://github.com/drosemann/infra-pilot.git`
+3. Branch from `main` using naming convention below
+4. Make changes, ensure tests pass
+5. Push and open a PR against `main`
 
 ## Branch Naming
 
-Use descriptive names with the following prefixes:
+`feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`, `perf/`, `style/` prefix + hyphenated description.
 
-| Prefix      | Use Case                     | Example                          |
-|-------------|------------------------------|----------------------------------|
-| `feat/`     | New feature                  | `feat/oidc-sso-provider`         |
-| `fix/`      | Bug fix                      | `fix/container-logs-encoding`    |
-| `docs/`     | Documentation changes        | `docs/api-endpoint-reference`    |
-| `refactor/` | Code restructuring           | `refactor/orchestrator-cog-loader` |
-| `test/`     | Adding or updating tests     | `test/integration-service-auth`  |
-| `chore/`    | Build, CI, or tooling        | `chore/upgrade-node-to-20`       |
-| `perf/`     | Performance improvements     | `perf/panel-metric-polling`      |
-| `style/`    | Code style, formatting       | `style/eslint-config-align`      |
+## Commits
 
-Use hyphens (`-`) as word separators. Keep names concise but descriptive.
-
-## Commit Style
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
-
+[Conventional Commits](https://www.conventionalcommits.org/):
 ```
-<type>(<scope>): <short description>
-
-[optional body]
-[optional footer]
+<type>(<scope>): <description>
 ```
-
-**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`
-
-**Scope** (optional): the affected component, e.g. `panel`, `orchestrator`, `discord`, `integration`, `cli`, `mobile`, `docs`
-
-Examples:
-
-```
-feat(orchestrator): add kubernetes cluster manager cog
-fix(panel): resolve websocket reconnection loop
-docs(api): document webhook event bus endpoints
-test(integration): add auth 2fa flow coverage
-```
-
-Write commit messages in **imperative mood** ("add" not "added"). Keep the summary under 72 characters.
-
-## Pull Request Workflow
-
-1. Ensure your branch is up to date with `main`:
-
-   ```bash
-   git fetch upstream
-   git rebase upstream/main
-   ```
-
-2. Run the full test suite:
-
-   ```bash
-   pytest tests/
-   cd services/management-panel && npm test
-   cd services/orchestrator-agent && pytest
-   ```
-
-3. Push your branch and open a PR against `main`.
-4. Fill in the [PR template](.github/pull_request_template.md) completely.
-5. Request a review from the maintainers.
-6. Respond to review feedback with additional commits on the same branch.
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`. Scope (optional): `panel`, `orchestrator`, `discord`, `integration`, `cli`, `docs`. Keep summary under 72 chars.
 
 ## PR Checklist
 
-Before submitting, verify that:
+- [ ] Branch follows naming convention
+- [ ] Commits follow Conventional Commits
+- [ ] Tests pass, coverage doesn't decrease
+- [ ] No new warnings/errors
+- [ ] Documentation updated if behavior changed
+- [ ] No secrets committed
 
-- [ ] Branch name follows the naming convention (`type/descriptive-name`)
-- [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/) style
-- [ ] PR title is clear and describes the change
-- [ ] PR template is filled out completely
-- [ ] Code compiles/lints without new warnings or errors
-- [ ] Existing tests pass
-- [ ] New tests cover the changes (unit and/or integration)
-- [ ] Documentation is updated if behavior or APIs changed
-- [ ] No secrets, tokens, or credentials are committed
-- [ ] Changes are focused on a single concern (one feature/fix per PR)
-- [ ] All conversations on the PR are resolved before merge
+## Tests
 
-## Test Requirements
-
-- All new features must include tests (unit tests for logic, integration tests for API/network paths).
-- Bug fixes must include a test that reproduces the issue before the fix.
-- Run the full test suite locally before pushing:
-
-  ```bash
-  pytest tests/                           # Python tests (orchestrator, integration)
-  cd services/management-panel && npm test # Panel frontend + API tests
-  cd services/discord-service && npm test  # Discord service tests
-  ```
-
-- Code coverage should not decrease. Run `./scripts/coverage.sh` or the equivalent for your service to check.
+```bash
+pytest tests/
+cd services/management-panel && npm test
+cd services/orchestrator-agent && pytest
+```

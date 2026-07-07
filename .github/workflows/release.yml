@@ -3,6 +3,9 @@ name: Release Management
 on:
   push:
     branches: [ main ]
+  schedule:
+    # Runs every Saturday at 23:00 UTC (00:00 Sunday German Standard Time)
+    - cron: '0 23 * * 6'
   workflow_dispatch:
     inputs:
       version:
@@ -29,7 +32,7 @@ jobs:
       is_prerelease: ${{ steps.semver.outputs.prerelease }}
 
     steps:
-      - uses: actions/checkout@v4  # Fixed version
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -55,7 +58,7 @@ jobs:
       changelog: ${{ steps.gen.outputs.changelog }}
 
     steps:
-      - uses: actions/checkout@v4  # Fixed version
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -67,8 +70,14 @@ jobs:
           echo "### Changes since last release" >> changelog.md
           echo "" >> changelog.md
           
-          # Improved fallback syntax for git log
-          git log --oneline --no-decorate $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD 2>/dev/null >> changelog.md || echo "- Initial release" >> changelog.md
+          # Get latest tag safely, fallback to first commit if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            git log --oneline --no-decorate >> changelog.md || echo "- Initial release" >> changelog.md
+          else
+            git log --oneline --no-decorate "${LATEST_TAG}..HEAD" >> changelog.md || echo "- Maintenance updates" >> changelog.md
+          fi
           
           echo "" >> changelog.md
           echo "### Services included" >> changelog.md
@@ -81,13 +90,14 @@ jobs:
             echo "- Service Core"
           } >> changelog.md
           
-          # Safe multiline output handling
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          # Secure and robust multiline output handling using a dynamic delimiter
+          EOF_DELIMITER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64 | tr -dc 'a-zA-Z0-9')
+          echo "changelog<<${EOF_DELIMITER}" >> $GITHUB_OUTPUT
           cat changelog.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "${EOF_DELIMITER}" >> $GITHUB_OUTPUT
 
       - name: Upload changelog
-        uses: actions/upload-artifact@v4  # Fixed version
+        uses: actions/upload-artifact@v4
         with:
           name: changelog
           path: changelog.md
@@ -98,14 +108,15 @@ jobs:
     needs: [version, changelog]
 
     steps:
-      - uses: actions/checkout@v4  # Fixed version
+      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2  # v2 is standard/stable for softprops
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.version }}
           body: ${{ needs.changelog.outputs.changelog }}
-          prerelease: ${{ needs.version.outputs.is_prerelease }}
-          generate_release_notes: false  # Set to false to use your custom body exclusively
+          # Cast the string to a strict boolean comparison
+          prerelease: ${{ needs.version.outputs.is_prerelease == 'true' }}
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

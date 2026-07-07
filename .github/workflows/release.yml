@@ -24,13 +24,12 @@ jobs:
   version:
     runs-on: ubuntu-latest
     name: Determine Version
-
     outputs:
       version: ${{ steps.semver.outputs.version }}
       is_prerelease: ${{ steps.semver.outputs.prerelease }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4  # Fixed version
         with:
           fetch-depth: 0
 
@@ -41,7 +40,7 @@ jobs:
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
           else
-            # Use git tag count as version
+            # Safe fallback if no tags exist yet
             tag_count=$(git tag --list 'v*' | wc -l)
             next_version=$((tag_count + 1))
             echo "version=0.${next_version}.0" >> $GITHUB_OUTPUT
@@ -52,12 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Generate Changelog
     needs: version
-
     outputs:
       changelog: ${{ steps.gen.outputs.changelog }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4  # Fixed version
         with:
           fetch-depth: 0
 
@@ -68,22 +66,28 @@ jobs:
           echo "" >> changelog.md
           echo "### Changes since last release" >> changelog.md
           echo "" >> changelog.md
+          
+          # Improved fallback syntax for git log
           git log --oneline --no-decorate $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD 2>/dev/null >> changelog.md || echo "- Initial release" >> changelog.md
+          
           echo "" >> changelog.md
           echo "### Services included" >> changelog.md
-          echo "- CLI Service" >> changelog.md
-          echo "- Integration Service" >> changelog.md
-          echo "- Orchestrator Agent" >> changelog.md
-          echo "- Management Panel" >> changelog.md
-          echo "- Discord Service" >> changelog.md
-          echo "- Service Core" >> changelog.md
-          changelog=$(cat changelog.md)
+          {
+            echo "- CLI Service"
+            echo "- Integration Service"
+            echo "- Orchestrator Agent"
+            echo "- Management Panel"
+            echo "- Discord Service"
+            echo "- Service Core"
+          } >> changelog.md
+          
+          # Safe multiline output handling
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$changelog" >> $GITHUB_OUTPUT
+          cat changelog.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload changelog
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4  # Fixed version
         with:
           name: changelog
           path: changelog.md
@@ -94,28 +98,14 @@ jobs:
     needs: [version, changelog]
 
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Create Git tag
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag -a "v${{ needs.version.outputs.version }}" -m "Release v${{ needs.version.outputs.version }}"
-          git push origin "v${{ needs.version.outputs.version }}"
+      - uses: actions/checkout@v4  # Fixed version
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2  # v2 is standard/stable for softprops
         with:
           tag_name: v${{ needs.version.outputs.version }}
           body: ${{ needs.changelog.outputs.changelog }}
           prerelease: ${{ needs.version.outputs.is_prerelease }}
-          generate_release_notes: true
+          generate_release_notes: false  # Set to false to use your custom body exclusively
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build all Docker images
-        env:
-          REGISTRY: ghcr.io
-        run: |
-          echo "Triggering multi-service build for release v${{ needs.version.outputs.version }}"
-          # Individual service builds are handled by docker-publish.yml on tag push

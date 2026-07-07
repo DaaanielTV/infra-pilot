@@ -30,7 +30,7 @@ jobs:
       is_prerelease: ${{ steps.semver.outputs.prerelease }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
       changelog: ${{ steps.gen.outputs.changelog }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -83,7 +83,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload changelog
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: changelog
           path: changelog.md
@@ -94,7 +94,7 @@ jobs:
     needs: [version, changelog]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Create Git tag
         run: |

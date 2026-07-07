@@ -22,6 +22,11 @@ node_modules/
 dist/
 build/
 
+# Python packaging
+*.egg-info/
+.coverage
+coverage.xml
+
 # Java
 *.class
 *.jar

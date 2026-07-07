@@ -1,0 +1,64 @@
+import typer
+from ...client import ApiClient
+from ...config import load_config
+from ...output.formatters import print_output
+
+app = typer.Typer(help="Developer pulse surveys")
+
+
+def _get_client(ctx: typer.Context) -> ApiClient:
+    config = load_config(profile=ctx.obj.get("profile"))
+    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+
+
+@app.command()
+def list(ctx: typer.Context):
+    """List pulse surveys"""
+    client = _get_client(ctx)
+    result = client.pulse_list()
+    import builtins; _list_type = builtins.list
+    data = result if isinstance(result, _list_type) else result.get("key", result)
+    print_output(data, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def create(
+    ctx: typer.Context,
+    title: str = typer.Argument(help="Survey title"),
+    questions: str = typer.Argument(help="Questions (JSON)"),
+):
+    """Create a pulse survey"""
+    client = _get_client(ctx)
+    result = client.pulse_create(title, questions)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def respond(
+    ctx: typer.Context,
+    survey_id: str = typer.Argument(help="Survey ID"),
+    answers: str = typer.Argument(help="Answers (JSON)"),
+):
+    """Respond to a pulse survey"""
+    client = _get_client(ctx)
+    result = client.pulse_respond(survey_id, answers)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def results(
+    ctx: typer.Context,
+    survey_id: str = typer.Argument(help="Survey ID"),
+):
+    """Get pulse survey results"""
+    client = _get_client(ctx)
+    result = client.pulse_results(survey_id)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def summary(ctx: typer.Context):
+    """Get pulse survey summary"""
+    client = _get_client(ctx)
+    result = client.pulse_summary()
+    print_output(result, ctx.obj.get("output", "table"))

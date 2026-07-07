@@ -1,0 +1,51 @@
+import typer
+from ...client import ApiClient
+from ...config import load_config
+from ...output.formatters import print_output
+
+app = typer.Typer(help="Marketplace recommendations")
+
+
+def _get_client(ctx: typer.Context) -> ApiClient:
+    config = load_config(profile=ctx.obj.get("profile"))
+    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+
+
+@app.command()
+def list(ctx: typer.Context):
+    """List recommendations"""
+    client = _get_client(ctx)
+    result = client.reco_list()
+    import builtins; _list_type = builtins.list
+    data = result if isinstance(result, _list_type) else result.get("key", result)
+    print_output(data, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def summary(ctx: typer.Context):
+    """Get recommendation summary"""
+    client = _get_client(ctx)
+    result = client.reco_summary()
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def implement(
+    ctx: typer.Context,
+    reco_id: str = typer.Argument(help="Recommendation ID"),
+):
+    """Implement a recommendation"""
+    client = _get_client(ctx)
+    result = client.reco_implement(reco_id)
+    print_output(result, ctx.obj.get("output", "table"))
+
+
+@app.command()
+def dismiss(
+    ctx: typer.Context,
+    reco_id: str = typer.Argument(help="Recommendation ID"),
+):
+    """Dismiss a recommendation"""
+    client = _get_client(ctx)
+    result = client.reco_dismiss(reco_id)
+    print_output(result, ctx.obj.get("output", "table"))

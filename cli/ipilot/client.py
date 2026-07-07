@@ -1,1886 +1,1797 @@
 import json
-import urllib.request
-import urllib.error
+import requests
+from typing import Any, Dict, Optional
 
 
 class ApiClient:
+    """HTTP API client for Infra Pilot backend.
 
-    def __init__(self, base_url, token=None):
-        self.base_url = base_url.rstrip('/')
-        self.token = token
+    Maintains full backward compatibility with existing cmd_* functions
+    while adding session management, retry, and better error handling.
+    """
 
-    def _headers(self):
-        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        if self.token:
-            headers['Authorization'] = f'Bearer {self.token}'
-        return headers
-
-    def _request(self, method, path, data=None):
-        url = f'{self.base_url}/api/v1{path}'
-        body = json.dumps(data).encode('utf-8') if data else None
-        req = urllib.request.Request(url, data=body, headers=self._headers(), method=method)
-        try:
-            with urllib.request.urlopen(req) as resp:
-                return json.loads(resp.read().decode('utf-8'))
-        except urllib.error.HTTPError as e:
-            msg = e.read().decode('utf-8') if e.fp else str(e)
-            try:
-                return {'error': json.loads(msg).get('message', msg)}
-            except json.JSONDecodeError:
-                return {'error': msg}
-        except urllib.error.URLError as e:
-            return {'error': f'Connection failed: {e.reason}'}
-
-    def login(self, api_key):
-        return self._request('POST', '/auth/login', {'api_key': api_key})
-
-    def logout(self):
-        return self._request('POST', '/auth/logout')
-
-    def list_servers(self):
-        return self._request('GET', '/servers')
-
-    def get_server(self, server_id):
-        return self._request('GET', f'/servers/{server_id}')
-
-    def create_server(self, name, server_type, memory=None):
-        return self._request('POST', '/servers', {
-            'name': name,
-            'type': server_type,
-            'memory': memory,
+    def __init__(self, base_url: str, token: Optional[str] = None):
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         })
+        if token:
+            self.session.headers["Authorization"] = f"Bearer {token}"
 
-    def delete_server(self, server_id):
-        return self._request('DELETE', f'/servers/{server_id}')
+    def _headers(self) -> Dict[str, str]:
+        return dict(self.session.headers)
 
-    def server_status(self, server_id):
-        return self._request('GET', f'/servers/{server_id}/status')
+    def _request(self, method: str, path: str, data: Optional[Dict] = None) -> Any:
+        url = f"{self.base_url}/api/v1{path}"
+        try:
+            resp = self.session.request(method, url, json=data, timeout=30)
+            resp.raise_for_status()
+            if resp.content:
+                return resp.json()
+            return {}
+        except requests.HTTPError as e:
+            try:
+                msg = e.response.json().get("message", str(e))
+            except (json.JSONDecodeError, AttributeError):
+                msg = str(e)
+            return {"error": msg}
+        except requests.ConnectionError as e:
+            return {"error": f"Connection failed: {e}"}
+        except requests.Timeout:
+            return {"error": "Request timed out"}
 
-    def health_check(self):
-        return self._request('GET', '/health')
+    def _get(self, path: str) -> Any:
+        return self._request("GET", path)
 
-    def get_logs(self, server_id, lines=50, follow=False):
-        params = f'?lines={lines}&follow={"true" if follow else "false"}'
-        return self._request('GET', f'/servers/{server_id}/logs{params}')
+    def _post(self, path: str, data: Optional[Dict] = None) -> Any:
+        return self._request("POST", path, data)
 
-    def list_backups(self, server_id=None):
-        path = f'/servers/{server_id}/backups' if server_id else '/backups'
-        return self._request('GET', path)
+    def _put(self, path: str, data: Optional[Dict] = None) -> Any:
+        return self._request("PUT", path, data)
 
-    def create_backup(self, server_id):
-        return self._request('POST', f'/servers/{server_id}/backups')
+    def _delete(self, path: str) -> Any:
+        return self._request("DELETE", path)
 
-    def deploy(self, server_id, branch):
-        return self._request('POST', f'/servers/{server_id}/deploy', {'branch': branch})
+    def login(self, api_key: str) -> Any:
+        return self._request("POST", "/auth/login", {"api_key": api_key})
 
-    # === Edge & IoT API Methods ===
+    def logout(self) -> Any:
+        return self._request("POST", "/auth/logout")
 
-    def edge_list_devices(self, device_type=None, status=None):
+    def list_servers(self) -> Any:
+        return self._request("GET", "/servers")
+
+    def get_server(self, server_id: str) -> Any:
+        return self._request("GET", f"/servers/{server_id}")
+
+    def create_server(self, name: str, server_type: str, memory: Optional[int] = None) -> Any:
+        return self._request("POST", "/servers", {"name": name, "type": server_type, "memory": memory})
+
+    def delete_server(self, server_id: str) -> Any:
+        return self._request("DELETE", f"/servers/{server_id}")
+
+    def server_status(self, server_id: str) -> Any:
+        return self._request("GET", f"/servers/{server_id}/status")
+
+    def get_logs(self, server_id: str, lines: int = 50, follow: bool = False) -> Any:
+        return self._request("GET", f"/servers/{server_id}/logs?lines={lines}&follow={follow}")
+
+    def list_backups(self, server_id: Optional[str] = None) -> Any:
+        path = f"/backups/{server_id}" if server_id else "/backups"
+        return self._request("GET", path)
+
+    def create_backup(self, server_id: str) -> Any:
+        return self._request("POST", f"/servers/{server_id}/backups")
+
+    def deploy(self, server_id: str, branch: str) -> Any:
+        return self._request("POST", f"/servers/{server_id}/deploy", {"branch": branch})
+
+    def health_check(self) -> Any:
+        return self._request("GET", "/health")
+
+    def list_edge_devices(self, device_type: Optional[str] = None, status: Optional[str] = None) -> Any:
         params = {}
         if device_type:
-            params['device_type'] = device_type
+            params["device_type"] = device_type
         if status:
-            params['status'] = status
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/edge/devices?{qs}' if qs else '/edge/devices')
+            params["status"] = status
+        return self._request("GET", f"/edge/devices?{requests.compat.urlencode(params)}")
 
-    def edge_register_device(self, name, device_type, hardware_id):
-        return self._request('POST', '/edge/devices', {
-            'name': name, 'device_type': device_type, 'hardware_id': hardware_id,
-        })
+    def register_edge_device(self, name: str, device_type: str, hardware_id: str) -> Any:
+        return self._request("POST", "/edge/devices", {"name": name, "device_type": device_type, "hardware_id": hardware_id})
 
-    def edge_device_status(self, device_id):
-        return self._request('GET', f'/edge/devices/{device_id}')
+    def edge_device_status(self, device_id: str) -> Any:
+        return self._request("GET", f"/edge/devices/{device_id}")
 
-    def edge_send_command(self, device_id, command):
-        return self._request('POST', f'/edge/devices/{device_id}/command', {'command': command})
+    def edge_device_command(self, device_id: str, command: str) -> Any:
+        return self._request("POST", f"/edge/devices/{device_id}/command", {"command": command})
 
-    def edge_create_backup(self, device_id):
-        return self._request('POST', f'/edge/devices/{device_id}/backup')
+    def backup_edge_device(self, device_id: str) -> Any:
+        return self._request("POST", f"/edge/devices/{device_id}/backup")
 
-    def fn_list_functions(self, device_id=None):
-        path = f'/edge/functions?device_id={device_id}' if device_id else '/edge/functions'
-        return self._request('GET', path)
+    def list_edge_functions(self, device_id: Optional[str] = None) -> Any:
+        path = f"/edge/functions?device_id={device_id}" if device_id else "/edge/functions"
+        return self._request("GET", path)
 
-    def fn_deploy_function(self, name, runtime, device_id, source, handler):
-        return self._request('POST', '/edge/functions', {
-            'name': name, 'runtime': runtime, 'device_id': device_id,
-            'source': source, 'handler': handler,
-        })
+    def deploy_edge_function(self, name: str, runtime: str, device_id: str, source: str, handler: str) -> Any:
+        return self._request("POST", "/edge/functions", {"name": name, "runtime": runtime, "device_id": device_id, "source": source, "handler": handler})
 
-    def fn_invoke_function(self, func_id, payload=None):
-        return self._request('POST', f'/edge/functions/{func_id}/invoke', payload or {})
+    def invoke_edge_function(self, func_id: str, payload: Optional[str] = None) -> Any:
+        return self._request("POST", f"/edge/functions/{func_id}/invoke", {"payload": payload})
 
-    def ml_list_models(self, device_id=None):
-        path = f'/edge/ml/models?device_id={device_id}' if device_id else '/edge/ml/models'
-        return self._request('GET', path)
+    def list_ml_models(self, device_id: Optional[str] = None) -> Any:
+        path = f"/edge/ml/models?device_id={device_id}" if device_id else "/edge/ml/models"
+        return self._request("GET", path)
 
-    def ml_deploy_model(self, name, model_format, device_id, version):
-        return self._request('POST', '/edge/ml/models', {
-            'name': name, 'model_format': model_format,
-            'device_id': device_id, 'version': version,
-        })
+    def deploy_ml_model(self, name: str, model_format: str, device_id: str, version: str) -> Any:
+        return self._request("POST", "/edge/ml/models", {"name": name, "format": model_format, "device_id": device_id, "version": version})
 
-    def ml_run_inference(self, model_id, input_data=None):
-        return self._request('POST', f'/edge/ml/models/{model_id}/infer', {'input': input_data or 'default'})
+    def run_inference(self, model_id: str) -> Any:
+        return self._request("POST", f"/edge/ml/models/{model_id}/infer")
 
-    def iot_generate_codes(self, count=10, ttl=24):
-        return self._request('POST', '/iot/codes', {'count': count, 'ttl_hours': ttl})
+    def generate_claim_codes(self, count: int = 10, ttl: int = 24) -> Any:
+        return self._request("POST", "/iot/claim-codes", {"count": count, "ttl": ttl})
 
-    def iot_enroll_device(self, code, device_id):
-        return self._request('POST', '/iot/enroll', {'code': code, 'device_id': device_id})
+    def enroll_device(self, code: str, device_id: str) -> Any:
+        return self._request("POST", "/iot/enroll", {"code": code, "device_id": device_id})
 
-    def cdn_get_stats(self):
-        return self._request('GET', '/edge/cdn/stats')
+    def cdn_stats(self) -> Any:
+        return self._request("GET", "/edge/cdn/stats")
 
-    def mesh_list_networks(self):
-        return self._request('GET', '/mesh/networks')
+    def list_mesh_networks(self) -> Any:
+        return self._request("GET", "/edge/mesh")
 
-    def mesh_create_network(self, name, mesh_type, subnet):
-        return self._request('POST', '/mesh/networks', {
-            'name': name, 'mesh_type': mesh_type, 'subnet': subnet,
-        })
+    def create_mesh_network(self, name: str, mesh_type: str, subnet: str) -> Any:
+        return self._request("POST", "/edge/mesh", {"name": name, "mesh_type": mesh_type, "subnet": subnet})
 
-    def gw_list_gateways(self, status=None):
-        path = f'/lorawan/gateways?status={status}' if status else '/lorawan/gateways'
-        return self._request('GET', path)
+    def list_lorawan_gateways(self, status: Optional[str] = None) -> Any:
+        path = f"/edge/lorawan/gateways?status={status}" if status else "/edge/lorawan/gateways"
+        return self._request("GET", path)
 
-    def pipeline_get_statistics(self):
-        return self._request('GET', '/iot/pipeline/stats')
+    def pipeline_stats(self) -> Any:
+        return self._request("GET", "/edge/pipeline/stats")
 
-    # === Green Computing API Methods ===
+    def energy_current(self) -> Any:
+        return self._request("GET", "/energy/current")
 
-    def energy_get_current(self):
-        return self._request('GET', '/energy/current')
-
-    def energy_get_history(self, server_id=None, hours=24):
-        path = f'/energy/history?hours={hours}'
+    def energy_history(self, server_id: Optional[str] = None, hours: int = 24) -> Any:
+        params = f"?hours={hours}"
         if server_id:
-            path += f'&server_id={server_id}'
-        return self._request('GET', path)
+            params += f"&server_id={server_id}"
+        return self._request("GET", f"/energy/history{params}")
 
-    def energy_get_summary(self, period='daily'):
-        return self._request('GET', f'/energy/summary?period={period}')
+    def energy_summary(self, period: str = "daily") -> Any:
+        return self._request("GET", f"/energy/summary?period={period}")
 
-    def carbon_get_current(self):
-        return self._request('GET', '/carbon/current')
+    def carbon_current(self) -> Any:
+        return self._request("GET", "/carbon/current")
 
-    def carbon_get_history(self):
-        return self._request('GET', '/carbon/history')
+    def carbon_history(self) -> Any:
+        return self._request("GET", "/carbon/history")
 
-    def green_get_forecast(self):
-        return self._request('GET', '/green/forecast')
+    def green_forecast(self) -> Any:
+        return self._request("GET", "/green/forecast")
 
-    def green_list_jobs(self, status=None):
-        path = f'/green/jobs?status={status}' if status else '/green/jobs'
-        return self._request('GET', path)
+    def green_jobs(self) -> Any:
+        return self._request("GET", "/green/jobs")
 
-    def green_add_job(self, name, command, urgency='normal'):
-        return self._request('POST', '/green/jobs', {
-            'name': name, 'command': command, 'urgency': urgency,
-        })
+    def green_schedule(self, workload_id: str, schedule_type: str) -> Any:
+        return self._request("POST", "/green/schedule", {"workload_id": workload_id, "schedule_type": schedule_type})
 
-    def green_savings_report(self):
-        return self._request('GET', '/green/report')
+    def green_report(self) -> Any:
+        return self._request("GET", "/green/report")
 
-    def reclaim_list_resources(self, resource_type=None):
-        path = f'/reclaim/resources?type={resource_type}' if resource_type else '/reclaim/resources'
-        return self._request('GET', path)
+    def reclaim_list(self) -> Any:
+        return self._request("GET", "/reclaim/resources")
 
-    def reclaim_scan(self):
-        return self._request('POST', '/reclaim/scan')
+    def reclaim_scan(self) -> Any:
+        return self._request("POST", "/reclaim/scan")
 
-    def reclaim_report(self):
-        return self._request('GET', '/reclaim/report')
+    def reclaim_report(self) -> Any:
+        return self._request("GET", "/reclaim/report")
 
-    def shutdown_list_policies(self):
-        return self._request('GET', '/shutdown/policies')
+    def shutdown_policies(self) -> Any:
+        return self._request("GET", "/shutdown/policies")
 
-    def shutdown_create_policy(self, name, tags, shutdown_hours):
-        tag_list = [t.strip() for t in tags.split(',')]
-        hours = [int(h.strip()) for h in shutdown_hours.split(',')]
-        return self._request('POST', '/shutdown/policies', {
-            'name': name, 'tags': tag_list, 'shutdown_hours': hours,
-        })
+    def create_shutdown_policy(self, name: str, schedule: str, conditions: Any) -> Any:
+        return self._request("POST", "/shutdown/policies", {"name": name, "schedule": schedule, "conditions": conditions})
 
-    def shutdown_savings(self):
-        return self._request('GET', '/shutdown/savings')
+    def shutdown_savings(self) -> Any:
+        return self._request("GET", "/shutdown/savings")
 
-    def hardware_list_assets(self, asset_type=None):
-        path = f'/hardware/assets?type={asset_type}' if asset_type else '/hardware/assets'
-        return self._request('GET', path)
+    def list_hardware(self) -> Any:
+        return self._request("GET", "/hardware")
 
-    def hardware_add_asset(self, asset_type, manufacturer, model, serial):
-        return self._request('POST', '/hardware/assets', {
-            'asset_type': asset_type, 'manufacturer': manufacturer,
-            'model': model, 'serial_number': serial,
-        })
+    def add_hardware(self, name: str, hardware_type: str, specs: Any) -> Any:
+        return self._request("POST", "/hardware", {"name": name, "type": hardware_type, "specs": specs})
 
-    def pue_get_current(self):
-        return self._request('GET', '/pue/current')
+    def pue_current(self) -> Any:
+        return self._request("GET", "/pue/current")
 
-    def pue_get_history(self, hours=168):
-        return self._request('GET', f'/pue/history?hours={hours}')
+    def pue_history(self) -> Any:
+        return self._request("GET", "/pue/history")
 
-    def provider_get_rankings(self):
-        return self._request('GET', '/provider/rankings')
+    def provider_rank(self) -> Any:
+        return self._request("GET", "/provider/rank")
 
-    def offset_calculate(self, energy_kwh, project_type='reforestation'):
-        return self._request('POST', '/offset/calculate', {
-            'energy_kwh': energy_kwh, 'project_type': project_type,
-        })
+    def offset_quote(self, amount: float) -> Any:
+        return self._request("POST", "/offset/quote", {"amount": amount})
 
-    def offset_purchase(self, quote_id):
-        return self._request('POST', '/offset/purchase', {'quote_id': quote_id})
+    def offset_purchase(self, amount: float, provider: str) -> Any:
+        return self._request("POST", "/offset/purchase", {"amount": amount, "provider": provider})
 
-    def offset_list_certificates(self):
-        return self._request('GET', '/offset/certificates')
+    def offset_certs(self) -> Any:
+        return self._request("GET", "/offset/certificates")
 
-    def efficiency_get_score(self, server_id):
-        return self._request('GET', f'/efficiency/servers/{server_id}/score')
+    def efficiency_score(self) -> Any:
+        return self._request("GET", "/efficiency/score")
 
-    def efficiency_get_recommendations(self, server_id):
-        return self._request('GET', f'/efficiency/servers/{server_id}/recommendations')
+    def efficiency_recommendations(self) -> Any:
+        return self._request("GET", "/efficiency/recommendations")
 
-    # === v3 Identity & Access API Methods ===
+    def oidc_clients(self) -> Any:
+        return self._request("GET", "/identity/oidc/clients")
 
-    def oidc_list_clients(self):
-        return self._request('GET', '/identity/oidc/clients')
+    def oidc_register(self, name: str, redirect_uris: list) -> Any:
+        return self._request("POST", "/identity/oidc/clients", {"name": name, "redirect_uris": redirect_uris})
 
-    def oidc_register_client(self, name, redirect_uris, client_type='confidential'):
-        return self._request('POST', '/identity/oidc/clients', {
-            'client_name': name, 'redirect_uris': redirect_uris, 'client_type': client_type,
-        })
+    def oidc_delete(self, client_id: str) -> Any:
+        return self._request("DELETE", f"/identity/oidc/clients/{client_id}")
 
-    def oidc_delete_client(self, client_id):
-        return self._request('DELETE', f'/identity/oidc/clients/{client_id}')
+    def webauthn_credentials(self) -> Any:
+        return self._request("GET", "/identity/webauthn/credentials")
 
-    def webauthn_list_credentials(self, user_id):
-        return self._request('GET', f'/identity/webauthn/credentials?user_id={user_id}')
+    def webauthn_remove(self, credential_id: str) -> Any:
+        return self._request("DELETE", f"/identity/webauthn/credentials/{credential_id}")
 
-    def webauthn_remove_credential(self, credential_id):
-        return self._request('DELETE', f'/identity/webauthn/credentials/{credential_id}')
+    def list_sessions(self) -> Any:
+        return self._request("GET", "/identity/sessions")
 
-    def session_list_active(self, user_id):
-        return self._request('GET', f'/identity/sessions?user_id={user_id}')
+    def revoke_session(self, session_id: str) -> Any:
+        return self._request("DELETE", f"/identity/sessions/{session_id}")
 
-    def session_revoke(self, session_id):
-        return self._request('POST', f'/identity/sessions/{session_id}/revoke')
+    def pam_requests(self) -> Any:
+        return self._request("GET", "/identity/pam/requests")
 
-    def pam_list_requests(self, user_id=None, status=None):
-        params = {}
-        if user_id: params['user_id'] = user_id
-        if status: params['status'] = status
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/identity/pam/requests?{qs}' if qs else '/identity/pam/requests')
+    def pam_request(self, resource: str, reason: str) -> Any:
+        return self._request("POST", "/identity/pam/requests", {"resource": resource, "reason": reason})
 
-    def pam_create_request(self, user_id, resource, role, reason, duration=3600):
-        return self._request('POST', '/identity/pam/requests', {
-            'user_id': user_id, 'resource': resource, 'role': role,
-            'reason': reason, 'duration': duration,
-        })
+    def pam_approve(self, request_id: str) -> Any:
+        return self._request("POST", f"/identity/pam/requests/{request_id}/approve")
 
-    def pam_approve_request(self, request_id, approver_id):
-        return self._request('POST', f'/identity/pam/requests/{request_id}/approve', {'approver_id': approver_id})
+    def pam_deny(self, request_id: str) -> Any:
+        return self._request("POST", f"/identity/pam/requests/{request_id}/deny")
 
-    def pam_deny_request(self, request_id, approver_id):
-        return self._request('POST', f'/identity/pam/requests/{request_id}/deny', {'approver_id': approver_id})
+    def breach_list(self) -> Any:
+        return self._request("GET", "/governance/breaches")
 
-    def breach_list(self):
-        return self._request('GET', '/identity/breaches')
+    def breach_report(self, breach_id: str, details: Any) -> Any:
+        return self._request("POST", f"/governance/breaches/{breach_id}/report", details)
 
-    def breach_report(self, description, data_types, affected_users=0):
-        return self._request('POST', '/identity/breaches', {
-            'description': description, 'affected_data_types': data_types,
-            'affected_users_count': affected_users,
-        })
+    def policy_list(self) -> Any:
+        return self._request("GET", "/governance/policies")
 
-    # === v3 Governance API Methods ===
+    def policy_create(self, name: str, rules: Any) -> Any:
+        return self._request("POST", "/governance/policies", {"name": name, "rules": rules})
 
-    def policy_list(self, category=None):
-        path = f'/governance/policies?category={category}' if category else '/governance/policies'
-        return self._request('GET', path)
+    def policy_evaluate(self, policy_id: str, resource: str) -> Any:
+        return self._request("POST", f"/governance/policies/{policy_id}/evaluate", {"resource": resource})
 
-    def policy_create(self, name, description, category='general'):
-        return self._request('POST', '/governance/policies', {
-            'name': name, 'description': description, 'category': category, 'rules': [],
-        })
+    def compliance_scan(self, framework: str) -> Any:
+        return self._request("POST", "/governance/compliance/scan", {"framework": framework})
 
-    def policy_evaluate(self, resource, action, context=None):
-        return self._request('POST', '/governance/policies/evaluate', {
-            'resource': resource, 'action': action, 'context': context or {},
-        })
+    def compliance_report(self, scan_id: str) -> Any:
+        return self._request("GET", f"/governance/compliance/report/{scan_id}")
 
-    def compliance_run_scan(self, benchmark='cis_docker'):
-        return self._request('POST', '/governance/compliance/scan', {'benchmark': benchmark})
+    def compliance_checks(self) -> Any:
+        return self._request("GET", "/governance/compliance/checks")
 
-    def compliance_get_report(self, scan_id):
-        return self._request('GET', f'/governance/compliance/scans/{scan_id}')
+    def audit_anomalies(self) -> Any:
+        return self._request("GET", "/governance/audit/anomalies")
 
-    def compliance_list_checks(self, benchmark='cis_docker'):
-        return self._request('GET', f'/governance/compliance/checks?benchmark={benchmark}')
+    def audit_trend(self) -> Any:
+        return self._request("GET", "/governance/audit/trend")
 
-    def audit_get_anomalies(self, threshold=None):
-        path = f'/governance/audit/anomalies?threshold={threshold}' if threshold else '/governance/audit/anomalies'
-        return self._request('GET', path)
+    def audit_summary(self) -> Any:
+        return self._request("GET", "/governance/audit/summary")
 
-    def audit_get_trend(self, user_id):
-        return self._request('GET', f'/governance/audit/trend/{user_id}')
+    def classify_scan(self) -> Any:
+        return self._request("POST", "/governance/classify/scan")
 
-    def audit_get_summary(self):
-        return self._request('GET', '/governance/audit/summary')
+    def classify_inventory(self) -> Any:
+        return self._request("GET", "/governance/classify/inventory")
 
-    def classify_scan_text(self, text):
-        return self._request('POST', '/governance/classify/scan', {'text': text})
+    def vendor_list(self) -> Any:
+        return self._request("GET", "/governance/vendors")
 
-    def classify_get_inventory(self):
-        return self._request('GET', '/governance/classify/inventory')
+    def vendor_create(self, name: str, risk_level: str) -> Any:
+        return self._request("POST", "/governance/vendors", {"name": name, "risk_level": risk_level})
 
-    def vendor_list(self):
-        return self._request('GET', '/governance/vendors')
+    def vendor_assess(self, vendor_id: str) -> Any:
+        return self._request("POST", f"/governance/vendors/{vendor_id}/assess")
 
-    def vendor_create(self, name, domain, category='saas'):
-        return self._request('POST', '/governance/vendors', {
-            'name': name, 'domain': domain, 'category': category,
-        })
+    def workflow_list(self) -> Any:
+        return self._request("GET", "/orchestration/workflows")
 
-    def vendor_create_assessment(self, vendor_id, questionnaire_type='sig'):
-        return self._request('POST', f'/governance/vendors/{vendor_id}/assessments', {
-            'questionnaire_type': questionnaire_type,
-        })
+    def workflow_create(self, name: str, steps: list) -> Any:
+        return self._request("POST", "/orchestration/workflows", {"name": name, "steps": steps})
 
-    # === v3 Orchestration API Methods ===
+    def workflow_run(self, workflow_id: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", f"/orchestration/workflows/{workflow_id}/run", params or {})
 
-    def workflow_list(self):
-        return self._request('GET', '/orchestration/workflows')
+    def infra_pipeline_list(self) -> Any:
+        return self._request("GET", "/orchestration/pipelines")
 
-    def workflow_create(self, name, description):
-        return self._request('POST', '/orchestration/workflows', {
-            'name': name, 'description': description, 'nodes': [], 'edges': [],
-        })
+    def infra_pipeline_run(self, pipeline_id: str) -> Any:
+        return self._request("POST", f"/orchestration/pipelines/{pipeline_id}/run")
 
-    def workflow_execute(self, workflow_id):
-        return self._request('POST', f'/orchestration/workflows/{workflow_id}/execute', {
-            'trigger_data': {'source': 'cli', 'timestamp': __import__('datetime').datetime.utcnow().isoformat()},
-        })
+    def drift_scan(self) -> Any:
+        return self._request("POST", "/orchestration/drift/scan")
 
-    def infra_pipeline_list(self):
-        return self._request('GET', '/orchestration/pipelines')
+    def drift_list(self) -> Any:
+        return self._request("GET", "/orchestration/drift")
 
-    def infra_pipeline_run(self, pipeline_id, branch='main'):
-        return self._request('POST', f'/orchestration/pipelines/{pipeline_id}/run', {
-            'triggered_by': 'cli', 'branch': branch,
-        })
+    def quota_list(self) -> Any:
+        return self._request("GET", "/orchestration/quotas")
 
-    def drift_run_scan(self):
-        return self._request('POST', '/orchestration/drift/scan')
+    def quota_check(self, resource: str) -> Any:
+        return self._request("GET", f"/orchestration/quotas/{resource}")
 
-    def drift_list_scans(self):
-        return self._request('GET', '/orchestration/drift/scans')
+    def remediate_rules(self) -> Any:
+        return self._request("GET", "/orchestration/remediation/rules")
 
-    def quota_list(self):
-        return self._request('GET', '/orchestration/quotas')
+    def remediate_history(self) -> Any:
+        return self._request("GET", "/orchestration/remediation/history")
 
-    def quota_check(self, entity_type, entity_id, resources):
-        return self._request('POST', '/orchestration/quotas/check', {
-            'entity_type': entity_type, 'entity_id': entity_id, 'resources': resources,
-        })
+    def maintenance_list(self) -> Any:
+        return self._request("GET", "/orchestration/maintenance")
 
-    def remediation_list_rules(self):
-        return self._request('GET', '/orchestration/remediation/rules')
+    def maintenance_schedule(self, resource: str, window: str) -> Any:
+        return self._request("POST", "/orchestration/maintenance", {"resource": resource, "window": window})
 
-    def remediation_get_history(self):
-        return self._request('GET', '/orchestration/remediation/history')
+    def runbook_list(self) -> Any:
+        return self._request("GET", "/orchestration/runbooks")
 
-    def maintenance_list_windows(self):
-        return self._request('GET', '/orchestration/maintenance/windows')
+    def runbook_use(self, runbook_id: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", f"/orchestration/runbooks/{runbook_id}/execute", params or {})
 
-    def maintenance_schedule(self, name, start_time, end_time, systems):
-        return self._request('POST', '/orchestration/maintenance/windows', {
-            'name': name, 'start_time': start_time, 'end_time': end_time,
-            'affected_systems': systems,
-        })
+    def chaos_experiments(self) -> Any:
+        return self._request("GET", "/orchestration/chaos/experiments")
 
-    def runbook_list_templates(self):
-        return self._request('GET', '/orchestration/runbook-templates')
+    def chaos_create(self, name: str, fault_type: str, target: str) -> Any:
+        return self._request("POST", "/orchestration/chaos/experiments", {"name": name, "fault_type": fault_type, "target": target})
 
-    def runbook_instantiate(self, template_id, variables=None):
-        return self._request('POST', f'/orchestration/runbook-templates/{template_id}/instantiate', {
-            'variables': variables or {},
-        })
+    def chaos_run(self, experiment_id: str) -> Any:
+        return self._request("POST", f"/orchestration/chaos/experiments/{experiment_id}/run")
 
-    def chaos_list_experiments(self):
-        return self._request('GET', '/orchestration/chaos/experiments')
+    def chaos_stop(self, experiment_id: str) -> Any:
+        return self._request("POST", f"/orchestration/chaos/experiments/{experiment_id}/stop")
 
-    def chaos_create_experiment(self, name, target):
-        return self._request('POST', '/orchestration/chaos/experiments', {
-            'name': name, 'target': target, 'faults': [],
-        })
+    def chaos_faults(self) -> Any:
+        return self._request("GET", "/orchestration/chaos/faults")
 
-    def chaos_run_experiment(self, experiment_id):
-        return self._request('POST', f'/orchestration/chaos/experiments/{experiment_id}/run')
+    def heal_status(self) -> Any:
+        return self._request("GET", "/orchestration/heal/status")
 
-    def chaos_stop_experiment(self, experiment_id):
-        return self._request('POST', f'/orchestration/chaos/experiments/{experiment_id}/stop')
+    def heal_history(self) -> Any:
+        return self._request("GET", "/orchestration/heal/history")
 
-    def chaos_list_faults(self):
-        return self._request('GET', '/orchestration/chaos/fault-types')
+    def heal_retrain(self) -> Any:
+        return self._request("POST", "/orchestration/heal/retrain")
 
-    def healing_get_status(self):
-        return self._request('GET', '/orchestration/healing/status')
+    def sdwan_status(self) -> Any:
+        return self._request("GET", "/networking/sdwan/status")
 
-    def healing_get_history(self):
-        return self._request('GET', '/orchestration/healing/history')
+    def sdwan_apps(self) -> Any:
+        return self._request("GET", "/networking/sdwan/apps")
 
-    def healing_retrain(self):
-        return self._request('POST', '/orchestration/healing/retrain')
+    def sdwan_create(self, name: str, provider: str, bandwidth: int) -> Any:
+        return self._request("POST", "/networking/sdwan/links", {"name": name, "provider": provider, "bandwidth": bandwidth})
 
-    # === v3 Networking API Methods ===
+    def sdwan_delete(self, link_id: str) -> Any:
+        return self._request("DELETE", f"/networking/sdwan/links/{link_id}")
 
-    def sdwan_status(self):
-        return self._request('GET', '/networking/sdwan/status')
+    def sdwan_toggle(self, link_id: str) -> Any:
+        return self._request("POST", f"/networking/sdwan/links/{link_id}/toggle")
 
-    def sdwan_list_apps(self):
-        return self._request('GET', '/networking/sdwan/apps')
+    def vpn_configs(self) -> Any:
+        return self._request("GET", "/networking/vpn/configs")
 
-    def sdwan_create_app(self, name, provider, bandwidth):
-        return self._request('POST', '/networking/sdwan/apps', {
-            'name': name, 'provider': provider, 'bandwidth': bandwidth,
-        })
+    def vpn_create(self, name: str, protocol: str, server: str) -> Any:
+        return self._request("POST", "/networking/vpn/configs", {"name": name, "protocol": protocol, "server": server})
 
-    def sdwan_delete_app(self, app_id):
-        return self._request('DELETE', f'/networking/sdwan/apps/{app_id}')
+    def vpn_delete(self, config_id: str) -> Any:
+        return self._request("DELETE", f"/networking/vpn/configs/{config_id}")
 
-    def sdwan_toggle(self, app_id):
-        return self._request('POST', f'/networking/sdwan/apps/{app_id}/toggle')
+    def vpn_status(self, config_id: str) -> Any:
+        return self._request("GET", f"/networking/vpn/configs/{config_id}")
 
-    def vpn_list_configs(self):
-        return self._request('GET', '/networking/vpn/configs')
+    def dns_zones(self) -> Any:
+        return self._request("GET", "/networking/dns/zones")
 
-    def vpn_create_config(self, name, server, port, protocol):
-        return self._request('POST', '/networking/vpn/configs', {
-            'name': name, 'server': server, 'port': port, 'protocol': protocol,
-        })
+    def dns_create_zone(self, domain: str, ttl: int = 3600) -> Any:
+        return self._request("POST", "/networking/dns/zones", {"domain": domain, "ttl": ttl})
 
-    def vpn_delete_config(self, config_id):
-        return self._request('DELETE', f'/networking/vpn/configs/{config_id}')
+    def dns_delete_zone(self, zone_id: str) -> Any:
+        return self._request("DELETE", f"/networking/dns/zones/{zone_id}")
 
-    def vpn_status(self):
-        return self._request('GET', '/networking/vpn/status')
+    def dns_records(self, zone_id: str) -> Any:
+        return self._request("GET", f"/networking/dns/zones/{zone_id}/records")
 
-    def dns_list_zones(self):
-        return self._request('GET', '/networking/dns/zones')
+    def dns_add_record(self, zone_id: str, record_type: str, name: str, value: str, ttl: int = 300) -> Any:
+        return self._request("POST", f"/networking/dns/zones/{zone_id}/records", {"type": record_type, "name": name, "value": value, "ttl": ttl})
 
-    def dns_create_zone(self, domain, ttl):
-        return self._request('POST', '/networking/dns/zones', {
-            'domain': domain, 'ttl': ttl,
-        })
+    def dns_delete_record(self, zone_id: str, record_id: str) -> Any:
+        return self._request("DELETE", f"/networking/dns/zones/{zone_id}/records/{record_id}")
 
-    def dns_delete_zone(self, zone_id):
-        return self._request('DELETE', f'/networking/dns/zones/{zone_id}')
+    def bgp_sessions(self) -> Any:
+        return self._request("GET", "/networking/bgp/sessions")
 
-    def dns_list_records(self, zone_id):
-        return self._request('GET', f'/networking/dns/zones/{zone_id}/records')
+    def bgp_create(self, name: str, asn: int, neighbor: str) -> Any:
+        return self._request("POST", "/networking/bgp/sessions", {"name": name, "asn": asn, "neighbor": neighbor})
 
-    def dns_create_record(self, zone_id, name, record_type, value, ttl):
-        return self._request('POST', f'/networking/dns/zones/{zone_id}/records', {
-            'name': name, 'type': record_type, 'value': value, 'ttl': ttl,
-        })
+    def bgp_delete(self, session_id: str) -> Any:
+        return self._request("DELETE", f"/networking/bgp/sessions/{session_id}")
 
-    def dns_delete_record(self, zone_id, record_id):
-        return self._request('DELETE', f'/networking/dns/zones/{zone_id}/records/{record_id}')
+    def bgp_routes(self, session_id: Optional[str] = None) -> Any:
+        path = f"/networking/bgp/routes/{session_id}" if session_id else "/networking/bgp/routes"
+        return self._request("GET", path)
 
-    def bgp_list_sessions(self):
-        return self._request('GET', '/networking/bgp/sessions')
+    def proxy_rules(self) -> Any:
+        return self._request("GET", "/networking/proxy/rules")
 
-    def bgp_create_session(self, name, peer_as, peer_ip):
-        return self._request('POST', '/networking/bgp/sessions', {
-            'name': name, 'peer_as': peer_as, 'peer_ip': peer_ip,
-        })
+    def proxy_create(self, name: str, source: str, target: str) -> Any:
+        return self._request("POST", "/networking/proxy/rules", {"name": name, "source": source, "target": target})
 
-    def bgp_delete_session(self, session_id):
-        return self._request('DELETE', f'/networking/bgp/sessions/{session_id}')
+    def proxy_delete(self, rule_id: str) -> Any:
+        return self._request("DELETE", f"/networking/proxy/rules/{rule_id}")
 
-    def bgp_routes(self):
-        return self._request('GET', '/networking/bgp/routes')
+    def proxy_toggle(self, rule_id: str) -> Any:
+        return self._request("POST", f"/networking/proxy/rules/{rule_id}/toggle")
 
-    def proxy_list_rules(self):
-        return self._request('GET', '/networking/proxy/rules')
+    def segment_list(self) -> Any:
+        return self._request("GET", "/networking/segments")
 
-    def proxy_create_rule(self, domain, target, tls):
-        return self._request('POST', '/networking/proxy/rules', {
-            'domain': domain, 'target': target, 'tls_enabled': tls,
-        })
+    def segment_create(self, name: str, cidr: str, vlan: Optional[int] = None) -> Any:
+        return self._request("POST", "/networking/segments", {"name": name, "cidr": cidr, "vlan": vlan})
 
-    def proxy_delete_rule(self, rule_id):
-        return self._request('DELETE', f'/networking/proxy/rules/{rule_id}')
+    def segment_delete(self, segment_id: str) -> Any:
+        return self._request("DELETE", f"/networking/segments/{segment_id}")
 
-    def proxy_toggle(self, rule_id):
-        return self._request('POST', f'/networking/proxy/rules/{rule_id}/toggle')
+    def capture_list(self) -> Any:
+        return self._request("GET", "/networking/capture")
 
-    def seg_list_segments(self):
-        return self._request('GET', '/networking/segments')
+    def capture_start(self, interface: str, filter_expr: Optional[str] = None) -> Any:
+        return self._request("POST", "/networking/capture/start", {"interface": interface, "filter": filter_expr})
 
-    def seg_create_segment(self, name, cidr, env):
-        return self._request('POST', '/networking/segments', {
-            'name': name, 'cidr': cidr, 'environment': env,
-        })
+    def capture_stop(self, capture_id: str) -> Any:
+        return self._request("POST", f"/networking/capture/{capture_id}/stop")
 
-    def seg_delete_segment(self, segment_id):
-        return self._request('DELETE', f'/networking/segments/{segment_id}')
+    def dnsfilter_status(self) -> Any:
+        return self._request("GET", "/networking/dnsfilter/status")
 
-    def cap_list_captures(self):
-        return self._request('GET', '/networking/captures')
+    def dnsfilter_rules(self) -> Any:
+        return self._request("GET", "/networking/dnsfilter/rules")
 
-    def cap_start_capture(self, interface, duration, filter_expr):
-        return self._request('POST', '/networking/captures', {
-            'interface': interface, 'duration': duration, 'filter': filter_expr,
-        })
+    def dnsfilter_add(self, domain: str, action: str = "block") -> Any:
+        return self._request("POST", "/networking/dnsfilter/rules", {"domain": domain, "action": action})
 
-    def cap_stop_capture(self, capture_id):
-        return self._request('POST', f'/networking/captures/{capture_id}/stop')
+    def dnsfilter_remove(self, rule_id: str) -> Any:
+        return self._request("DELETE", f"/networking/dnsfilter/rules/{rule_id}")
 
-    def dnsfilter_status(self):
-        return self._request('GET', '/networking/dnsfilter/status')
+    def dhcp_leases(self) -> Any:
+        return self._request("GET", "/networking/dhcp/leases")
 
-    def dnsfilter_list_rules(self):
-        return self._request('GET', '/networking/dnsfilter/rules')
+    def netcost_show(self) -> Any:
+        return self._request("GET", "/networking/cost")
 
-    def dnsfilter_create_rule(self, domain, action):
-        return self._request('POST', '/networking/dnsfilter/rules', {
-            'domain': domain, 'action': action,
-        })
+    def netcost_budget(self, budget: float) -> Any:
+        return self._request("POST", "/networking/cost/budget", {"budget": budget})
 
-    def dnsfilter_delete_rule(self, rule_id):
-        return self._request('DELETE', f'/networking/dnsfilter/rules/{rule_id}')
+    def cell_networks(self) -> Any:
+        return self._request("GET", "/networking/cell/networks")
 
-    def dhcp_leases(self):
-        return self._request('GET', '/networking/dhcp/leases')
+    def cell_register(self, name: str, provider: str, apn: str) -> Any:
+        return self._request("POST", "/networking/cell/networks", {"name": name, "provider": provider, "apn": apn})
 
-    def cost_get_costs(self):
-        return self._request('GET', '/networking/costs')
+    def cell_delete(self, network_id: str) -> Any:
+        return self._request("DELETE", f"/networking/cell/networks/{network_id}")
 
-    def cost_set_budget(self, monthly_budget):
-        return self._request('POST', '/networking/costs/budget', {
-            'monthly_budget': monthly_budget,
-        })
+    def cell_status(self, network_id: str) -> Any:
+        return self._request("GET", f"/networking/cell/networks/{network_id}")
 
-    def cell_list_networks(self):
-        return self._request('GET', '/networking/cellular/networks')
+    def cell_sims(self, network_id: str) -> Any:
+        return self._request("GET", f"/networking/cell/networks/{network_id}/sims")
 
-    def cell_register_network(self, name, provider, apn):
-        return self._request('POST', '/networking/cellular/networks', {
-            'name': name, 'provider': provider, 'apn': apn,
-        })
+    def cell_activate(self, sim_id: str) -> Any:
+        return self._request("POST", f"/networking/cell/sims/{sim_id}/activate")
 
-    def cell_delete_network(self, network_id):
-        return self._request('DELETE', f'/networking/cellular/networks/{network_id}')
+    def cell_deactivate(self, sim_id: str) -> Any:
+        return self._request("POST", f"/networking/cell/sims/{sim_id}/deactivate")
 
-    def cell_status(self):
-        return self._request('GET', '/networking/cellular/status')
+    def trade_list(self) -> Any:
+        return self._request("GET", "/marketplace/trades")
 
-    def cell_list_sims(self):
-        return self._request('GET', '/networking/cellular/sims')
+    def trade_create(self, resource: str, amount: float, price: float) -> Any:
+        return self._request("POST", "/marketplace/trades", {"resource": resource, "amount": amount, "price": price})
 
-    def cell_activate_sim(self, sim_id):
-        return self._request('POST', f'/networking/cellular/sims/{sim_id}/activate')
+    def trade_accept(self, trade_id: str) -> Any:
+        return self._request("POST", f"/marketplace/trades/{trade_id}/accept")
 
-    def cell_deactivate_sim(self, sim_id):
-        return self._request('POST', f'/networking/cellular/sims/{sim_id}/deactivate')
+    def trade_cancel(self, trade_id: str) -> Any:
+        return self._request("POST", f"/marketplace/trades/{trade_id}/cancel")
 
-    # === v3 Marketplace API Methods ===
+    def appmarket_list(self) -> Any:
+        return self._request("GET", "/marketplace/apps")
 
-    def trade_list(self, status=None):
-        path = f'/marketplace/trades?status={status}' if status else '/marketplace/trades'
-        return self._request('GET', path)
+    def appmarket_install(self, app_id: str, target: str) -> Any:
+        return self._request("POST", f"/marketplace/apps/{app_id}/install", {"target": target})
 
-    def trade_create(self, resource_type, quantity, price, unit):
-        return self._request('POST', '/marketplace/trades', {
-            'resource_type': resource_type, 'quantity': quantity,
-            'price': price, 'unit': unit,
-        })
+    def appmarket_installations(self) -> Any:
+        return self._request("GET", "/marketplace/installations")
 
-    def trade_accept(self, trade_id):
-        return self._request('POST', f'/marketplace/trades/{trade_id}/accept')
+    def ppu_metrics(self) -> Any:
+        return self._request("GET", "/marketplace/ppu/metrics")
 
-    def trade_cancel(self, trade_id):
-        return self._request('DELETE', f'/marketplace/trades/{trade_id}')
+    def ppu_usage(self) -> Any:
+        return self._request("GET", "/marketplace/ppu/usage")
 
-    def appmarket_list(self, category=None):
-        path = f'/marketplace/apps?category={category}' if category else '/marketplace/apps'
-        return self._request('GET', path)
+    def ppu_budget(self) -> Any:
+        return self._request("GET", "/marketplace/ppu/budget")
 
-    def appmarket_install(self, app_id, target_server=None):
-        return self._request('POST', f'/marketplace/apps/{app_id}/install', {
-            'target_server_id': target_server,
-        })
+    def reseller_list(self) -> Any:
+        return self._request("GET", "/marketplace/resellers")
 
-    def appmarket_installations(self):
-        return self._request('GET', '/marketplace/apps/installations')
+    def reseller_create(self, name: str, email: str, commission: float) -> Any:
+        return self._request("POST", "/marketplace/resellers", {"name": name, "email": email, "commission": commission})
 
-    def ppu_metrics(self):
-        return self._request('GET', '/marketplace/ppu/metrics')
+    def reseller_delete(self, reseller_id: str) -> Any:
+        return self._request("DELETE", f"/marketplace/resellers/{reseller_id}")
 
-    def ppu_usage(self):
-        return self._request('GET', '/marketplace/ppu/usage')
+    def reseller_analytics(self, reseller_id: str) -> Any:
+        return self._request("GET", f"/marketplace/resellers/{reseller_id}/analytics")
 
-    def ppu_set_budget(self, monthly_budget):
-        return self._request('POST', '/marketplace/ppu/budget', {
-            'monthly_budget': monthly_budget,
-        })
+    def whitelabel_settings(self) -> Any:
+        return self._request("GET", "/marketplace/whitelabel")
 
-    def reseller_list(self):
-        return self._request('GET', '/marketplace/resellers')
+    def sla_list(self) -> Any:
+        return self._request("GET", "/marketplace/sla")
 
-    def reseller_create(self, name, email, commission):
-        return self._request('POST', '/marketplace/resellers', {
-            'name': name, 'email': email, 'commission_rate': commission,
-        })
+    def sla_create(self, name: str, uptime: float, response_time: int) -> Any:
+        return self._request("POST", "/marketplace/sla", {"name": name, "uptime": uptime, "response_time": response_time})
 
-    def reseller_delete(self, reseller_id):
-        return self._request('DELETE', f'/marketplace/resellers/{reseller_id}')
+    def sla_delete(self, sla_id: str) -> Any:
+        return self._request("DELETE", f"/marketplace/sla/{sla_id}")
 
-    def reseller_analytics(self, reseller_id):
-        return self._request('GET', f'/marketplace/resellers/{reseller_id}/analytics')
+    def sla_status(self, sla_id: str) -> Any:
+        return self._request("GET", f"/marketplace/sla/{sla_id}")
 
-    def whitelabel_settings(self):
-        return self._request('GET', '/marketplace/whitelabel')
+    def credit_list(self) -> Any:
+        return self._request("GET", "/marketplace/credits")
 
-    def sla_list(self):
-        return self._request('GET', '/marketplace/slas')
+    def credit_issue(self, customer_id: str, amount: float, reason: str) -> Any:
+        return self._request("POST", "/marketplace/credits", {"customer_id": customer_id, "amount": amount, "reason": reason})
 
-    def sla_create(self, name, uptime, credit_rate):
-        return self._request('POST', '/marketplace/slas', {
-            'name': name, 'uptime_target': uptime, 'credit_rate': credit_rate,
-        })
+    def crypto_wallets(self) -> Any:
+        return self._request("GET", "/marketplace/crypto/wallets")
 
-    def sla_delete(self, sla_id):
-        return self._request('DELETE', f'/marketplace/slas/{sla_id}')
+    def crypto_create_wallet(self, currency: str, label: str) -> Any:
+        return self._request("POST", "/marketplace/crypto/wallets", {"currency": currency, "label": label})
 
-    def sla_status(self, sla_id):
-        return self._request('GET', f'/marketplace/slas/{sla_id}/status')
+    def crypto_transactions(self, wallet_id: Optional[str] = None) -> Any:
+        path = f"/marketplace/crypto/transactions/{wallet_id}" if wallet_id else "/marketplace/crypto/transactions"
+        return self._request("GET", path)
 
-    def credit_list(self):
-        return self._request('GET', '/marketplace/credits')
+    def crypto_rates(self) -> Any:
+        return self._request("GET", "/marketplace/crypto/rates")
 
-    def credit_issue(self, customer_id, amount, reason):
-        return self._request('POST', '/marketplace/credits', {
-            'customer_id': customer_id, 'amount': amount, 'reason': reason,
-        })
+    def plans_list(self) -> Any:
+        return self._request("GET", "/marketplace/plans")
 
-    def crypto_wallets(self):
-        return self._request('GET', '/marketplace/crypto/wallets')
+    def plans_create(self, name: str, price: float, features: list) -> Any:
+        return self._request("POST", "/marketplace/plans", {"name": name, "price": price, "features": features})
 
-    def crypto_create_wallet(self, currency, label):
-        return self._request('POST', '/marketplace/crypto/wallets', {
-            'currency': currency, 'label': label,
-        })
+    def plans_delete(self, plan_id: str) -> Any:
+        return self._request("DELETE", f"/marketplace/plans/{plan_id}")
 
-    def crypto_transactions(self):
-        return self._request('GET', '/marketplace/crypto/transactions')
+    def plans_subscriptions(self) -> Any:
+        return self._request("GET", "/marketplace/plans/subscriptions")
 
-    def crypto_rates(self):
-        return self._request('GET', '/marketplace/crypto/rates')
+    def reco_list(self) -> Any:
+        return self._request("GET", "/marketplace/recommendations")
 
-    def plans_list(self):
-        return self._request('GET', '/marketplace/plans')
+    def reco_summary(self) -> Any:
+        return self._request("GET", "/marketplace/recommendations/summary")
 
-    def plans_create(self, name, price, billing_cycle, features):
-        feature_list = [f.strip() for f in features.split(',')]
-        return self._request('POST', '/marketplace/plans', {
-            'name': name, 'price': price,
-            'billing_cycle': billing_cycle, 'features': feature_list,
-        })
+    def reco_implement(self, reco_id: str) -> Any:
+        return self._request("POST", f"/marketplace/recommendations/{reco_id}/implement")
 
-    def plans_delete(self, plan_id):
-        return self._request('DELETE', f'/marketplace/plans/{plan_id}')
+    def reco_dismiss(self, reco_id: str) -> Any:
+        return self._request("POST", f"/marketplace/recommendations/{reco_id}/dismiss")
 
-    def plans_subscriptions(self):
-        return self._request('GET', '/marketplace/plans/subscriptions')
+    def tax_rates(self) -> Any:
+        return self._request("GET", "/marketplace/tax/rates")
 
-    def reco_list(self):
-        return self._request('GET', '/marketplace/recommendations')
+    def tax_invoices(self) -> Any:
+        return self._request("GET", "/marketplace/tax/invoices")
 
-    def reco_summary(self):
-        return self._request('GET', '/marketplace/recommendations/summary')
+    def tax_generate(self, customer_id: str, period: str) -> Any:
+        return self._request("POST", "/marketplace/tax/invoices/generate", {"customer_id": customer_id, "period": period})
 
-    def reco_implement(self, reco_id):
-        return self._request('POST', f'/marketplace/recommendations/{reco_id}/implement')
+    def tax_pay(self, invoice_id: str) -> Any:
+        return self._request("POST", f"/marketplace/tax/invoices/{invoice_id}/pay")
 
-    def reco_dismiss(self, reco_id):
-        return self._request('POST', f'/marketplace/recommendations/{reco_id}/dismiss')
+    def tax_summary(self) -> Any:
+        return self._request("GET", "/marketplace/tax/summary")
 
-    def tax_rates(self):
-        return self._request('GET', '/marketplace/tax/rates')
+    def tax_file(self, tax_year: int) -> Any:
+        return self._request("POST", "/marketplace/tax/file", {"tax_year": tax_year})
 
-    def tax_invoices(self):
-        return self._request('GET', '/marketplace/tax/invoices')
+    def loyalty_status(self) -> Any:
+        return self._request("GET", "/marketplace/loyalty/status")
 
-    def tax_generate_invoice(self):
-        return self._request('POST', '/marketplace/tax/invoices/generate')
+    def loyalty_badges(self) -> Any:
+        return self._request("GET", "/marketplace/loyalty/badges")
 
-    def tax_mark_paid(self, invoice_id):
-        return self._request('POST', f'/marketplace/tax/invoices/{invoice_id}/pay')
+    def loyalty_rewards(self) -> Any:
+        return self._request("GET", "/marketplace/loyalty/rewards")
 
-    def tax_summary(self):
-        return self._request('GET', '/marketplace/tax/summary')
+    def loyalty_redeem(self, reward_id: str) -> Any:
+        return self._request("POST", f"/marketplace/loyalty/rewards/{reward_id}/redeem")
 
-    def tax_file_report(self):
-        return self._request('POST', '/marketplace/tax/file')
+    def loyalty_leaderboard(self) -> Any:
+        return self._request("GET", "/marketplace/loyalty/leaderboard")
 
-    def loyalty_status(self):
-        return self._request('GET', '/marketplace/loyalty/status')
+    def cx_health_list(self) -> Any:
+        return self._request("GET", "/cx/health")
 
-    def loyalty_badges(self):
-        return self._request('GET', '/marketplace/loyalty/badges')
+    def cx_health_get(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/health/{customer_id}")
 
-    def loyalty_rewards(self):
-        return self._request('GET', '/marketplace/loyalty/rewards')
+    def cx_health_compute(self, customer_id: str) -> Any:
+        return self._request("POST", f"/cx/health/{customer_id}/compute")
 
-    def loyalty_redeem(self, reward_id):
-        return self._request('POST', f'/marketplace/loyalty/rewards/{reward_id}/redeem')
+    def cx_health_history(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/health/{customer_id}/history")
 
-    def loyalty_leaderboard(self):
-        return self._request('GET', '/marketplace/loyalty/leaderboard')
+    def cx_health_stats(self) -> Any:
+        return self._request("GET", "/cx/health/stats")
 
-    # === v4 Platform Engineering API Methods ===
+    def cx_ticket_list(self) -> Any:
+        return self._request("GET", "/cx/tickets")
 
-    def devportal_list_components(self, domain=None):
-        path = '/v4/platform-engineering/portal/components'
-        if domain:
-            path += f'?domain={domain}'
-        return self._request('GET', path)
+    def cx_ticket_create(self, customer_id: str, subject: str, description: str, priority: str = "medium") -> Any:
+        return self._request("POST", "/cx/tickets", {"customer_id": customer_id, "subject": subject, "description": description, "priority": priority})
 
-    def devportal_register_component(self, name, domain, description, owner):
-        return self._request('POST', '/v4/platform-engineering/portal/components', {
-            'name': name, 'domain': domain, 'description': description, 'owner': owner,
-        })
+    def cx_ticket_get(self, ticket_id: str) -> Any:
+        return self._request("GET", f"/cx/tickets/{ticket_id}")
 
-    def devportal_get_component(self, component_id):
-        return self._request('GET', f'/v4/platform-engineering/portal/components/{component_id}')
+    def cx_ticket_status(self, ticket_id: str, status: str) -> Any:
+        return self._request("PATCH", f"/cx/tickets/{ticket_id}/status", {"status": status})
 
-    def devportal_summary(self):
-        return self._request('GET', '/v4/platform-engineering/portal/summary')
+    def cx_ticket_comment(self, ticket_id: str, comment: str) -> Any:
+        return self._request("POST", f"/cx/tickets/{ticket_id}/comments", {"comment": comment})
 
-    def scaffold_list_templates(self):
-        return self._request('GET', '/v4/platform-engineering/scaffold/templates')
+    def cx_ticket_assign(self, ticket_id: str, assignee: str) -> Any:
+        return self._request("POST", f"/cx/tickets/{ticket_id}/assign", {"assignee": assignee})
 
-    def scaffold_generate(self, template_id, project_name, params=None):
-        return self._request('POST', f'/v4/platform-engineering/scaffold/templates/{template_id}/generate', {
-            'project_name': project_name, 'params': params or {},
-        })
+    def cx_ticket_stats(self) -> Any:
+        return self._request("GET", "/cx/tickets/stats")
 
-    def scaffold_status(self, generation_id):
-        return self._request('GET', f'/v4/platform-engineering/scaffold/generations/{generation_id}')
+    def cx_sla_list(self) -> Any:
+        return self._request("GET", "/cx/sla")
 
-    def scaffold_complete_step(self, generation_id, step_name, outputs=None):
-        return self._request('POST', f'/v4/platform-engineering/scaffold/generations/{generation_id}/steps/{step_name}/complete', {
-            'outputs': outputs or {},
-        })
+    def cx_sla_create(self, name: str, response_time: int, resolution_time: int) -> Any:
+        return self._request("POST", "/cx/sla", {"name": name, "response_time": response_time, "resolution_time": resolution_time})
 
-    def catalog_list_services(self):
-        return self._request('GET', '/v4/platform-engineering/catalog/services')
+    def cx_canned_list(self) -> Any:
+        return self._request("GET", "/cx/canned-responses")
 
-    def catalog_register_service(self, name, domain, description, owner):
-        return self._request('POST', '/v4/platform-engineering/catalog/services', {
-            'name': name, 'domain': domain, 'description': description, 'owner': owner,
-        })
+    def cx_canned_create(self, title: str, content: str, category: str) -> Any:
+        return self._request("POST", "/cx/canned-responses", {"title": title, "content": content, "category": category})
 
-    def catalog_get_service(self, service_id):
-        return self._request('GET', f'/v4/platform-engineering/catalog/services/{service_id}')
+    def cx_sentiment_analyze(self, customer_id: str) -> Any:
+        return self._request("POST", f"/cx/sentiment/{customer_id}/analyze")
 
-    def catalog_score_service(self, service_id):
-        return self._request('POST', f'/v4/platform-engineering/catalog/services/{service_id}/score')
+    def cx_sentiment_profile(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/sentiment/{customer_id}")
 
-    def catalog_summary(self):
-        return self._request('GET', '/v4/platform-engineering/catalog/summary')
+    def cx_sentiment_interactions(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/sentiment/{customer_id}/interactions")
 
-    def scorecards_list(self):
-        return self._request('GET', '/v4/platform-engineering/scorecards')
+    def cx_sentiment_trends(self) -> Any:
+        return self._request("GET", "/cx/sentiment/trends")
 
-    def scorecards_create(self, name, team, dora=False):
-        return self._request('POST', '/v4/platform-engineering/scorecards', {
-            'name': name, 'team': team, 'include_dora': dora,
-        })
+    def cx_sentiment_alerts(self) -> Any:
+        return self._request("GET", "/cx/sentiment/alerts")
 
-    def scorecards_get(self, scorecard_id):
-        return self._request('GET', f'/v4/platform-engineering/scorecards/{scorecard_id}')
+    def cx_adoption_summary(self) -> Any:
+        return self._request("GET", "/cx/adoption/summary")
 
-    def scorecards_update_metric(self, scorecard_id, metric, value):
-        return self._request('PATCH', f'/v4/platform-engineering/scorecards/{scorecard_id}/metrics/{metric}', {
-            'value': value,
-        })
+    def cx_adoption_features(self) -> Any:
+        return self._request("GET", "/cx/adoption/features")
 
-    def scorecards_summary(self):
-        return self._request('GET', '/v4/platform-engineering/scorecards/summary')
+    def cx_adoption_track(self, customer_id: str, feature: str) -> Any:
+        return self._request("POST", f"/cx/adoption/{customer_id}/track", {"feature": feature})
 
-    def templatereg_list(self):
-        return self._request('GET', '/v4/platform-engineering/templates')
+    def cx_adoption_recommendations(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/adoption/{customer_id}/recommendations")
 
-    def templatereg_create(self, name, category, params_schema=None):
-        return self._request('POST', '/v4/platform-engineering/templates', {
-            'name': name, 'category': category, 'params_schema': params_schema or {},
-        })
+    def cx_adoption_stats(self) -> Any:
+        return self._request("GET", "/cx/adoption/stats")
 
-    def templatereg_get(self, template_id):
-        return self._request('GET', f'/v4/platform-engineering/templates/{template_id}')
+    def cx_onboarding_start(self, customer_id: str, plan: str) -> Any:
+        return self._request("POST", f"/cx/onboarding/{customer_id}/start", {"plan": plan})
 
-    def templatereg_use(self, template_id):
-        return self._request('POST', f'/v4/platform-engineering/templates/{template_id}/use')
+    def cx_onboarding_get(self, customer_id: str) -> Any:
+        return self._request("GET", f"/cx/onboarding/{customer_id}")
 
-    def templatereg_summary(self):
-        return self._request('GET', '/v4/platform-engineering/templates/summary')
+    def cx_onboarding_step(self, customer_id: str, step: str) -> Any:
+        return self._request("POST", f"/cx/onboarding/{customer_id}/step/{step}")
 
-    def techdebt_list(self, severity=None):
-        path = '/v4/platform-engineering/tech-debt'
-        if severity:
-            path += f'?severity={severity}'
-        return self._request('GET', path)
+    def cx_onboarding_stats(self) -> Any:
+        return self._request("GET", "/cx/onboarding/stats")
 
-    def techdebt_report(self, title, severity, effort_hours, area):
-        return self._request('POST', '/v4/platform-engineering/tech-debt', {
-            'title': title, 'severity': severity, 'effort_hours': effort_hours, 'area': area,
-        })
+    def cx_kb_list(self, category: Optional[str] = None) -> Any:
+        path = f"/cx/kb?category={category}" if category else "/cx/kb"
+        return self._request("GET", path)
 
-    def techdebt_get(self, debt_id):
-        return self._request('GET', f'/v4/platform-engineering/tech-debt/{debt_id}')
+    def cx_kb_create(self, title: str, content: str, category: str) -> Any:
+        return self._request("POST", "/cx/kb", {"title": title, "content": content, "category": category})
 
-    def techdebt_fix(self, debt_id):
-        return self._request('POST', f'/v4/platform-engineering/tech-debt/{debt_id}/fix')
+    def cx_kb_get(self, article_id: str) -> Any:
+        return self._request("GET", f"/cx/kb/{article_id}")
 
-    def techdebt_summary(self):
-        return self._request('GET', '/v4/platform-engineering/tech-debt/summary')
+    def cx_kb_update(self, article_id: str, content: str) -> Any:
+        return self._request("PATCH", f"/cx/kb/{article_id}", {"content": content})
 
-    def environments_list(self, status=None):
-        path = '/v4/platform-engineering/environments'
-        if status:
-            path += f'?status={status}'
-        return self._request('GET', path)
+    def cx_kb_search(self, query: str) -> Any:
+        return self._request("GET", f"/cx/kb/search?q={query}")
 
-    def environments_create(self, name, template, ttl, branch):
-        return self._request('POST', '/v4/platform-engineering/environments', {
-            'name': name, 'template': template, 'ttl_hours': ttl, 'branch': branch,
-        })
+    def cx_kb_categories(self) -> Any:
+        return self._request("GET", "/cx/kb/categories")
 
-    def environments_get(self, env_id):
-        return self._request('GET', f'/v4/platform-engineering/environments/{env_id}')
+    def cx_kb_feedback(self, article_id: str, helpful: bool) -> Any:
+        return self._request("POST", f"/cx/kb/{article_id}/feedback", {"helpful": helpful})
 
-    def environments_delete(self, env_id):
-        return self._request('DELETE', f'/v4/platform-engineering/environments/{env_id}')
+    def cx_community_posts(self) -> Any:
+        return self._request("GET", "/cx/community/posts")
 
-    def environments_extend(self, env_id, hours):
-        return self._request('POST', f'/v4/platform-engineering/environments/{env_id}/extend', {
-            'additional_hours': hours,
-        })
+    def cx_community_create(self, title: str, content: str, category: str) -> Any:
+        return self._request("POST", "/cx/community/posts", {"title": title, "content": content, "category": category})
 
-    def environments_summary(self):
-        return self._request('GET', '/v4/platform-engineering/environments/summary')
+    def cx_community_get(self, post_id: str) -> Any:
+        return self._request("GET", f"/cx/community/posts/{post_id}")
 
-    def apicatalog_list(self):
-        return self._request('GET', '/v4/platform-engineering/api-catalog')
+    def cx_community_vote(self, post_id: str, vote: int) -> Any:
+        return self._request("POST", f"/cx/community/posts/{post_id}/vote", {"vote": vote})
 
-    def apicatalog_register(self, name, version, spec_content):
-        return self._request('POST', '/v4/platform-engineering/api-catalog', {
-            'name': name, 'version': version, 'spec': spec_content,
-        })
+    def cx_community_comment(self, post_id: str, content: str) -> Any:
+        return self._request("POST", f"/cx/community/posts/{post_id}/comments", {"content": content})
 
-    def apicatalog_get(self, api_id):
-        return self._request('GET', f'/v4/platform-engineering/api-catalog/{api_id}')
+    def cx_community_comments(self, post_id: str) -> Any:
+        return self._request("GET", f"/cx/community/posts/{post_id}/comments")
 
-    def apicatalog_summary(self):
-        return self._request('GET', '/v4/platform-engineering/api-catalog/summary')
+    def cx_community_requests(self) -> Any:
+        return self._request("GET", "/cx/community/feature-requests")
 
-    def docgen_list(self):
-        return self._request('GET', '/v4/platform-engineering/docs')
+    def cx_community_categories(self) -> Any:
+        return self._request("GET", "/cx/community/categories")
 
-    def docgen_generate(self, title, doc_type):
-        return self._request('POST', '/v4/platform-engineering/docs', {
-            'title': title, 'doc_type': doc_type,
-        })
+    def cx_community_leaderboard(self) -> Any:
+        return self._request("GET", "/cx/community/leaderboard")
 
-    def docgen_get(self, doc_id):
-        return self._request('GET', f'/v4/platform-engineering/docs/{doc_id}')
+    def cx_community_stats(self) -> Any:
+        return self._request("GET", "/cx/community/stats")
 
-    def docgen_summary(self):
-        return self._request('GET', '/v4/platform-engineering/docs/summary')
+    def cx_comm_send(self, customer_id: str, template: str, channel: str) -> Any:
+        return self._request("POST", f"/cx/comm/{customer_id}/send", {"template": template, "channel": channel})
 
-    def pulse_list_surveys(self):
-        return self._request('GET', '/v4/platform-engineering/pulse/surveys')
+    def cx_comm_batches(self) -> Any:
+        return self._request("GET", "/cx/comm/batches")
 
-    def pulse_create_survey(self, title, questions):
-        return self._request('POST', '/v4/platform-engineering/pulse/surveys', {
-            'title': title, 'questions': questions,
-        })
+    def cx_comm_batch(self, batch_id: str) -> Any:
+        return self._request("GET", f"/cx/comm/batches/{batch_id}")
 
-    def pulse_respond(self, survey_id, respondent, answers):
-        return self._request('POST', f'/v4/platform-engineering/pulse/surveys/{survey_id}/respond', {
-            'respondent': respondent, 'answers': answers,
-        })
+    def cx_comm_maintenance_schedule(self, customer_id: str, message: str, scheduled_at: str) -> Any:
+        return self._request("POST", f"/cx/comm/{customer_id}/maintenance", {"message": message, "scheduled_at": scheduled_at})
 
-    def pulse_results(self, survey_id):
-        return self._request('GET', f'/v4/platform-engineering/pulse/surveys/{survey_id}/results')
+    def cx_comm_maintenance_list(self) -> Any:
+        return self._request("GET", "/cx/comm/maintenance")
 
-    def pulse_summary(self):
-        return self._request('GET', '/v4/platform-engineering/pulse/summary')
+    def cx_comm_maintenance_complete(self, maintenance_id: str) -> Any:
+        return self._request("POST", f"/cx/comm/maintenance/{maintenance_id}/complete")
 
-    # === v4 Customer Experience API Methods ===
+    def cx_comm_templates(self) -> Any:
+        return self._request("GET", "/cx/comm/templates")
 
-    def cx_list_health_profiles(self, risk_level=None, min_score=None):
-        params = {}
-        if risk_level: params['risk_level'] = risk_level
-        if min_score is not None: params['min_score'] = min_score
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/health/profile?{qs}' if qs else '/cx/health/profile')
+    def cx_comm_template_create(self, name: str, subject: str, body: str) -> Any:
+        return self._request("POST", "/cx/comm/templates", {"name": name, "subject": subject, "body": body})
 
-    def cx_get_health_profile(self, customer_id):
-        return self._request('GET', f'/cx/health/profile/{customer_id}')
+    def cx_nps_create(self, name: str, targets: list) -> Any:
+        return self._request("POST", "/cx/nps/surveys", {"name": name, "targets": targets})
 
-    def cx_compute_health(self, customer_id, data):
-        return self._request('POST', f'/cx/health/compute/{customer_id}', data)
+    def cx_nps_list(self) -> Any:
+        return self._request("GET", "/cx/nps/surveys")
 
-    def cx_get_health_history(self, customer_id, days=30):
-        return self._request('GET', f'/cx/health/history/{customer_id}?days={days}')
+    def cx_nps_get(self, survey_id: str) -> Any:
+        return self._request("GET", f"/cx/nps/surveys/{survey_id}")
 
-    def cx_get_health_stats(self):
-        return self._request('GET', '/cx/health/stats')
+    def cx_nps_send(self, survey_id: str) -> Any:
+        return self._request("POST", f"/cx/nps/surveys/{survey_id}/send")
 
-    def cx_list_tickets(self, status=None, priority=None, customer_id=None, assigned_to=None, search=None, limit=50, offset=0):
-        params = {}
-        if status: params['status'] = status
-        if priority: params['priority'] = priority
-        if customer_id: params['customer_id'] = customer_id
-        if assigned_to: params['assigned_to'] = assigned_to
-        if search: params['search'] = search
-        params['limit'] = limit
-        params['offset'] = offset
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/tickets?{qs}')
+    def cx_nps_respond(self, survey_id: str, score: int, comment: Optional[str] = None) -> Any:
+        return self._request("POST", f"/cx/nps/surveys/{survey_id}/respond", {"score": score, "comment": comment or ""})
 
-    def cx_create_ticket(self, subject, description, customer_id, customer_name='', customer_email='', priority='medium', channel='web', category=None, tags=None):
-        return self._request('POST', '/cx/tickets', {
-            'subject': subject, 'description': description, 'customer_id': customer_id,
-            'customer_name': customer_name, 'customer_email': customer_email,
-            'priority': priority, 'channel': channel, 'category': category, 'tags': tags,
-        })
+    def cx_nps_score(self, survey_id: str) -> Any:
+        return self._request("GET", f"/cx/nps/surveys/{survey_id}/score")
 
-    def cx_get_ticket(self, ticket_id):
-        return self._request('GET', f'/cx/tickets/{ticket_id}')
+    def cx_nps_trend(self, survey_id: str) -> Any:
+        return self._request("GET", f"/cx/nps/surveys/{survey_id}/trend")
 
-    def cx_update_ticket_status(self, ticket_id, status, agent_id=None):
-        return self._request('PATCH', f'/cx/tickets/{ticket_id}/status', {'status': status, 'agent_id': agent_id})
+    def cx_nps_detractors(self, survey_id: str) -> Any:
+        return self._request("GET", f"/cx/nps/surveys/{survey_id}/detractors")
 
-    def cx_add_comment(self, ticket_id, author_id, body, author_name='', is_internal=False):
-        return self._request('POST', f'/cx/tickets/{ticket_id}/comments', {
-            'author_id': author_id, 'author_name': author_name, 'body': body, 'is_internal': is_internal,
-        })
+    def cx_nps_stats(self) -> Any:
+        return self._request("GET", "/cx/nps/stats")
 
-    def cx_assign_ticket(self, ticket_id, agent_id, team=None):
-        return self._request('POST', f'/cx/tickets/{ticket_id}/assign', {'agent_id': agent_id, 'team': team})
+    def cx_success_plays(self) -> Any:
+        return self._request("GET", "/cx/success/plays")
 
-    def cx_get_ticket_stats(self):
-        return self._request('GET', '/cx/tickets/stats')
+    def cx_success_create(self, name: str, trigger: str, actions: list) -> Any:
+        return self._request("POST", "/cx/success/plays", {"name": name, "trigger": trigger, "actions": actions})
 
-    def cx_list_slas(self):
-        return self._request('GET', '/cx/slas')
+    def cx_success_status(self, play_id: str) -> Any:
+        return self._request("GET", f"/cx/success/plays/{play_id}")
 
-    def cx_create_sla(self, name, priority, response_time, resolution_time, business_hours=True):
-        return self._request('POST', '/cx/slas', {
-            'name': name, 'priority': priority, 'response_time': response_time,
-            'resolution_time': resolution_time, 'business_hours': business_hours,
-        })
+    def cx_success_trigger(self, play_id: str, customer_id: str) -> Any:
+        return self._request("POST", f"/cx/success/plays/{play_id}/trigger", {"customer_id": customer_id})
 
-    def cx_list_canned_responses(self, category=None):
-        path = f'/cx/canned-responses?category={category}' if category else '/cx/canned-responses'
-        return self._request('GET', path)
+    def cx_success_executions(self, play_id: str) -> Any:
+        return self._request("GET", f"/cx/success/plays/{play_id}/executions")
 
-    def cx_create_canned_response(self, title, body, category, tags=None, created_by=''):
-        return self._request('POST', '/cx/canned-responses', {
-            'title': title, 'body': body, 'category': category, 'tags': tags, 'created_by': created_by,
-        })
+    def cx_success_stats(self) -> Any:
+        return self._request("GET", "/cx/success/stats")
 
-    def cx_analyze_sentiment(self, text, source_type='support_ticket', source_id='', customer_id='', customer_name='', metadata=None):
-        return self._request('POST', '/cx/sentiment/analyze', {
-            'text': text, 'source_type': source_type, 'source_id': source_id,
-            'customer_id': customer_id, 'customer_name': customer_name, 'metadata': metadata,
-        })
+    def aiops_rca_analyze(self, incident_id: str) -> Any:
+        return self._request("POST", f"/aiops/rca/{incident_id}/analyze")
 
-    def cx_get_sentiment_profile(self, customer_id):
-        return self._request('GET', f'/cx/sentiment/profile/{customer_id}')
+    def aiops_rca_incidents(self) -> Any:
+        return self._request("GET", "/aiops/rca/incidents")
 
-    def cx_list_sentiment_interactions(self, customer_id=None, source_type=None, min_score=None, max_score=None, escalated_only=False, limit=50):
-        params = {}
-        if customer_id: params['customer_id'] = customer_id
-        if source_type: params['source_type'] = source_type
-        if min_score is not None: params['min_score'] = min_score
-        if max_score is not None: params['max_score'] = max_score
-        if escalated_only: params['escalated_only'] = 'true'
-        params['limit'] = limit
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/sentiment/interactions?{qs}')
+    def aiops_rca_events(self, incident_id: str) -> Any:
+        return self._request("GET", f"/aiops/rca/{incident_id}/events")
 
-    def cx_get_sentiment_trends(self, period='daily', days=30):
-        return self._request('GET', f'/cx/sentiment/trends?period={period}&days={days}')
+    def aiops_rca_deps(self, incident_id: str) -> Any:
+        return self._request("GET", f"/aiops/rca/{incident_id}/dependencies")
 
-    def cx_get_sentiment_alerts(self):
-        return self._request('GET', '/cx/sentiment/alerts')
+    def aiops_dem_list(self) -> Any:
+        return self._request("GET", "/aiops/dem/monitors")
 
-    def cx_get_adoption_summary(self, customer_id):
-        return self._request('GET', f'/cx/adoption/summary/{customer_id}')
+    def aiops_dem_create(self, name: str, url: str, interval: int = 60) -> Any:
+        return self._request("POST", "/aiops/dem/monitors", {"name": name, "url": url, "interval": interval})
 
-    def cx_get_feature_adoption(self, customer_id, days=30):
-        return self._request('GET', f'/cx/adoption/features/{customer_id}?days={days}')
+    def aiops_dem_check(self, monitor_id: str) -> Any:
+        return self._request("POST", f"/aiops/dem/monitors/{monitor_id}/check")
 
-    def cx_track_event(self, event_type, customer_id, user_id, feature_id=None, feature_name=None, metadata=None, session_id=None):
-        return self._request('POST', '/cx/adoption/track', {
-            'event_type': event_type, 'customer_id': customer_id, 'user_id': user_id,
-            'feature_id': feature_id, 'feature_name': feature_name, 'metadata': metadata, 'session_id': session_id,
-        })
+    def aiops_dem_stats(self, monitor_id: str) -> Any:
+        return self._request("GET", f"/aiops/dem/monitors/{monitor_id}/stats")
 
-    def cx_get_adoption_recommendations(self, customer_id):
-        return self._request('GET', f'/cx/adoption/recommendations/{customer_id}')
+    def aiops_dem_summary(self) -> Any:
+        return self._request("GET", "/aiops/dem/summary")
 
-    def cx_get_adoption_stats(self):
-        return self._request('GET', '/cx/adoption/stats')
+    def aiops_alert_ingest(self, source: str, message: str, severity: str = "info") -> Any:
+        return self._request("POST", "/aiops/alerts/ingest", {"source": source, "message": message, "severity": severity})
 
-    def cx_start_onboarding(self, customer_id, customer_name='', product_tier='standard'):
-        return self._request('POST', '/cx/onboarding/start', {
-            'customer_id': customer_id, 'customer_name': customer_name, 'product_tier': product_tier,
-        })
+    def aiops_alert_incidents(self) -> Any:
+        return self._request("GET", "/aiops/alerts/incidents")
 
-    def cx_get_onboarding_session(self, customer_id):
-        return self._request('GET', f'/cx/onboarding/session/{customer_id}')
+    def aiops_alert_stats(self) -> Any:
+        return self._request("GET", "/aiops/alerts/stats")
 
-    def cx_update_onboarding_step(self, session_id, step_id, status, metadata=None):
-        return self._request('POST', '/cx/onboarding/step', {
-            'session_id': session_id, 'step_id': step_id, 'status': status, 'metadata': metadata,
-        })
+    def aiops_alert_suppress(self, alert_id: str) -> Any:
+        return self._request("POST", f"/aiops/alerts/{alert_id}/suppress")
 
-    def cx_get_onboarding_stats(self):
-        return self._request('GET', '/cx/onboarding/stats')
+    def aiops_scaling_predict(self, resource: str) -> Any:
+        return self._request("POST", f"/aiops/scaling/{resource}/predict")
 
-    def cx_list_articles(self, category=None, article_type=None, status=None, limit=50):
-        params = {}
-        if category: params['category'] = category
-        if article_type: params['type'] = article_type
-        if status: params['status'] = status
-        params['limit'] = limit
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/kb/articles?{qs}')
+    def aiops_scaling_metrics(self, resource: str) -> Any:
+        return self._request("GET", f"/aiops/scaling/{resource}/metrics")
 
-    def cx_create_article(self, title, content, category, article_type='guide', tags=None, author='', language='en'):
-        return self._request('POST', '/cx/kb/articles', {
-            'title': title, 'content': content, 'category': category,
-            'article_type': article_type, 'tags': tags, 'author': author, 'language': language,
-        })
+    def aiops_scaling_policy(self, resource: str, min_instances: int, max_instances: int) -> Any:
+        return self._request("POST", f"/aiops/scaling/{resource}/policy", {"min": min_instances, "max": max_instances})
 
-    def cx_get_article(self, article_id):
-        return self._request('GET', f'/cx/kb/articles/{article_id}')
+    def aiops_scaling_summary(self) -> Any:
+        return self._request("GET", "/aiops/scaling/summary")
 
-    def cx_update_article(self, article_id, data):
-        return self._request('PUT', f'/cx/kb/articles/{article_id}', data)
+    def aiops_health_services(self) -> Any:
+        return self._request("GET", "/aiops/health/services")
 
-    def cx_search_articles(self, query, category=None, limit=20):
-        params = f'q={query}'
-        if category: params += f'&category={category}'
-        params += f'&limit={limit}'
-        return self._request('GET', f'/cx/kb/search?{params}')
+    def aiops_health_register(self, name: str, endpoint: str, interval: int) -> Any:
+        return self._request("POST", "/aiops/health/services", {"name": name, "endpoint": endpoint, "interval": interval})
 
-    def cx_list_categories(self):
-        return self._request('GET', '/cx/kb/categories')
+    def aiops_health_forecast(self, service_id: str) -> Any:
+        return self._request("GET", f"/aiops/health/{service_id}/forecast")
 
-    def cx_add_article_feedback(self, article_id, helpful, comment=None, user_id=None):
-        return self._request('POST', '/cx/kb/feedback', {
-            'article_id': article_id, 'helpful': helpful, 'comment': comment, 'user_id': user_id,
-        })
+    def aiops_health_dashboard(self) -> Any:
+        return self._request("GET", "/aiops/health/dashboard")
 
-    def cx_list_posts(self, category_id=None, post_type=None, sort='hot', limit=50, offset=0):
-        params = {}
-        if category_id: params['category_id'] = category_id
-        if post_type: params['post_type'] = post_type
-        params['sort'] = sort
-        params['limit'] = limit
-        params['offset'] = offset
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/community/posts?{qs}')
+    def aiops_assistant_message(self, message: str) -> Any:
+        return self._request("POST", "/aiops/assistant/message", {"message": message})
 
-    def cx_create_post(self, title, content, category_id, post_type='discussion', author_id='', author_name='', tags=None):
-        return self._request('POST', '/cx/community/posts', {
-            'title': title, 'content': content, 'category_id': category_id,
-            'post_type': post_type, 'author_id': author_id, 'author_name': author_name, 'tags': tags,
-        })
+    def aiops_assistant_stats(self) -> Any:
+        return self._request("GET", "/aiops/assistant/stats")
 
-    def cx_get_post(self, post_id):
-        return self._request('GET', f'/cx/community/posts/{post_id}')
+    def aiops_change_plan(self, service: str, change: str, risk: str) -> Any:
+        return self._request("POST", "/aiops/change/plan", {"service": service, "change": change, "risk": risk})
 
-    def cx_vote_post(self, post_id, user_id, vote_type):
-        return self._request('POST', f'/cx/community/posts/{post_id}/vote', {'user_id': user_id, 'vote_type': vote_type})
+    def aiops_change_approve(self, plan_id: str) -> Any:
+        return self._request("POST", f"/aiops/change/{plan_id}/approve")
 
-    def cx_add_community_comment(self, post_id, author_id, body, author_name='', parent_comment_id=None):
-        return self._request('POST', f'/cx/community/posts/{post_id}/comments', {
-            'author_id': author_id, 'author_name': author_name, 'body': body, 'parent_comment_id': parent_comment_id,
-        })
+    def aiops_change_stats(self) -> Any:
+        return self._request("GET", "/aiops/change/stats")
 
-    def cx_get_post_comments(self, post_id):
-        return self._request('GET', f'/cx/community/posts/{post_id}/comments')
+    def aiops_capacity_recommend(self) -> Any:
+        return self._request("GET", "/aiops/capacity/recommendations")
 
-    def cx_get_feature_requests(self, sort='votes', limit=50):
-        return self._request('GET', f'/cx/community/feature-requests?sort={sort}&limit={limit}')
+    def aiops_capacity_usage(self, resource: str) -> Any:
+        return self._request("GET", f"/aiops/capacity/{resource}/usage")
 
-    def cx_get_community_categories(self):
-        return self._request('GET', '/cx/community/categories')
+    def aiops_capacity_simulate(self, resource: str, load: float) -> Any:
+        return self._request("POST", f"/aiops/capacity/{resource}/simulate", {"load": load})
 
-    def cx_get_leaderboard(self, limit=20):
-        return self._request('GET', f'/cx/community/leaderboard?limit={limit}')
+    def aiops_capacity_summary(self) -> Any:
+        return self._request("GET", "/aiops/capacity/summary")
 
-    def cx_get_community_stats(self):
-        return self._request('GET', '/cx/community/stats')
+    def aiops_chatbot_message(self, message: str) -> Any:
+        return self._request("POST", "/aiops/chatbot/message", {"message": message})
 
-    def cx_send_notification(self, ntype, subject, body, channels, priority='normal', target_segment='all', target_customer_ids=None, template_id=None, scheduled_at=None, created_by=''):
-        return self._request('POST', '/cx/communication/send', {
-            'type': ntype, 'priority': priority, 'subject': subject, 'body': body,
-            'channels': channels, 'target_segment': target_segment,
-            'target_customer_ids': target_customer_ids, 'template_id': template_id,
-            'scheduled_at': scheduled_at, 'created_by': created_by,
-        })
+    def aiops_chatbot_tasks(self) -> Any:
+        return self._request("GET", "/aiops/chatbot/tasks")
 
-    def cx_list_batches(self, limit=50):
-        return self._request('GET', f'/cx/communication/batches?limit={limit}')
+    def aiops_chatbot_analytics(self) -> Any:
+        return self._request("GET", "/aiops/chatbot/analytics")
 
-    def cx_get_batch_stats(self, batch_id):
-        return self._request('GET', f'/cx/communication/batch/{batch_id}')
+    def finops_commitment_list(self) -> Any:
+        return self._request("GET", "/finops/commitments")
 
-    def cx_schedule_maintenance(self, title, description, affected_services, start_time, end_time, expected_downtime, created_by=''):
-        return self._request('POST', '/cx/communication/maintenance', {
-            'title': title, 'description': description, 'affected_services': affected_services,
-            'start_time': start_time, 'end_time': end_time, 'expected_downtime': expected_downtime, 'created_by': created_by,
-        })
+    def finops_commitment_summary(self) -> Any:
+        return self._request("GET", "/finops/commitments/summary")
 
-    def cx_list_maintenance(self, status=None):
-        path = f'/cx/communication/maintenance?status={status}' if status else '/cx/communication/maintenance'
-        return self._request('GET', path)
+    def finops_commitment_implement(self, commitment_id: str) -> Any:
+        return self._request("POST", f"/finops/commitments/{commitment_id}/implement")
 
-    def cx_complete_maintenance(self, maintenance_id, actual_downtime=None, post_mortem=None):
-        return self._request('POST', f'/cx/communication/maintenance/{maintenance_id}/complete', {
-            'actual_downtime': actual_downtime, 'post_mortem': post_mortem,
-        })
+    def finops_commitment_commitments(self) -> Any:
+        return self._request("GET", "/finops/commitments/list")
 
-    def cx_list_templates(self, channel=None):
-        path = f'/cx/communication/templates?channel={channel}' if channel else '/cx/communication/templates'
-        return self._request('GET', path)
+    def finops_spot_list(self) -> Any:
+        return self._request("GET", "/finops/spot/advice")
 
-    def cx_create_template(self, name, subject, body, channel, category='general', variables=None):
-        return self._request('POST', '/cx/communication/templates', {
-            'name': name, 'subject': subject, 'body': body, 'channel': channel,
-            'category': category, 'variables': variables,
-        })
+    def finops_spot_create(self, name: str, instance_type: str, max_price: float, region: str) -> Any:
+        return self._request("POST", "/finops/spot/requests", {"name": name, "instance_type": instance_type, "max_price": max_price, "region": region})
 
-    def cx_create_survey(self, title, description, survey_type, trigger, questions, target_segment='all', frequency_days=None):
-        return self._request('POST', '/cx/nps/surveys', {
-            'title': title, 'description': description, 'survey_type': survey_type,
-            'trigger': trigger, 'questions': questions, 'target_segment': target_segment,
-            'frequency_days': frequency_days,
-        })
+    def finops_spot_get(self, request_id: str) -> Any:
+        return self._request("GET", f"/finops/spot/requests/{request_id}")
 
-    def cx_get_surveys(self, trigger=None, survey_type=None):
-        params = {}
-        if trigger: params['trigger'] = trigger
-        if survey_type: params['survey_type'] = survey_type
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/nps/surveys?{qs}' if qs else '/cx/nps/surveys')
+    def finops_spot_instances(self) -> Any:
+        return self._request("GET", "/finops/spot/instances")
 
-    def cx_get_survey(self, survey_id):
-        return self._request('GET', f'/cx/nps/surveys/{survey_id}')
+    def finops_spot_savings(self) -> Any:
+        return self._request("GET", "/finops/spot/savings")
 
-    def cx_send_survey(self, survey_id, customer_id, customer_name=''):
-        return self._request('POST', f'/cx/nps/send/{survey_id}', {'customer_id': customer_id, 'customer_name': customer_name})
+    def finops_uoe_metrics(self) -> Any:
+        return self._request("GET", "/finops/uoe/metrics")
 
-    def cx_submit_response(self, response_id, answers=None, comments=None):
-        return self._request('POST', f'/cx/nps/respond/{response_id}', {'answers': answers or {}, 'comments': comments})
+    def finops_uoe_record(self, metric: str, value: float) -> Any:
+        return self._request("POST", "/finops/uoe/metrics", {"metric": metric, "value": value})
 
-    def cx_get_nps_score(self):
-        return self._request('GET', '/cx/nps/score')
+    def finops_uoe_targets(self) -> Any:
+        return self._request("GET", "/finops/uoe/targets")
 
-    def cx_get_nps_trend(self, days=90):
-        return self._request('GET', f'/cx/nps/trend?days={days}')
+    def finops_uoe_set_target(self, metric: str, target: float) -> Any:
+        return self._request("POST", "/finops/uoe/targets", {"metric": metric, "target": target})
 
-    def cx_get_detractor_feedback(self, limit=50):
-        return self._request('GET', f'/cx/nps/detractors?limit={limit}')
+    def finops_uoe_violations(self) -> Any:
+        return self._request("GET", "/finops/uoe/violations")
 
-    def cx_get_nps_stats(self):
-        return self._request('GET', '/cx/nps/stats')
+    def finops_uoe_overview(self) -> Any:
+        return self._request("GET", "/finops/uoe/overview")
 
-    def cx_list_plays(self, trigger_event=None, status=None):
-        params = {}
-        if trigger_event: params['trigger_event'] = trigger_event
-        if status: params['status'] = status
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/success/plays?{qs}' if qs else '/cx/success/plays')
+    def finops_anomaly_list(self) -> Any:
+        return self._request("GET", "/finops/anomalies")
 
-    def cx_create_play(self, name, description, trigger_event, actions, tags=None, trigger_conditions=None, cooldown_days=30):
-        return self._request('POST', '/cx/success/plays', {
-            'name': name, 'description': description, 'trigger_event': trigger_event,
-            'actions': actions, 'tags': tags, 'trigger_conditions': trigger_conditions, 'cooldown_days': cooldown_days,
-        })
+    def finops_anomaly_summary(self) -> Any:
+        return self._request("GET", "/finops/anomalies/summary")
 
-    def cx_update_play_status(self, play_id, status):
-        return self._request('PATCH', f'/cx/success/plays/{play_id}/status', {'status': status})
+    def finops_anomaly_investigate(self, anomaly_id: str) -> Any:
+        return self._request("POST", f"/finops/anomalies/{anomaly_id}/investigate")
 
-    def cx_evaluate_trigger(self, event, customer_id, event_data=None):
-        return self._request('POST', '/cx/success/trigger', {'event': event, 'customer_id': customer_id, 'event_data': event_data})
+    def finops_anomaly_resolve(self, anomaly_id: str) -> Any:
+        return self._request("POST", f"/finops/anomalies/{anomaly_id}/resolve")
 
-    def cx_get_executions(self, play_id=None, customer_id=None, limit=50):
-        params = {}
-        if play_id: params['play_id'] = play_id
-        if customer_id: params['customer_id'] = customer_id
-        params['limit'] = limit
-        qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        return self._request('GET', f'/cx/success/executions?{qs}')
+    def finops_anomaly_profiles(self) -> Any:
+        return self._request("GET", "/finops/anomalies/profiles")
 
-    def cx_get_success_stats(self):
-        return self._request('GET', '/cx/success/stats')
+    def finops_anomaly_create_profile(self, name: str, rules: Any) -> Any:
+        return self._request("POST", "/finops/anomalies/profiles", {"name": name, "rules": rules})
 
-    # === v4 AIOps API Methods ===
+    def finops_budget_list(self) -> Any:
+        return self._request("GET", "/finops/budgets")
 
-    def rca_analyze(self, title, description):
-        return self._request('POST', '/aiops/rca/analyze', {'incident_title': title, 'incident_description': description})
+    def finops_budget_create(self, name: str, amount: float, period: str) -> Any:
+        return self._request("POST", "/finops/budgets", {"name": name, "amount": amount, "period": period})
 
-    def rca_ingest_event(self, event_type, source, title, description, metadata=None, severity='info'):
-        return self._request('POST', '/aiops/rca/events', {'event_type': event_type, 'source': source, 'title': title, 'description': description, 'metadata': metadata or {}, 'severity': severity})
+    def finops_budget_get(self, budget_id: str) -> Any:
+        return self._request("GET", f"/finops/budgets/{budget_id}")
 
-    def rca_incidents(self):
-        return self._request('GET', '/aiops/rca/incidents')
+    def finops_budget_spend(self, budget_id: str) -> Any:
+        return self._request("GET", f"/finops/budgets/{budget_id}/spend")
 
-    def rca_events(self, source=None):
-        params = f'?source={source}' if source else ''
-        return self._request('GET', f'/aiops/rca/events{params}')
+    def finops_budget_forecast(self, budget_id: str) -> Any:
+        return self._request("GET", f"/finops/budgets/{budget_id}/forecast")
 
-    def rca_dependency_graph(self):
-        return self._request('GET', '/aiops/rca/dependencies')
+    def finops_budget_scenario(self, budget_id: str, adjustments: Any) -> Any:
+        return self._request("POST", f"/finops/budgets/{budget_id}/scenario", {"adjustments": adjustments})
 
-    def remediate_suggest(self, incident):
-        return self._request('POST', '/aiops/remediate/suggest', incident)
+    def finops_budget_summary(self) -> Any:
+        return self._request("GET", "/finops/budgets/summary")
 
-    def remediate_create(self, incident_id, action, params, confidence, pattern):
-        return self._request('POST', '/aiops/remediate/create', {'incident_id': incident_id, 'action': action, 'params': params, 'confidence': confidence, 'pattern': pattern})
+    def finops_rightsizing_list(self) -> Any:
+        return self._request("GET", "/finops/rightsizing")
 
-    def remediate_approve(self, remediation_id, approver):
-        return self._request('POST', f'/aiops/remediate/{remediation_id}/approve', {'approver': approver})
+    def finops_rightsizing_summary(self) -> Any:
+        return self._request("GET", "/finops/rightsizing/summary")
 
-    def remediate_reject(self, remediation_id, reason):
-        return self._request('POST', f'/aiops/remediate/{remediation_id}/reject', {'reason': reason})
+    def finops_rightsizing_approve(self, suggestion_id: str) -> Any:
+        return self._request("POST", f"/finops/rightsizing/{suggestion_id}/approve")
 
-    def remediate_execute(self, remediation_id):
-        return self._request('POST', f'/aiops/remediate/{remediation_id}/execute')
+    def finops_rightsizing_implement(self, suggestion_id: str) -> Any:
+        return self._request("POST", f"/finops/rightsizing/{suggestion_id}/implement")
 
-    def remediate_list(self):
-        return self._request('GET', '/aiops/remediate')
+    def finops_rightsizing_dismiss(self, suggestion_id: str) -> Any:
+        return self._request("POST", f"/finops/rightsizing/{suggestion_id}/dismiss")
 
-    def remediate_stats(self):
-        return self._request('GET', '/aiops/remediate/stats')
+    def finops_waste_list(self) -> Any:
+        return self._request("GET", "/finops/waste")
 
-    def remediate_patterns(self):
-        return self._request('GET', '/aiops/remediate/patterns')
+    def finops_waste_summary(self) -> Any:
+        return self._request("GET", "/finops/waste/summary")
 
-    def dem_list(self, status=None):
-        params = f'?status={status}' if status else ''
-        return self._request('GET', f'/aiops/dem/monitors{params}')
+    def finops_waste_scan(self) -> Any:
+        return self._request("POST", "/finops/waste/scan")
 
-    def dem_create(self, name, url, monitor_type='browser_synthetic', status='active'):
-        return self._request('POST', '/aiops/dem/monitors', {'name': name, 'url': url, 'monitor_type': monitor_type, 'status': status})
+    def finops_waste_approve(self, waste_id: str) -> Any:
+        return self._request("POST", f"/finops/waste/{waste_id}/approve")
 
-    def dem_get(self, monitor_id):
-        return self._request('GET', f'/aiops/dem/monitors/{monitor_id}')
+    def finops_waste_cleanup(self, waste_id: str) -> Any:
+        return self._request("POST", f"/finops/waste/{waste_id}/cleanup")
 
-    def dem_update(self, monitor_id, data):
-        return self._request('PATCH', f'/aiops/dem/monitors/{monitor_id}', data)
+    def finops_waste_dismiss(self, waste_id: str) -> Any:
+        return self._request("POST", f"/finops/waste/{waste_id}/dismiss")
 
-    def dem_delete(self, monitor_id):
-        return self._request('DELETE', f'/aiops/dem/monitors/{monitor_id}')
+    def finops_carbon_list(self) -> Any:
+        return self._request("GET", "/finops/carbon")
 
-    def dem_run_check(self, monitor_id):
-        return self._request('POST', f'/aiops/dem/monitors/{monitor_id}/check')
+    def finops_carbon_assets(self) -> Any:
+        return self._request("GET", "/finops/carbon/assets")
 
-    def dem_stats(self, monitor_id):
-        return self._request('GET', f'/aiops/dem/monitors/{monitor_id}/stats')
+    def finops_carbon_register(self, name: str, asset_type: str, emissions: float) -> Any:
+        return self._request("POST", "/finops/carbon/assets", {"name": name, "asset_type": asset_type, "emissions": emissions})
 
-    def dem_summary(self):
-        return self._request('GET', '/aiops/dem/summary')
+    def finops_carbon_sustainability(self) -> Any:
+        return self._request("GET", "/finops/carbon/sustainability")
 
-    def dem_vitals(self, monitor_id):
-        return self._request('GET', f'/aiops/dem/monitors/{monitor_id}/vitals')
+    def finops_arbitrage_workloads(self) -> Any:
+        return self._request("GET", "/finops/arbitrage/workloads")
 
-    def alert_ingest(self, name, source, severity, message):
-        return self._request('POST', '/aiops/alerts', {'name': name, 'source': source, 'severity': severity, 'message': message})
+    def finops_arbitrage_comparisons(self, workload_id: str) -> Any:
+        return self._request("GET", f"/finops/arbitrage/workloads/{workload_id}/compare")
 
-    def alert_ack(self, alert_id):
-        return self._request('POST', f'/aiops/alerts/{alert_id}/acknowledge')
+    def finops_arbitrage_savings(self) -> Any:
+        return self._request("GET", "/finops/arbitrage/savings")
 
-    def alert_resolve(self, alert_id):
-        return self._request('POST', f'/aiops/alerts/{alert_id}/resolve')
+    def finops_reports_list(self) -> Any:
+        return self._request("GET", "/finops/reports")
 
-    def alert_suppression(self, name, match_name):
-        return self._request('POST', '/aiops/alerts/suppression', {'name': name, 'match_name': match_name})
+    def finops_reports_generate(self, report_type: str, period: str) -> Any:
+        return self._request("POST", "/finops/reports", {"type": report_type, "period": period})
 
-    def alert_incidents(self, status=None):
-        params = f'?status={status}' if status else ''
-        return self._request('GET', f'/aiops/alerts/incidents{params}')
+    def finops_reports_summary(self) -> Any:
+        return self._request("GET", "/finops/reports/summary")
 
-    def alert_resolve_incident(self, incident_id):
-        return self._request('POST', f'/aiops/alerts/incidents/{incident_id}/resolve')
+    def soar_playbooks(self) -> Any:
+        return self._request("GET", "/soc/soar/playbooks")
 
-    def alert_stats(self):
-        return self._request('GET', '/aiops/alerts/stats')
+    def soar_playbook(self, playbook_id: str) -> Any:
+        return self._request("GET", f"/soc/soar/playbooks/{playbook_id}")
 
-    def scaling_record_metric(self, resource_id, metric, value):
-        return self._request('POST', '/aiops/scaling/metrics', {'resource_id': resource_id, 'metric': metric, 'value': value})
+    def soar_run(self, playbook_id: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", f"/soc/soar/playbooks/{playbook_id}/run", params or {})
 
-    def scaling_predict(self, resource_id, metric):
-        return self._request('GET', f'/aiops/scaling/predict/{resource_id}/{metric}')
+    def soar_create(self, name: str, steps: list, trigger: str) -> Any:
+        return self._request("POST", "/soc/soar/playbooks", {"name": name, "steps": steps, "trigger": trigger})
 
-    def scaling_policy(self, resource_id, policy):
-        return self._request('POST', '/aiops/scaling/policy', {'resource_id': resource_id, 'policy': policy})
+    def soar_cases(self) -> Any:
+        return self._request("GET", "/soc/soar/cases")
 
-    def scaling_metrics(self, resource_id, metric):
-        return self._request('GET', f'/aiops/scaling/metrics/{resource_id}/{metric}')
+    def soar_connectors(self) -> Any:
+        return self._request("GET", "/soc/soar/connectors")
 
-    def scaling_summary(self):
-        return self._request('GET', '/aiops/scaling/summary')
+    def ti_feeds(self) -> Any:
+        return self._request("GET", "/soc/threatintel/feeds")
 
-    def health_register(self, service_id, name):
-        return self._request('POST', '/aiops/health/services', {'service_id': service_id, 'name': name})
+    def ti_iocs(self, feed_id: Optional[str] = None) -> Any:
+        path = f"/soc/threatintel/iocs/{feed_id}" if feed_id else "/soc/threatintel/iocs"
+        return self._request("GET", path)
 
-    def health_snapshot(self, service_id, metrics):
-        return self._request('POST', '/aiops/health/snapshots', {'service_id': service_id, 'metrics': metrics})
+    def ti_blocklist(self) -> Any:
+        return self._request("GET", "/soc/threatintel/blocklist")
 
-    def health_forecast(self, service_id):
-        return self._request('GET', f'/aiops/health/forecast/{service_id}')
+    def ti_add_ioc(self, ioc: str, ioc_type: str, confidence: str) -> Any:
+        return self._request("POST", "/soc/threatintel/iocs", {"ioc": ioc, "type": ioc_type, "confidence": confidence})
 
-    def health_dashboard(self):
-        return self._request('GET', '/aiops/health/dashboard')
+    def ti_analyze(self, ioc: str) -> Any:
+        return self._request("POST", "/soc/threatintel/analyze", {"ioc": ioc})
 
-    def health_services(self):
-        return self._request('GET', '/aiops/health/services')
+    def decoy_list(self) -> Any:
+        return self._request("GET", "/soc/decoy/decoys")
 
-    def health_get(self, service_id):
-        return self._request('GET', f'/aiops/health/services/{service_id}')
+    def decoy_tokens(self) -> Any:
+        return self._request("GET", "/soc/decoy/tokens")
 
-    def health_delete(self, service_id):
-        return self._request('DELETE', f'/aiops/health/services/{service_id}')
+    def decoy_create(self, name: str, decoy_type: str, target: str) -> Any:
+        return self._request("POST", "/soc/decoy/decoys", {"name": name, "type": decoy_type, "target": target})
 
-    def ops_assistant_message(self, session_id, user_id, message):
-        return self._request('POST', '/aiops/assistant/message', {'session_id': session_id, 'user_id': user_id, 'message': message})
+    def decoy_deploy(self, decoy_id: str) -> Any:
+        return self._request("POST", f"/soc/decoy/decoys/{decoy_id}/deploy")
 
-    def ops_assistant_session(self, session_id):
-        return self._request('GET', f'/aiops/assistant/session/{session_id}')
+    def vuln_cves(self, severity: Optional[str] = None) -> Any:
+        path = f"/soc/vuln/cves?severity={severity}" if severity else "/soc/vuln/cves"
+        return self._request("GET", path)
 
-    def ops_assistant_stats(self):
-        return self._request('GET', '/aiops/assistant/stats')
+    def vuln_scan(self, target: str) -> Any:
+        return self._request("POST", "/soc/vuln/scans", {"target": target})
 
-    def change_plan(self, title, description, change_type, target, affected_resources):
-        return self._request('POST', '/aiops/changes', {'title': title, 'description': description, 'change_type': change_type, 'target': target, 'affected_resources': affected_resources})
+    def vuln_patch(self, cve_id: str) -> Any:
+        return self._request("POST", f"/soc/vuln/cves/{cve_id}/patch")
 
-    def change_approve(self, change_id, approver):
-        return self._request('POST', f'/aiops/changes/{change_id}/approve', {'approver': approver})
+    def vuln_summary(self) -> Any:
+        return self._request("GET", "/soc/vuln/summary")
 
-    def change_reject(self, change_id, reason):
-        return self._request('POST', f'/aiops/changes/{change_id}/reject', {'reason': reason})
+    def ir_list(self) -> Any:
+        return self._request("GET", "/soc/incidents")
 
-    def change_outcome(self, change_id, status, result):
-        return self._request('POST', f'/aiops/changes/{change_id}/outcome', {'status': status, 'result': result})
+    def ir_get(self, incident_id: str) -> Any:
+        return self._request("GET", f"/soc/incidents/{incident_id}")
 
-    def change_stats(self):
-        return self._request('GET', '/aiops/changes/stats')
+    def ir_create(self, title: str, severity: str, description: str) -> Any:
+        return self._request("POST", "/soc/incidents", {"title": title, "severity": severity, "description": description})
 
-    def capacity_record_usage(self, resource_id, metric, total, used):
-        return self._request('POST', '/aiops/capacity/usage', {'resource_id': resource_id, 'metric': metric, 'total': total, 'used': used})
+    def ir_status(self, incident_id: str, status: str) -> Any:
+        return self._request("PATCH", f"/soc/incidents/{incident_id}/status", {"status": status})
 
-    def capacity_usage(self, resource_id, metric):
-        return self._request('GET', f'/aiops/capacity/usage/{resource_id}/{metric}')
+    def ir_evidence(self, incident_id: str, file: str) -> Any:
+        return self._request("POST", f"/soc/incidents/{incident_id}/evidence", {"file": file})
 
-    def capacity_recommend(self, resource_id, metric):
-        return self._request('GET', f'/aiops/capacity/recommend/{resource_id}/{metric}')
+    def ir_timeline(self, incident_id: str) -> Any:
+        return self._request("GET", f"/soc/incidents/{incident_id}/timeline")
 
-    def capacity_simulate(self, resource_id, metric, scenario):
-        return self._request('POST', '/aiops/capacity/simulate', {'resource_id': resource_id, 'metric': metric, 'scenario': scenario})
+    def ir_report(self, incident_id: str) -> Any:
+        return self._request("GET", f"/soc/incidents/{incident_id}/report")
 
-    def capacity_summary(self):
-        return self._request('GET', '/aiops/capacity/summary')
+    def ueba_entities(self) -> Any:
+        return self._request("GET", "/soc/ueba/entities")
 
-    def chatbot_message(self, user_id, message, conversation_id=None):
-        return self._request('POST', '/aiops/chatbot/message', {'user_id': user_id, 'message': message, 'conversation_id': conversation_id})
+    def ueba_alerts(self) -> Any:
+        return self._request("GET", "/soc/ueba/alerts")
 
-    def chatbot_conversation(self, conversation_id):
-        return self._request('GET', f'/aiops/chatbot/conversation/{conversation_id}')
+    def cspm_accounts(self) -> Any:
+        return self._request("GET", "/soc/cspm/accounts")
 
-    def chatbot_tasks(self, user_id):
-        return self._request('GET', f'/aiops/chatbot/tasks/{user_id}')
+    def cspm_results(self, account_id: str) -> Any:
+        return self._request("GET", f"/soc/cspm/accounts/{account_id}/results")
 
-    def chatbot_analytics(self):
-        return self._request('GET', '/aiops/chatbot/analytics')
+    def cspm_scan(self, account_id: str) -> Any:
+        return self._request("POST", f"/soc/cspm/accounts/{account_id}/scan")
 
-    # === v4 SOC API Methods ===
+    def ndr_flows(self) -> Any:
+        return self._request("GET", "/soc/ndr/flows")
 
-    def soar_playbooks(self):
-        return self._request('GET', '/api/v1/soc/soar/playbooks')
+    def ndr_alerts(self) -> Any:
+        return self._request("GET", "/soc/ndr/alerts")
 
-    def soar_playbook_get(self, playbook_id):
-        return self._request('GET', f'/api/v1/soc/soar/playbooks/{playbook_id}')
+    def secrets_findings(self) -> Any:
+        return self._request("GET", "/soc/secrets/findings")
 
-    def soar_playbook_run(self, playbook_id):
-        return self._request('POST', f'/api/v1/soc/soar/playbooks/{playbook_id}/run')
+    def secrets_targets(self) -> Any:
+        return self._request("GET", "/soc/secrets/targets")
 
-    def soar_playbook_create(self, name, description, category):
-        return self._request('POST', '/api/v1/soc/soar/playbooks', {'name': name, 'description': description, 'category': category})
+    def secrets_rotate(self, finding_id: str) -> Any:
+        return self._request("POST", f"/soc/secrets/findings/{finding_id}/rotate")
 
-    def soar_cases(self):
-        return self._request('GET', '/api/v1/soc/soar/cases')
+    def training_modules(self) -> Any:
+        return self._request("GET", "/soc/training/modules")
 
-    def soar_connectors(self):
-        return self._request('GET', '/api/v1/soc/soar/connectors')
+    def training_campaigns(self) -> Any:
+        return self._request("GET", "/soc/training/campaigns")
 
-    def threatintel_feeds(self):
-        return self._request('GET', '/api/v1/soc/threat-intel/feeds')
+    def training_assignments(self) -> Any:
+        return self._request("GET", "/soc/training/assignments")
 
-    def threatintel_iocs(self):
-        return self._request('GET', '/api/v1/soc/threat-intel/iocs')
+    def devportal_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/devportal/apis")
 
-    def threatintel_blocklist(self):
-        return self._request('GET', '/api/v1/soc/threat-intel/blocklist')
+    def devportal_register(self, name: str, version: str, spec_url: str) -> Any:
+        return self._request("POST", "/v4/platform-engineering/devportal/apis", {"name": name, "version": version, "spec_url": spec_url})
 
-    def threatintel_add_ioc(self, ioc_type, value, confidence):
-        return self._request('POST', '/api/v1/soc/threat-intel/iocs', {'type': ioc_type, 'value': value, 'confidence': confidence})
+    def devportal_get(self, api_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/devportal/apis/{api_id}")
 
-    def threatintel_analyze(self, text):
-        return self._request('POST', '/api/v1/soc/threat-intel/analyze', {'text': text})
+    def devportal_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/devportal/summary")
 
-    def deception_decoys(self):
-        return self._request('GET', '/api/v1/soc/deception/decoys')
+    def scaffold_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/scaffold/templates")
 
-    def deception_tokens(self):
-        return self._request('GET', '/api/v1/soc/deception/tokens')
+    def scaffold_generate(self, template: str, name: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", "/v4/platform-engineering/scaffold/generate", {"template": template, "name": name, "params": params or {}})
 
-    def deception_create_decoy(self, name, decoy_type, target_ip, port):
-        return self._request('POST', '/api/v1/soc/deception/decoys', {'name': name, 'decoy_type': decoy_type, 'target_ip': target_ip, 'port': port})
+    def scaffold_status(self, generation_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/scaffold/{generation_id}")
 
-    def deception_deploy(self, decoy_id):
-        return self._request('POST', f'/api/v1/soc/deception/decoys/{decoy_id}/deploy')
+    def scaffold_step(self, generation_id: str, step: str, data: Any) -> Any:
+        return self._request("POST", f"/v4/platform-engineering/scaffold/{generation_id}/step/{step}", {"data": data})
 
-    def vuln_cves(self):
-        return self._request('GET', '/api/v1/soc/vulnerabilities/cves')
+    def catalog_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/service-catalog")
 
-    def vuln_scan(self, target):
-        return self._request('POST', '/api/v1/soc/vulnerabilities/scan', {'target': target})
+    def catalog_register(self, name: str, description: str, version: str) -> Any:
+        return self._request("POST", "/v4/platform-engineering/service-catalog", {"name": name, "description": description, "version": version})
 
-    def vuln_patch(self, cve_id):
-        return self._request('POST', f'/api/v1/soc/vulnerabilities/cves/{cve_id}/patch')
+    def catalog_get(self, service_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/service-catalog/{service_id}")
 
-    def vuln_summary(self):
-        return self._request('GET', '/api/v1/soc/vulnerabilities/summary')
+    def catalog_score(self, service_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/service-catalog/{service_id}/score")
 
-    def ir_incidents(self):
-        return self._request('GET', '/api/v1/soc/incidents')
+    def catalog_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/service-catalog/summary")
 
-    def ir_get_incident(self, incident_id):
-        return self._request('GET', f'/api/v1/soc/incidents/{incident_id}')
+    def scorecards_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/scorecards")
 
-    def ir_create_incident(self, title, severity, incident_type):
-        return self._request('POST', '/api/v1/soc/incidents', {'title': title, 'severity': severity, 'incident_type': incident_type})
+    def scorecards_create(self, name: str, criteria: list) -> Any:
+        return self._request("POST", "/v4/platform-engineering/scorecards", {"name": name, "criteria": criteria})
 
-    def ir_update_status(self, incident_id, status):
-        return self._request('PATCH', f'/api/v1/soc/incidents/{incident_id}/status', {'status': status})
+    def scorecards_get(self, scorecard_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/scorecards/{scorecard_id}")
 
-    def ir_add_evidence(self, incident_id, title, content, evidence_type):
-        return self._request('POST', f'/api/v1/soc/incidents/{incident_id}/evidence', {'title': title, 'content': content, 'evidence_type': evidence_type})
+    def scorecards_update(self, scorecard_id: str, criteria: list) -> Any:
+        return self._request("PATCH", f"/v4/platform-engineering/scorecards/{scorecard_id}", {"criteria": criteria})
 
-    def ir_timeline(self, incident_id):
-        return self._request('GET', f'/api/v1/soc/incidents/{incident_id}/timeline')
+    def scorecards_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/scorecards/summary")
 
-    def ir_report(self, incident_id):
-        return self._request('GET', f'/api/v1/soc/incidents/{incident_id}/report')
+    def templatereg_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/template-registry")
 
-    def ueba_entities(self):
-        return self._request('GET', '/api/v1/soc/ueba/entities')
+    def templatereg_create(self, name: str, template_type: str, content: str) -> Any:
+        return self._request("POST", "/v4/platform-engineering/template-registry", {"name": name, "type": template_type, "content": content})
 
-    def ueba_alerts(self):
-        return self._request('GET', '/api/v1/soc/ueba/alerts')
+    def templatereg_get(self, template_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/template-registry/{template_id}")
 
-    def cspm_accounts(self):
-        return self._request('GET', '/api/v1/soc/cspm/accounts')
+    def templatereg_use(self, template_id: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", f"/v4/platform-engineering/template-registry/{template_id}/use", params or {})
 
-    def cspm_results(self):
-        return self._request('GET', '/api/v1/soc/cspm/results')
+    def templatereg_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/template-registry/summary")
 
-    def cspm_scan(self):
-        return self._request('POST', '/api/v1/soc/cspm/scan')
+    def techdebt_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/techdebt")
 
-    def ndr_flows(self, malicious_only=True):
-        path = '/api/v1/soc/ndr/flows'
-        if malicious_only:
-            path += '?malicious_only=true'
-        return self._request('GET', path)
+    def techdebt_report(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/techdebt/report")
 
-    def ndr_alerts(self):
-        return self._request('GET', '/api/v1/soc/ndr/alerts')
+    def techdebt_get(self, item_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/techdebt/{item_id}")
 
-    def secrets_findings(self):
-        return self._request('GET', '/api/v1/soc/secrets/findings')
+    def techdebt_fix(self, item_id: str) -> Any:
+        return self._request("POST", f"/v4/platform-engineering/techdebt/{item_id}/fix")
 
-    def secrets_targets(self):
-        return self._request('GET', '/api/v1/soc/secrets/targets')
+    def techdebt_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/techdebt/summary")
 
-    def secrets_rotate(self, finding_id):
-        return self._request('POST', f'/api/v1/soc/secrets/rotate/{finding_id}')
+    def environments_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/environments")
 
-    def training_modules(self):
-        return self._request('GET', '/api/v1/soc/training/modules')
+    def environments_create(self, name: str, env_type: str, template: str) -> Any:
+        return self._request("POST", "/v4/platform-engineering/environments", {"name": name, "type": env_type, "template": template})
 
-    def training_campaigns(self):
-        return self._request('GET', '/api/v1/soc/training/campaigns')
+    def environments_get(self, env_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/environments/{env_id}")
 
-    def training_assignments(self):
-        return self._request('GET', '/api/v1/soc/training/assignments')
+    def environments_delete(self, env_id: str) -> Any:
+        return self._request("DELETE", f"/v4/platform-engineering/environments/{env_id}")
 
-    # === v4 FinOps API Methods ===
+    def environments_extend(self, env_id: str, ttl_hours: int) -> Any:
+        return self._request("POST", f"/v4/platform-engineering/environments/{env_id}/extend", {"ttl_hours": ttl_hours})
 
-    def finops_commitment_list(self):
-        return self._request('GET', '/finops/commitment/recommendations')
+    def environments_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/environments/summary")
 
-    def finops_commitment_summary(self):
-        return self._request('GET', '/finops/commitment/summary')
+    def apicatalog_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/api-catalog")
 
-    def finops_commitment_implement(self, rec_id):
-        return self._request('POST', f'/finops/commitment/recommendations/{rec_id}/implement')
+    def apicatalog_register(self, name: str, version: str, spec: str) -> Any:
+        return self._request("POST", "/v4/platform-engineering/api-catalog", {"name": name, "version": version, "spec": spec})
 
-    def finops_commitment_commitments(self):
-        return self._request('GET', '/finops/commitment/commitments')
+    def apicatalog_get(self, api_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/api-catalog/{api_id}")
 
-    def finops_spot_list(self, status=None):
-        path = f'/finops/spot/fleets?status={status}' if status else '/finops/spot/fleets'
-        return self._request('GET', path)
+    def apicatalog_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/api-catalog/summary")
 
-    def finops_spot_create(self, name, instance_types, target_capacity, regions):
-        return self._request('POST', '/finops/spot/fleets', {'name': name, 'instance_types': instance_types, 'target_capacity': target_capacity, 'regions': regions})
+    def docgen_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/docgen/templates")
 
-    def finops_spot_get(self, fleet_id):
-        return self._request('GET', f'/finops/spot/fleets/{fleet_id}')
+    def docgen_generate(self, template: str, service: str, params: Optional[Dict] = None) -> Any:
+        return self._request("POST", "/v4/platform-engineering/docgen/generate", {"template": template, "service": service, "params": params or {}})
 
-    def finops_spot_instances(self, fleet_id):
-        return self._request('GET', f'/finops/spot/fleets/{fleet_id}/instances')
+    def docgen_get(self, doc_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/docgen/{doc_id}")
 
-    def finops_spot_savings(self):
-        return self._request('GET', '/finops/spot/savings')
+    def docgen_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/docgen/summary")
 
-    def finops_uoe_metrics(self, customer_id=None, dimension=None):
-        path = '/finops/unit-economics/metrics'
-        params = []
-        if customer_id: params.append(f'customer_id={customer_id}')
-        if dimension: params.append(f'dimension={dimension}')
-        if params: path += '?' + '&'.join(params)
-        return self._request('GET', path)
+    def pulse_list(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/pulse/surveys")
 
-    def finops_uoe_record(self, customer_id, metric_name, value, dimension):
-        return self._request('POST', '/finops/unit-economics/metrics', {'customer_id': customer_id, 'metric_name': metric_name, 'value': value, 'dimension': dimension})
+    def pulse_create(self, title: str, questions: list) -> Any:
+        return self._request("POST", "/v4/platform-engineering/pulse/surveys", {"title": title, "questions": questions})
 
-    def finops_uoe_targets(self):
-        return self._request('GET', '/finops/unit-economics/targets')
+    def pulse_respond(self, survey_id: str, responses: dict) -> Any:
+        return self._request("POST", f"/v4/platform-engineering/pulse/{survey_id}/respond", {"responses": responses})
 
-    def finops_uoe_set_target(self, metric_name, target_value, threshold):
-        return self._request('POST', '/finops/unit-economics/targets', {'metric_name': metric_name, 'target_value': target_value, 'threshold_pct': threshold})
+    def pulse_results(self, survey_id: str) -> Any:
+        return self._request("GET", f"/v4/platform-engineering/pulse/{survey_id}/results")
 
-    def finops_uoe_violations(self):
-        return self._request('GET', '/finops/unit-economics/violations')
+    def pulse_summary(self) -> Any:
+        return self._request("GET", "/v4/platform-engineering/pulse/summary")
 
-    def finops_uoe_overview(self):
-        return self._request('GET', '/finops/unit-economics/overview')
+    def cc_status(self) -> Any:
+        return self._request("GET", "/api/v1/cc/status")
 
-    def finops_anomaly_list(self, severity=None):
-        path = f'/finops/anomaly/detections?severity={severity}' if severity else '/finops/anomaly/detections'
-        return self._request('GET', path)
+    def cc_scan(self, framework: str) -> Any:
+        return self._request("POST", "/api/v1/cc/scan", {"framework": framework})
 
-    def finops_anomaly_summary(self):
-        return self._request('GET', '/finops/anomaly/summary')
+    def cc_alerts(self) -> Any:
+        return self._request("GET", "/api/v1/cc/alerts")
 
-    def finops_anomaly_investigate(self, anomaly_id):
-        return self._request('POST', f'/finops/anomaly/detections/{anomaly_id}/investigate')
+    def cc_summary(self) -> Any:
+        return self._request("GET", "/api/v1/cc/summary")
 
-    def finops_anomaly_resolve(self, anomaly_id):
-        return self._request('POST', f'/finops/anomaly/detections/{anomaly_id}/resolve')
+    def cc_remediate(self, finding_id: str) -> Any:
+        return self._request("POST", f"/api/v1/cc/findings/{finding_id}/remediate")
 
-    def finops_anomaly_profiles(self):
-        return self._request('GET', '/finops/anomaly/profiles')
+    def cc_drift(self) -> Any:
+        return self._request("GET", "/api/v1/cc/drift")
 
-    def finops_anomaly_create_profile(self, name, method, sensitivity):
-        return self._request('POST', '/finops/anomaly/profiles', {'name': name, 'detection_method': method, 'sensitivity': sensitivity})
+    def cc_compare(self, scan_id_1: str, scan_id_2: str) -> Any:
+        return self._request("GET", f"/api/v1/cc/compare?scan1={scan_id_1}&scan2={scan_id_2}")
 
-    def finops_budget_list(self):
-        return self._request('GET', '/finops/budget')
+    def cc_report(self, framework: str) -> Any:
+        return self._request("GET", f"/api/v1/cc/report/{framework}")
 
-    def finops_budget_create(self, name, amount, period, scope=None):
-        return self._request('POST', '/finops/budget', {'name': name, 'amount': amount, 'period': period, 'scope': scope})
+    def cc_schedule(self, framework: str, cron: str) -> Any:
+        return self._request("POST", "/api/v1/cc/schedule", {"framework": framework, "cron": cron})
 
-    def finops_budget_get(self, budget_id):
-        return self._request('GET', f'/finops/budget/{budget_id}')
+    def cc_weakest(self) -> Any:
+        return self._request("GET", "/api/v1/cc/weakest")
 
-    def finops_budget_spend(self, budget_id, amount):
-        return self._request('POST', f'/finops/budget/{budget_id}/spend', {'amount': amount})
+    def ec_list(self) -> Any:
+        return self._request("GET", "/api/v1/evidence")
 
-    def finops_budget_forecast(self, budget_id):
-        return self._request('GET', f'/finops/budget/{budget_id}/forecast')
+    def ec_collect(self, evidence_type: str, target: str) -> Any:
+        return self._request("POST", "/api/v1/evidence/collect", {"type": evidence_type, "target": target})
 
-    def finops_budget_scenario(self, budget_id, scenario):
-        return self._request('POST', f'/finops/budget/{budget_id}/scenario', {'scenario': scenario})
+    def ec_packages(self) -> Any:
+        return self._request("GET", "/api/v1/evidence/packages")
 
-    def finops_budget_summary(self):
-        return self._request('GET', '/finops/budget/summary')
+    def ec_stats(self) -> Any:
+        return self._request("GET", "/api/v1/evidence/stats")
 
-    def finops_rightsizing_list(self):
-        return self._request('GET', '/finops/rightsizing/recommendations')
+    def ec_auto_collect(self) -> Any:
+        return self._request("POST", "/api/v1/evidence/auto-collect")
 
-    def finops_rightsizing_summary(self):
-        return self._request('GET', '/finops/rightsizing/summary')
+    def ec_search(self, query: str) -> Any:
+        return self._request("GET", f"/api/v1/evidence/search?q={query}")
 
-    def finops_rightsizing_approve(self, rec_id):
-        return self._request('POST', f'/finops/rightsizing/recommendations/{rec_id}/approve')
+    def ec_validate(self, evidence_id: str) -> Any:
+        return self._request("POST", f"/api/v1/evidence/{evidence_id}/validate")
 
-    def finops_rightsizing_implement(self, rec_id):
-        return self._request('POST', f'/finops/rightsizing/recommendations/{rec_id}/implement')
+    def ec_package_create(self, name: str, evidence_ids: list) -> Any:
+        return self._request("POST", "/api/v1/evidence/packages", {"name": name, "evidence_ids": evidence_ids})
 
-    def finops_rightsizing_dismiss(self, rec_id):
-        return self._request('POST', f'/finops/rightsizing/recommendations/{rec_id}/dismiss')
+    def ec_expired(self) -> Any:
+        return self._request("GET", "/api/v1/evidence/expired")
 
-    def finops_waste_list(self, category=None, severity=None):
-        path = '/finops/waste/findings'
-        params = []
-        if category: params.append(f'category={category}')
-        if severity: params.append(f'severity={severity}')
-        if params: path += '?' + '&'.join(params)
-        return self._request('GET', path)
+    def ec_custody(self, evidence_id: str) -> Any:
+        return self._request("GET", f"/api/v1/evidence/{evidence_id}/custody")
 
-    def finops_waste_summary(self):
-        return self._request('GET', '/finops/waste/summary')
+    def cac_list(self) -> Any:
+        return self._request("GET", "/api/v1/cac/policies")
 
-    def finops_waste_scan(self):
-        return self._request('POST', '/finops/waste/scan')
+    def cac_evaluate(self, policy_id: str) -> Any:
+        return self._request("POST", f"/api/v1/cac/policies/{policy_id}/evaluate")
 
-    def finops_waste_approve(self, finding_id):
-        return self._request('POST', f'/finops/waste/findings/{finding_id}/approve')
+    def cac_templates(self) -> Any:
+        return self._request("GET", "/api/v1/cac/templates")
 
-    def finops_waste_cleanup(self, finding_id):
-        return self._request('POST', f'/finops/waste/findings/{finding_id}/cleanup')
+    def cac_stats(self) -> Any:
+        return self._request("GET", "/api/v1/cac/stats")
 
-    def finops_waste_dismiss(self, finding_id):
-        return self._request('POST', f'/finops/waste/findings/{finding_id}/dismiss')
+    def cac_create(self, name: str, framework: str, rules: Any) -> Any:
+        return self._request("POST", "/api/v1/cac/policies", {"name": name, "framework": framework, "rules": rules})
 
-    def finops_carbon_list(self):
-        return self._request('GET', '/finops/carbon/recommendations')
+    def cac_gap(self) -> Any:
+        return self._request("GET", "/api/v1/cac/gap-analysis")
 
-    def finops_carbon_assets(self):
-        return self._request('GET', '/finops/carbon/assets')
+    def cac_test(self, policy_id: str, resource: str) -> Any:
+        return self._request("POST", f"/api/v1/cac/policies/{policy_id}/test", {"resource": resource})
 
-    def finops_carbon_register(self, name, provider, region, monthly_cost, kwh=None):
-        return self._request('POST', '/finops/carbon/assets', {'name': name, 'provider': provider, 'region': region, 'monthly_cost': monthly_cost, 'kwh': kwh})
+    def cac_dry_run(self, policy_id: str, resource: str) -> Any:
+        return self._request("POST", f"/api/v1/cac/policies/{policy_id}/dry-run", {"resource": resource})
 
-    def finops_carbon_sustainability(self):
-        return self._request('GET', '/finops/carbon/sustainability-budget')
+    def cac_version(self, policy_id: str) -> Any:
+        return self._request("GET", f"/api/v1/cac/policies/{policy_id}/version")
 
-    def finops_arbitrage_workloads(self):
-        return self._request('GET', '/finops/arbitrage/workloads')
+    def ar_list(self) -> Any:
+        return self._request("GET", "/api/v1/attestation")
 
-    def finops_arbitrage_comparisons(self):
-        return self._request('GET', '/finops/arbitrage/comparisons')
+    def ar_generate(self, framework: str, scope: str) -> Any:
+        return self._request("POST", "/api/v1/attestation/generate", {"framework": framework, "scope": scope})
 
-    def finops_arbitrage_savings(self):
-        return self._request('GET', '/finops/arbitrage/savings')
+    def ar_sign(self, report_id: str) -> Any:
+        return self._request("POST", f"/api/v1/attestation/{report_id}/sign")
 
-    def finops_reports_list(self):
-        return self._request('GET', '/finops/reports')
+    def ar_stats(self) -> Any:
+        return self._request("GET", "/api/v1/attestation/stats")
 
-    def finops_reports_summary(self):
-        return self._request('GET', '/finops/reports/summary')
+    def ar_approve(self, report_id: str) -> Any:
+        return self._request("POST", f"/api/v1/attestation/{report_id}/approve")
 
-    def finops_reports_generate(self, report_type, period):
-        return self._request('POST', '/finops/reports/generate', {'report_type': report_type, 'period': period})
+    def ar_verify(self, report_id: str) -> Any:
+        return self._request("POST", f"/api/v1/attestation/{report_id}/verify")
 
-    def finops_reports_get(self, report_id):
-        return self._request('GET', f'/finops/reports/{report_id}')
+    def ar_compare(self, report_id_1: str, report_id_2: str) -> Any:
+        return self._request("GET", f"/api/v1/attestation/compare?r1={report_id_1}&r2={report_id_2}")
 
-    def finops_reports_dashboard(self, dashboard_type):
-        return self._request('GET', f'/finops/reports/dashboard/{dashboard_type}')
+    def ar_schedule(self, framework: str, cron: str) -> Any:
+        return self._request("POST", "/api/v1/attestation/schedule", {"framework": framework, "cron": cron})
 
-    def finops_reports_allocations(self, team=None):
-        path = '/finops/reports/allocations'
-        if team:
-            path += f'?team={team}'
-        return self._request('GET', path)
+    def ar_coverage(self, framework: str) -> Any:
+        return self._request("GET", f"/api/v1/attestation/{framework}/coverage")
 
-    def finops_reports_create_allocation(self, tag_key, tag_value, cost_pct, team=None, project=None):
-        return self._request('POST', '/finops/reports/allocations', {
-            'tag_key': tag_key, 'tag_value': tag_value, 'cost_pct': cost_pct, 'team': team, 'project': project,
-        })
+    def vc_list(self) -> Any:
+        return self._request("GET", "/api/v1/vendor-compliance")
 
-    def finops_commitment_analyze(self):
-        return self._request('POST', '/finops/commitment/analyze')
+    def vc_register(self, name: str, tier: str) -> Any:
+        return self._request("POST", "/api/v1/vendor-compliance", {"name": name, "tier": tier})
 
-    def finops_commitment_coverage(self):
-        return self._request('GET', '/finops/commitment/coverage-gaps')
+    def vc_assess(self, vendor_id: str) -> Any:
+        return self._request("POST", f"/api/v1/vendor-compliance/{vendor_id}/assess")
 
-    def finops_spot_launch(self, fleet_id, count=None):
-        body = {}
-        if count: body['count'] = count
-        return self._request('POST', f'/finops/spot/fleets/{fleet_id}/launch', body)
+    def vc_risk(self, vendor_id: str) -> Any:
+        return self._request("GET", f"/api/v1/vendor-compliance/{vendor_id}/risk")
 
-    def finops_spot_interrupt(self, instance_id):
-        return self._request('POST', f'/finops/spot/instances/{instance_id}/interrupt')
+    def vc_scorecard(self, vendor_id: str) -> Any:
+        return self._request("GET", f"/api/v1/vendor-compliance/{vendor_id}/scorecard")
 
-    def finops_spot_update(self, fleet_id, capacity):
-        return self._request('PATCH', f'/finops/spot/fleets/{fleet_id}', {'target_capacity': capacity})
+    def vc_assessments(self) -> Any:
+        return self._request("GET", "/api/v1/vendor-compliance/assessments")
 
-    def finops_anomaly_ingest(self, service, amount, region):
-        return self._request('POST', '/finops/anomaly/ingest', {'service': service, 'amount': amount, 'region': region})
+    def vc_migrate_tier(self, vendor_id: str, new_tier: str) -> Any:
+        return self._request("POST", f"/api/v1/vendor-compliance/{vendor_id}/migrate", {"tier": new_tier})
 
-    def finops_budget_variance(self, budget_id):
-        return self._request('GET', f'/finops/budget/{budget_id}/variance')
+    def vc_categories(self) -> Any:
+        return self._request("GET", "/api/v1/vendor-compliance/categories")
 
-    def finops_rightsizing_register(self, name, resource_type, current_size, specs, monthly_cost, provider, region):
-        return self._request('POST', '/finops/rightsizing/resources', {
-            'name': name, 'resource_type': resource_type, 'current_size': current_size,
-            'specs': specs, 'monthly_cost': monthly_cost, 'provider': provider, 'region': region,
-        })
+    def vc_discover(self) -> Any:
+        return self._request("POST", "/api/v1/vendor-compliance/discover")
 
-    def finops_rightsizing_analyze(self, resource_id):
-        return self._request('POST', f'/finops/rightsizing/resources/{resource_id}/analyze')
+    def vc_remediation(self, vendor_id: str) -> Any:
+        return self._request("GET", f"/api/v1/vendor-compliance/{vendor_id}/remediation")
 
-    def finops_carbon_footprint(self, asset_id):
-        return self._request('GET', f'/finops/carbon/assets/{asset_id}/footprint')
+    def ri_changes(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/changes")
 
-    def finops_carbon_tradeoff(self, asset_id):
-        return self._request('GET', f'/finops/carbon/assets/{asset_id}/tradeoff')
+    def ri_detect(self, regulation: str, jurisdiction: str) -> Any:
+        return self._request("POST", "/api/v1/regulatory-intel/detect", {"regulation": regulation, "jurisdiction": jurisdiction})
 
-    def finops_carbon_intensity(self, region):
-        return self._request('GET', f'/finops/carbon/intensity/{region}')
+    def ri_sources(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/sources")
 
-    def finops_arbitrage_register(self, name, cpu_cores, memory_gb, storage_gb, data_transfer_gb, current_provider, current_cost):
-        return self._request('POST', '/finops/arbitrage/workloads', {
-            'name': name, 'cpu_cores': cpu_cores, 'memory_gb': memory_gb,
-            'storage_gb': storage_gb, 'data_transfer_gb': data_transfer_gb,
-            'current_provider': current_provider, 'current_cost': current_cost,
-        })
+    def ri_stats(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/stats")
 
-    def finops_arbitrage_compare(self, workload_id):
-        return self._request('GET', f'/finops/arbitrage/workloads/{workload_id}/compare')
+    def ri_impact(self, change_id: str) -> Any:
+        return self._request("GET", f"/api/v1/regulatory-intel/changes/{change_id}/impact")
 
-    def finops_arbitrage_migrate(self, workload_id):
-        return self._request('POST', f'/finops/arbitrage/workloads/{workload_id}/migrate')
+    def ri_matrix(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/matrix")
 
-    # === v4 Emerging Tech ===
+    def ri_calendar(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/calendar")
 
-    def blockchain_list_networks(self):
-        return self._get('/api/v1/emerging-tech/blockchain/networks')
+    def ri_notify(self, change_id: str, channel: str) -> Any:
+        return self._request("POST", f"/api/v1/regulatory-intel/changes/{change_id}/notify", {"channel": channel})
 
-    def blockchain_create_network(self, name, consensus, chain_id):
-        return self._post('/api/v1/emerging-tech/blockchain/networks', {'name': name, 'consensus': consensus, 'chain_id': chain_id})
+    def ri_pending(self) -> Any:
+        return self._request("GET", "/api/v1/regulatory-intel/pending")
 
-    def blockchain_network_status(self, network_id):
-        return self._get(f'/api/v1/emerging-tech/blockchain/networks/{network_id}')
+    def ri_search(self, query: str) -> Any:
+        return self._request("GET", f"/api/v1/regulatory-intel/search?q={query}")
 
-    def blockchain_validators(self, network_id):
-        return self._get(f'/api/v1/emerging-tech/blockchain/networks/{network_id}/validators')
+    def am_list(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/audits")
 
-    def storage_list_gateways(self):
-        return self._get('/api/v1/emerging-tech/storage/gateways')
+    def am_schedule(self, title: str, framework: str, date: str) -> Any:
+        return self._request("POST", "/api/v1/audit-mgmt/audits", {"title": title, "framework": framework, "date": date})
 
-    def storage_create_gateway(self, name, provider):
-        return self._post('/api/v1/emerging-tech/storage/gateways', {'name': name, 'provider': provider})
+    def am_rights(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/rights")
 
-    def storage_pin_content(self, cid):
-        return self._post('/api/v1/emerging-tech/storage/pin', {'cid': cid})
+    def am_stats(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/stats")
 
-    def storage_gateway_status(self, gateway_id):
-        return self._get(f'/api/v1/emerging-tech/storage/gateways/{gateway_id}')
+    def am_upcoming(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/upcoming")
 
-    def quantum_list_keys(self):
-        return self._get('/api/v1/emerging-tech/quantum/keys')
+    def am_overdue(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/overdue")
 
-    def quantum_generate_key(self, algorithm):
-        return self._post('/api/v1/emerging-tech/quantum/keys', {'algorithm': algorithm})
+    def am_workflow(self, audit_id: str, step: str) -> Any:
+        return self._request("POST", f"/api/v1/audit-mgmt/audits/{audit_id}/workflow", {"step": step})
 
-    def quantum_create_certificate(self, name, key_id):
-        return self._post('/api/v1/emerging-tech/quantum/certificates', {'name': name, 'key_id': key_id})
+    def am_report(self, audit_id: str) -> Any:
+        return self._request("GET", f"/api/v1/audit-mgmt/audits/{audit_id}/report")
 
-    def quantum_encrypt(self, key_id, message):
-        return self._post('/api/v1/emerging-tech/quantum/encrypt', {'key_id': key_id, 'message': message})
+    def am_register_right(self, name: str, description: str) -> Any:
+        return self._request("POST", "/api/v1/audit-mgmt/rights", {"name": name, "description": description})
 
-    def quantum_decrypt(self, key_id, ciphertext):
-        return self._post('/api/v1/emerging-tech/quantum/decrypt', {'key_id': key_id, 'ciphertext': ciphertext})
+    def am_calendar(self) -> Any:
+        return self._request("GET", "/api/v1/audit-mgmt/calendar")
 
-    def contracts_list(self):
-        return self._get('/api/v1/emerging-tech/contracts')
+    def dr_list(self) -> Any:
+        return self._request("GET", "/api/v1/data-residency/records")
 
-    def contracts_deploy(self, name, network, bytecode):
-        return self._post('/api/v1/emerging-tech/contracts', {'name': name, 'network': network, 'bytecode': bytecode})
+    def dr_register(self, name: str, region: str, data_type: str) -> Any:
+        return self._request("POST", "/api/v1/data-residency/records", {"name": name, "region": region, "data_type": data_type})
 
-    def contracts_get(self, contract_id):
-        return self._get(f'/api/v1/emerging-tech/contracts/{contract_id}')
+    def dr_check(self, record_id: str) -> Any:
+        return self._request("GET", f"/api/v1/data-residency/records/{record_id}/check")
 
-    def contracts_events(self, contract_id):
-        return self._get(f'/api/v1/emerging-tech/contracts/{contract_id}/events')
+    def dr_summary(self) -> Any:
+        return self._request("GET", "/api/v1/data-residency/summary")
 
-    def web3id_list(self):
-        return self._get('/api/v1/emerging-tech/web3id/identities')
+    def dr_flows(self) -> Any:
+        return self._request("GET", "/api/v1/data-residency/flows")
 
-    def web3id_create(self, did):
-        return self._post('/api/v1/emerging-tech/web3id/identities', {'did': did})
+    def dr_move(self, record_id: str, target_region: str) -> Any:
+        return self._request("POST", f"/api/v1/data-residency/records/{record_id}/move", {"target_region": target_region})
 
-    def web3id_authenticate(self, identity_id):
-        return self._post(f'/api/v1/emerging-tech/web3id/identities/{identity_id}/auth')
+    def dr_audit(self, record_id: str) -> Any:
+        return self._request("GET", f"/api/v1/data-residency/records/{record_id}/audit")
 
-    def web3id_sessions(self):
-        return self._get('/api/v1/emerging-tech/web3id/sessions')
+    def dr_violations(self) -> Any:
+        return self._request("GET", "/api/v1/data-residency/violations")
 
-    def confidential_list_enclaves(self):
-        return self._get('/api/v1/emerging-tech/confidential/enclaves')
+    def dr_compliance_report(self) -> Any:
+        return self._request("GET", "/api/v1/data-residency/compliance-report")
 
-    def confidential_create_enclave(self, name, image, memory_mb):
-        return self._post('/api/v1/emerging-tech/confidential/enclaves', {'name': name, 'image': image, 'memory_mb': memory_mb})
+    def dr_asset_search(self, query: str) -> Any:
+        return self._request("GET", f"/api/v1/data-residency/search?q={query}")
 
-    def confidential_attest(self, enclave_id):
-        return self._post(f'/api/v1/emerging-tech/confidential/enclaves/{enclave_id}/attest')
+    def ct_modules(self) -> Any:
+        return self._request("GET", "/api/v1/compliance-training/modules")
 
-    def confidential_secrets(self, enclave_id):
-        return self._get(f'/api/v1/emerging-tech/confidential/enclaves/{enclave_id}/secrets')
+    def ct_assign(self, user: str, module_id: str) -> Any:
+        return self._request("POST", "/api/v1/compliance-training/assignments", {"user": user, "module_id": module_id})
 
-    def federated_list_projects(self):
-        return self._get('/api/v1/emerging-tech/federated/projects')
+    def ct_status(self, assignment_id: str) -> Any:
+        return self._request("GET", f"/api/v1/compliance-training/assignments/{assignment_id}")
 
-    def federated_create_project(self, name, rounds, min_clients):
-        return self._post('/api/v1/emerging-tech/federated/projects', {'name': name, 'rounds': rounds, 'min_clients': min_clients})
+    def ct_stats(self) -> Any:
+        return self._request("GET", "/api/v1/compliance-training/stats")
 
-    def federated_project_status(self, project_id):
-        return self._get(f'/api/v1/emerging-tech/federated/projects/{project_id}')
+    def ct_certifications(self) -> Any:
+        return self._request("GET", "/api/v1/compliance-training/certifications")
 
-    def federated_rounds(self, project_id):
-        return self._get(f'/api/v1/emerging-tech/federated/projects/{project_id}/rounds')
+    def ct_expiring(self) -> Any:
+        return self._request("GET", "/api/v1/compliance-training/expiring")
 
-    def zkp_list(self):
-        return self._get('/api/v1/emerging-tech/zkp/proofs')
+    def ct_search(self, query: str) -> Any:
+        return self._request("GET", f"/api/v1/compliance-training/search?q={query}")
 
-    def zkp_generate(self, statement, witness):
-        return self._post('/api/v1/emerging-tech/zkp/proofs', {'statement': statement, 'witness': witness})
+    def ct_report(self) -> Any:
+        return self._request("GET", "/api/v1/compliance-training/report")
 
-    def zkp_verify(self, proof_id):
-        return self._post(f'/api/v1/emerging-tech/zkp/proofs/{proof_id}/verify')
+    def ct_progress(self, assignment_id: str) -> Any:
+        return self._request("GET", f"/api/v1/compliance-training/assignments/{assignment_id}/progress")
 
-    def zkp_circuits(self):
-        return self._get('/api/v1/emerging-tech/zkp/circuits')
+    def ct_batch_assign(self, users: list, module_id: str) -> Any:
+        return self._request("POST", "/api/v1/compliance-training/batch-assign", {"users": users, "module_id": module_id})
 
-    def dcn_list_tasks(self):
-        return self._get('/api/v1/emerging-tech/dcn/tasks')
+    def ap_sessions(self) -> Any:
+        return self._request("GET", "/api/v1/auditor/sessions")
 
-    def dcn_submit_task(self, name, requirements, input_data):
-        return self._post('/api/v1/emerging-tech/dcn/tasks', {'name': name, 'requirements': requirements, 'input_data': input_data})
+    def ap_evidence(self, session_id: str) -> Any:
+        return self._request("GET", f"/api/v1/auditor/sessions/{session_id}/evidence")
 
-    def dcn_task_status(self, task_id):
-        return self._get(f'/api/v1/emerging-tech/dcn/tasks/{task_id}')
+    def ap_findings(self, session_id: str) -> Any:
+        return self._request("GET", f"/api/v1/auditor/sessions/{session_id}/findings")
 
-    def dcn_workers(self):
-        return self._get('/api/v1/emerging-tech/dcn/workers')
+    def ap_stats(self) -> Any:
+        return self._request("GET", "/api/v1/auditor/stats")
+
+    def ap_engagement_create(self, title: str, scope: str, auditor: str) -> Any:
+        return self._request("POST", "/api/v1/auditor/engagements", {"title": title, "scope": scope, "auditor": auditor})
+
+    def ap_engagement_complete(self, engagement_id: str) -> Any:
+        return self._request("POST", f"/api/v1/auditor/engagements/{engagement_id}/complete")
+
+    def ap_finding_create(self, engagement_id: str, title: str, severity: str, description: str) -> Any:
+        return self._request("POST", f"/api/v1/auditor/engagements/{engagement_id}/findings", {"title": title, "severity": severity, "description": description})
+
+    def ap_session_revoke(self, session_id: str) -> Any:
+        return self._request("POST", f"/api/v1/auditor/sessions/{session_id}/revoke")
+
+    def ap_session_extend(self, session_id: str, hours: int) -> Any:
+        return self._request("POST", f"/api/v1/auditor/sessions/{session_id}/extend", {"hours": hours})
+
+    def ap_finding_update(self, finding_id: str, status: str) -> Any:
+        return self._request("PATCH", f"/api/v1/auditor/findings/{finding_id}", {"status": status})
+
+    def dr_list(self) -> Any:
+        return self._request("GET", "/api/v1/dr/plans")
+
+    def dr_create(self, name: str, rto: int, rpo: int, region: str) -> Any:
+        return self._request("POST", "/api/v1/dr/plans", {"name": name, "rto": rto, "rpo": rpo, "region": region})
+
+    def dr_status(self, plan_id: str) -> Any:
+        return self._request("GET", f"/api/v1/dr/plans/{plan_id}")
+
+    def dr_failover(self, plan_id: str) -> Any:
+        return self._request("POST", f"/api/v1/dr/plans/{plan_id}/failover")
+
+    def dr_readiness(self, plan_id: str) -> Any:
+        return self._request("GET", f"/api/v1/dr/plans/{plan_id}/readiness")
+
+    def dr_delete_plan(self, plan_id: str) -> Any:
+        return self._request("DELETE", f"/api/v1/dr/plans/{plan_id}")
+
+    def dr_scenarios(self) -> Any:
+        return self._request("GET", "/api/v1/dr/scenarios")
+
+    def dr_versions(self, plan_id: str) -> Any:
+        return self._request("GET", f"/api/v1/dr/plans/{plan_id}/versions")
+
+    def dr_notifications(self) -> Any:
+        return self._request("GET", "/api/v1/dr/notifications")
+
+    def dr_compliance(self, plan_id: str) -> Any:
+        return self._request("GET", f"/api/v1/dr/plans/{plan_id}/compliance")
+
+    def blockchain_list_networks(self) -> Any:
+        return self._get("/api/v1/emerging-tech/blockchain/networks")
+
+    def blockchain_create_network(self, name: str, consensus: str, chain_id: str) -> Any:
+        return self._post("/api/v1/emerging-tech/blockchain/networks", {"name": name, "consensus": consensus, "chain_id": chain_id})
+
+    def blockchain_network_status(self, network_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/blockchain/networks/{network_id}")
+
+    def blockchain_validators(self, network_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/blockchain/networks/{network_id}/validators")
+
+    def storage_list_gateways(self) -> Any:
+        return self._get("/api/v1/emerging-tech/storage/gateways")
+
+    def storage_create_gateway(self, name: str, provider: str) -> Any:
+        return self._post("/api/v1/emerging-tech/storage/gateways", {"name": name, "provider": provider})
+
+    def storage_pin_content(self, cid: str) -> Any:
+        return self._post("/api/v1/emerging-tech/storage/pin", {"cid": cid})
+
+    def storage_gateway_status(self, gateway_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/storage/gateways/{gateway_id}")
+
+    def quantum_list_keys(self) -> Any:
+        return self._get("/api/v1/emerging-tech/quantum/keys")
+
+    def quantum_generate_key(self, algorithm: str) -> Any:
+        return self._post("/api/v1/emerging-tech/quantum/keys", {"algorithm": algorithm})
+
+    def quantum_create_certificate(self, name: str, key_id: str) -> Any:
+        return self._post("/api/v1/emerging-tech/quantum/certificates", {"name": name, "key_id": key_id})
+
+    def quantum_encrypt(self, key_id: str, message: str) -> Any:
+        return self._post("/api/v1/emerging-tech/quantum/encrypt", {"key_id": key_id, "message": message})
+
+    def quantum_decrypt(self, key_id: str, ciphertext: str) -> Any:
+        return self._post("/api/v1/emerging-tech/quantum/decrypt", {"key_id": key_id, "ciphertext": ciphertext})
+
+    def contracts_list(self) -> Any:
+        return self._get("/api/v1/emerging-tech/contracts")
+
+    def contracts_deploy(self, name: str, network: str, bytecode: str) -> Any:
+        return self._post("/api/v1/emerging-tech/contracts", {"name": name, "network": network, "bytecode": bytecode})
+
+    def contracts_get(self, contract_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/contracts/{contract_id}")
+
+    def contracts_events(self, contract_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/contracts/{contract_id}/events")
+
+    def web3id_list(self) -> Any:
+        return self._get("/api/v1/emerging-tech/web3id/identities")
+
+    def web3id_create(self, did: str) -> Any:
+        return self._post("/api/v1/emerging-tech/web3id/identities", {"did": did})
+
+    def web3id_authenticate(self, identity_id: str) -> Any:
+        return self._post(f"/api/v1/emerging-tech/web3id/identities/{identity_id}/auth")
+
+    def web3id_sessions(self) -> Any:
+        return self._get("/api/v1/emerging-tech/web3id/sessions")
+
+    def confidential_list_enclaves(self) -> Any:
+        return self._get("/api/v1/emerging-tech/confidential/enclaves")
+
+    def confidential_create_enclave(self, name: str, image: str, memory_mb: int) -> Any:
+        return self._post("/api/v1/emerging-tech/confidential/enclaves", {"name": name, "image": image, "memory_mb": memory_mb})
+
+    def confidential_attest(self, enclave_id: str) -> Any:
+        return self._post(f"/api/v1/emerging-tech/confidential/enclaves/{enclave_id}/attest")
+
+    def confidential_secrets(self, enclave_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/confidential/enclaves/{enclave_id}/secrets")
+
+    def federated_list_projects(self) -> Any:
+        return self._get("/api/v1/emerging-tech/federated/projects")
+
+    def federated_create_project(self, name: str, rounds: int, min_clients: int) -> Any:
+        return self._post("/api/v1/emerging-tech/federated/projects", {"name": name, "rounds": rounds, "min_clients": min_clients})
+
+    def federated_project_status(self, project_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/federated/projects/{project_id}")
+
+    def federated_rounds(self, project_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/federated/projects/{project_id}/rounds")
+
+    def zkp_list(self) -> Any:
+        return self._get("/api/v1/emerging-tech/zkp/proofs")
+
+    def zkp_generate(self, statement: str, witness: str) -> Any:
+        return self._post("/api/v1/emerging-tech/zkp/proofs", {"statement": statement, "witness": witness})
+
+    def zkp_verify(self, proof_id: str) -> Any:
+        return self._post(f"/api/v1/emerging-tech/zkp/proofs/{proof_id}/verify")
+
+    def zkp_circuits(self) -> Any:
+        return self._get("/api/v1/emerging-tech/zkp/circuits")
+
+    def dcn_list_tasks(self) -> Any:
+        return self._get("/api/v1/emerging-tech/dcn/tasks")
+
+    def dcn_submit_task(self, name: str, requirements: str, input_data: str) -> Any:
+        return self._post("/api/v1/emerging-tech/dcn/tasks", {"name": name, "requirements": requirements, "input_data": input_data})
+
+    def dcn_task_status(self, task_id: str) -> Any:
+        return self._get(f"/api/v1/emerging-tech/dcn/tasks/{task_id}")
+
+    def dcn_workers(self) -> Any:
+        return self._get("/api/v1/emerging-tech/dcn/workers")

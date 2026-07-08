@@ -1,1 +1,1 @@
-"""Naming utilities for neutral provider mapping."""
+# Tools for mapping fake provider names to real ones

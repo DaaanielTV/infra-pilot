@@ -7,10 +7,9 @@ from ..client import ApiClient
 
 
 def create_app():
-    """Create and configure the main Typer application."""
     app = typer.Typer(
         name="ipilot",
-        help="Infra Pilot CLI - Infrastructure orchestration platform",
+        help="Infra Pilot CLI - tool for managing your infrastructure",
         no_args_is_help=True,
         rich_markup_mode="rich",
     )
@@ -24,11 +23,11 @@ def create_app():
         ),
         profile: str = typer.Option(
             None, "--profile", "-p",
-            help="Configuration profile to use",
+            help="Which config profile to use",
         ),
         no_color: bool = typer.Option(
             False, "--no-color",
-            help="Disable colored output",
+            help="Turn off colored output",
         ),
     ):
         ctx.ensure_object(dict)
@@ -40,7 +39,6 @@ def create_app():
 
 
 def get_client(ctx: typer.Context) -> ApiClient:
-    """Get an API client from context."""
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(
         base_url=config.get("api_url", "http://localhost:8080"),
@@ -49,12 +47,6 @@ def get_client(ctx: typer.Context) -> ApiClient:
 
 
 class LegacyBridge:
-    """Bridge for old argparse cmd_* functions to work under Typer.
-
-    Allows incremental migration. Remove each entry as the corresponding
-    command module is natively rewritten.
-    """
-
     def __init__(self):
         self._cmd_map: Dict[str, Callable] = {}
         self._sub_router: Dict[str, Dict[str, Callable]] = {}

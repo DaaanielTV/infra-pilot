@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List available apps"""
     client = _get_client(ctx)
     result = client.appmarket_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -37,6 +36,5 @@ def installations(ctx: typer.Context):
     """List installations"""
     client = _get_client(ctx)
     result = client.appmarket_installations()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

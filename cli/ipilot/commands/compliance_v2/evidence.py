@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List evidence items"""
+    """List evidence"""
     client = _get_client(ctx)
     result = client.ec_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def collect(
     ctx: typer.Context,
     source: str = typer.Argument(help="Evidence source"),
 ):
-    """Collect evidence"""
+    """Collect"""
     client = _get_client(ctx)
     result = client.ec_collect(source)
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,17 +33,16 @@ def collect(
 
 @app.command()
 def packages(ctx: typer.Context):
-    """List evidence packages"""
+    """Packages"""
     client = _get_client(ctx)
     result = client.ec_packages()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get evidence statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.ec_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -52,7 +50,7 @@ def stats(ctx: typer.Context):
 
 @app.command("auto-collect")
 def auto_collect(ctx: typer.Context):
-    """Run auto-collection"""
+    """Auto collect"""
     client = _get_client(ctx)
     result = client.ec_auto_collect()
     print_output(result, ctx.obj.get("output", "table"))
@@ -63,11 +61,10 @@ def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
 ):
-    """Search evidence"""
+    """Search"""
     client = _get_client(ctx)
     result = client.ec_search(query)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -76,7 +73,7 @@ def validate(
     ctx: typer.Context,
     evidence_id: str = typer.Argument(help="Evidence ID"),
 ):
-    """Validate evidence"""
+    """Validate"""
     client = _get_client(ctx)
     result = client.ec_validate(evidence_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -88,7 +85,7 @@ def package_create(
     name: str = typer.Argument(help="Package name"),
     evidence_ids: str = typer.Argument(help="Evidence IDs (JSON)"),
 ):
-    """Create an evidence package"""
+    """Create package"""
     client = _get_client(ctx)
     result = client.ec_package_create(name, evidence_ids)
     print_output(result, ctx.obj.get("output", "table"))
@@ -96,11 +93,10 @@ def package_create(
 
 @app.command()
 def expired(ctx: typer.Context):
-    """List expired evidence"""
+    """Expired evidence"""
     client = _get_client(ctx)
     result = client.ec_expired()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -109,7 +105,7 @@ def custody(
     ctx: typer.Context,
     evidence_id: str = typer.Argument(help="Evidence ID"),
 ):
-    """Get evidence custody chain"""
+    """Custody chain"""
     client = _get_client(ctx)
     result = client.ec_custody(evidence_id)
     print_output(result, ctx.obj.get("output", "table"))

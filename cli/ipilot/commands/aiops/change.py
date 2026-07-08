@@ -18,14 +18,14 @@ def plan(ctx: typer.Context, service: str = typer.Argument(..., help="Service na
 
 @app.command()
 def approve(ctx: typer.Context, plan_id: str = typer.Argument(..., help="Plan ID")):
-    """Approve a change plan"""
+    """Approve a change"""
     client = _get_client(ctx)
     result = client.aiops_change_approve(plan_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get change management stats"""
+    """Change stats"""
     client = _get_client(ctx)
     result = client.aiops_change_stats()
     print_output(result, ctx.obj.get("output", "table"))

@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Attestation and reports")
+app = typer.Typer(help="Attestation")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List attestations"""
     client = _get_client(ctx)
     result = client.ar_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def generate(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
 ):
-    """Generate an attestation"""
+    """Generate"""
     client = _get_client(ctx)
     result = client.ar_generate(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -37,7 +36,7 @@ def sign(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
 ):
-    """Sign an attestation"""
+    """Sign"""
     client = _get_client(ctx)
     result = client.ar_sign(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -45,7 +44,7 @@ def sign(
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get attestation statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.ar_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -56,7 +55,7 @@ def approve(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
 ):
-    """Approve an attestation"""
+    """Approve"""
     client = _get_client(ctx)
     result = client.ar_approve(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -67,7 +66,7 @@ def verify(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
 ):
-    """Verify an attestation"""
+    """Verify"""
     client = _get_client(ctx)
     result = client.ar_verify(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -79,7 +78,7 @@ def compare(
     attestation_id_a: str = typer.Argument(help="First attestation ID"),
     attestation_id_b: str = typer.Argument(help="Second attestation ID"),
 ):
-    """Compare attestations"""
+    """Compare"""
     client = _get_client(ctx)
     result = client.ar_compare(attestation_id_a, attestation_id_b)
     print_output(result, ctx.obj.get("output", "table"))
@@ -91,7 +90,7 @@ def schedule(
     cron: str = typer.Argument(help="Cron expression"),
     framework: str = typer.Argument(help="Framework name"),
 ):
-    """Schedule an attestation"""
+    """Schedule"""
     client = _get_client(ctx)
     result = client.ar_schedule(cron, framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -99,7 +98,7 @@ def schedule(
 
 @app.command()
 def coverage(ctx: typer.Context):
-    """Get attestation coverage"""
+    """Coverage"""
     client = _get_client(ctx)
     result = client.ar_coverage()
     print_output(result, ctx.obj.get("output", "table"))

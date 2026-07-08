@@ -11,28 +11,28 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def predict(ctx: typer.Context, resource: str = typer.Argument(..., help="Resource name")):
-    """Predict scaling needs for a resource"""
+    """Predict scaling needs"""
     client = _get_client(ctx)
     result = client.aiops_scaling_predict(resource)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def metrics(ctx: typer.Context, resource: str = typer.Argument(..., help="Resource name")):
-    """Get scaling metrics for a resource"""
+    """Scaling metrics"""
     client = _get_client(ctx)
     result = client.aiops_scaling_metrics(resource)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def policy(ctx: typer.Context, resource: str = typer.Argument(..., help="Resource name"), min_instances: int = typer.Argument(..., help="Minimum instances"), max_instances: int = typer.Argument(..., help="Maximum instances")):
-    """Set scaling policy for a resource"""
+    """Set scaling policy"""
     client = _get_client(ctx)
     result = client.aiops_scaling_policy(resource, min_instances, max_instances)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get scaling summary"""
+    """Scaling summary"""
     client = _get_client(ctx)
     result = client.aiops_scaling_summary()
     print_output(result, ctx.obj.get("output", "table"))

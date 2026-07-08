@@ -3,7 +3,6 @@ from rich.console import Console
 from rich.table import Table as RichTable
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.syntax import Syntax
 from rich import print as rprint
 import json
 
@@ -15,7 +14,6 @@ def get_console():
 
 
 def print_table(data: List[Dict], title: Optional[str] = None):
-    """Print data as a Rich table."""
     if not data:
         _console.print("[yellow](no data)[/yellow]")
         return

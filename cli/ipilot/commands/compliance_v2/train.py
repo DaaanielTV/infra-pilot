@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def modules(ctx: typer.Context):
-    """List training modules"""
+    """Modules"""
     client = _get_client(ctx)
     result = client.ct_modules()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def assign(
     user_id: str = typer.Argument(help="User ID"),
     module_id: str = typer.Argument(help="Module ID"),
 ):
-    """Assign a training module"""
+    """Assign"""
     client = _get_client(ctx)
     result = client.ct_assign(user_id, module_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def status(
     ctx: typer.Context,
     user_id: str = typer.Argument(help="User ID"),
 ):
-    """Get training status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.ct_status(user_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,7 +45,7 @@ def status(
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get training statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.ct_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -54,21 +53,19 @@ def stats(ctx: typer.Context):
 
 @app.command()
 def certifications(ctx: typer.Context):
-    """List certifications"""
+    """Certifications"""
     client = _get_client(ctx)
     result = client.ct_certifications()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def expiring(ctx: typer.Context):
-    """Get expiring certifications"""
+    """Expiring certs"""
     client = _get_client(ctx)
     result = client.ct_expiring()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -77,11 +74,10 @@ def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
 ):
-    """Search training content"""
+    """Search"""
     client = _get_client(ctx)
     result = client.ct_search(query)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -90,7 +86,7 @@ def report(
     ctx: typer.Context,
     module_id: str = typer.Argument(help="Module ID"),
 ):
-    """Get training report"""
+    """Report"""
     client = _get_client(ctx)
     result = client.ct_report(module_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -101,7 +97,7 @@ def progress(
     ctx: typer.Context,
     user_id: str = typer.Argument(help="User ID"),
 ):
-    """Get training progress"""
+    """Progress"""
     client = _get_client(ctx)
     result = client.ct_progress(user_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -113,7 +109,7 @@ def batch_assign(
     user_ids: str = typer.Argument(help="User IDs (JSON)"),
     module_id: str = typer.Argument(help="Module ID"),
 ):
-    """Batch assign training modules"""
+    """Batch assign"""
     client = _get_client(ctx)
     result = client.ct_batch_assign(user_ids, module_id)
     print_output(result, ctx.obj.get("output", "table"))

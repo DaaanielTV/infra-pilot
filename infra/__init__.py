@@ -1,1 +1,1 @@
-"""Infra package namespace for test scaffolding."""
+# This package holds test helper code

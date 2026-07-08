@@ -11,28 +11,28 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def services(ctx: typer.Context):
-    """List health services"""
+    """List services"""
     client = _get_client(ctx)
     result = client.aiops_health_services()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def register(ctx: typer.Context, name: str = typer.Argument(..., help="Service name"), endpoint: str = typer.Argument(..., help="Health endpoint"), interval: int = typer.Argument(..., help="Check interval in seconds")):
-    """Register a health service"""
+def register(ctx: typer.Context, name: str = typer.Argument(..., help="Service name"), endpoint: str = typer.Argument(..., help="Health endpoint"), interval: int = typer.Argument(..., help="Check interval")):
+    """Register a service"""
     client = _get_client(ctx)
     result = client.aiops_health_register(name, endpoint, interval)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def forecast(ctx: typer.Context, service_id: str = typer.Argument(..., help="Service ID")):
-    """Get health forecast for a service"""
+    """Health forecast"""
     client = _get_client(ctx)
     result = client.aiops_health_forecast(service_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def dashboard(ctx: typer.Context):
-    """Get health dashboard"""
+    """Health dashboard"""
     client = _get_client(ctx)
     result = client.aiops_health_dashboard()
     print_output(result, ctx.obj.get("output", "table"))

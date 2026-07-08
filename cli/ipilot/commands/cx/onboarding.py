@@ -5,11 +5,9 @@ from ...output.formatters import print_output
 
 app = typer.Typer(help="Customer onboarding")
 
-
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
-
 
 @app.command()
 def start(
@@ -17,22 +15,20 @@ def start(
     customer_id: str = typer.Argument(help="Customer ID"),
     plan: str = typer.Argument(help="Onboarding plan"),
 ):
-    """Start onboarding for a customer"""
+    """Start onboarding"""
     client = _get_client(ctx)
     result = client.cx_onboarding_start(customer_id, plan)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def get(
     ctx: typer.Context,
     customer_id: str = typer.Argument(help="Customer ID"),
 ):
-    """Get onboarding status"""
+    """Onboarding status"""
     client = _get_client(ctx)
     result = client.cx_onboarding_get(customer_id)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def step(
@@ -40,15 +36,14 @@ def step(
     customer_id: str = typer.Argument(help="Customer ID"),
     step: str = typer.Argument(help="Step name"),
 ):
-    """Complete an onboarding step"""
+    """Complete a step"""
     client = _get_client(ctx)
     result = client.cx_onboarding_step(customer_id, step)
     print_output(result, ctx.obj.get("output", "table"))
 
-
 @app.command()
 def stats(ctx: typer.Context):
-    """Onboarding statistics"""
+    """Onboarding stats"""
     client = _get_client(ctx)
     result = client.cx_onboarding_stats()
     print_output(result, ctx.obj.get("output", "table"))

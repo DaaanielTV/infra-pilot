@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def list(ctx: typer.Context):
-    """List resiliency pipelines"""
+    """List pipelines"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -20,7 +20,7 @@ def create(
     name: str = typer.Argument(help="Pipeline name"),
     config: str = typer.Argument(help="Pipeline config"),
 ):
-    """Create a resiliency pipeline"""
+    """Create"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,7 +29,7 @@ def trigger(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
 ):
-    """Trigger a resiliency pipeline"""
+    """Trigger"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -38,7 +38,7 @@ def steps(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
 ):
-    """List pipeline steps"""
+    """Steps"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -47,7 +47,7 @@ def webhooks(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
 ):
-    """List pipeline webhooks"""
+    """Webhooks"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -56,7 +56,7 @@ def triggers(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
 ):
-    """List pipeline triggers"""
+    """Triggers"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -65,5 +65,5 @@ def analytics(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
 ):
-    """Get pipeline analytics"""
+    """Analytics"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

@@ -1,27 +1,21 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="BGP management commands")
-
+app = typer.Typer(help="BGP commands")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
-
 
 @app.command()
 def sessions(ctx: typer.Context):
     """List BGP sessions"""
     client = _get_client(ctx)
     result = client.bgp_sessions()
-    data = result if isinstance(result, _list_type) else result.get("sessions", result)
+    data = result if isinstance(result, list) else result.get("sessions", result)
     print_output(data, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def create(
@@ -30,22 +24,20 @@ def create(
     asn: int = typer.Argument(..., help="ASN number"),
     neighbor: str = typer.Argument(..., help="Neighbor IP"),
 ):
-    """Create a new BGP session"""
+    """Create BGP session"""
     client = _get_client(ctx)
     result = client.bgp_create(name, asn, neighbor)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def delete(
     ctx: typer.Context,
     session_id: str = typer.Argument(..., help="Session ID"),
 ):
-    """Delete a BGP session"""
+    """Delete BGP session"""
     client = _get_client(ctx)
     result = client.bgp_delete(session_id)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def routes(
@@ -55,5 +47,5 @@ def routes(
     """Show BGP routes"""
     client = _get_client(ctx)
     result = client.bgp_routes(session_id)
-    data = result if isinstance(result, _list_type) else result.get("routes", result)
+    data = result if isinstance(result, list) else result.get("routes", result)
     print_output(data, ctx.obj.get("output", "table"))

@@ -1,30 +1,35 @@
 # Security Policy
 
-## Reporting
+## Reporting a Problem
 
-Do **not** open public issues. Email maintainers with:
-- Description of vulnerability
-- Affected components/versions
-- Steps to reproduce
-- Impact assessment
+**Do not** post security issues in public. Email the maintainers instead.
 
-**Response:** 48h acknowledgment, fix timeline provided.
+Tell us:
+- What the problem is
+- What parts of the app are affected
+- How to reproduce it
+- How bad you think it is
 
-## Best Practices
+**We will:** reply within 48 hours and give you a timeline for the fix.
 
-- Keep software updated, use HTTPS in production
-- Never hardcode credentials — use env vars or vaults
-- Validate input, parameterize queries
-- Scan dependencies regularly
+## Good Security Habits
 
-## Scanning
+- Keep your software up to date. Use HTTPS in production.
+- Never put passwords or API keys in code. Use environment variables instead.
+- Check user input and use parameterized database queries.
+- Scan your dependencies for known vulnerabilities.
 
-| Ecosystem | Tools |
-|-----------|-------|
+## Tools We Use
+
+| What | Tools |
+|------|-------|
 | Python | `bandit`, `safety` |
 | JavaScript | `npm audit` |
 | Docker | `trivy` |
 
 ## Supported Versions
 
-Current release: all patches. Previous major: critical fixes only.
+| Version | Support |
+|---------|---------|
+| Latest release | Full security patches |
+| Previous major version | Critical fixes only |

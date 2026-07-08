@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List catalog items"""
+    """List items"""
     client = _get_client(ctx)
     result = client.catalog_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def register(
     name: str = typer.Argument(help="Service name"),
     version: str = typer.Argument(help="Service version"),
 ):
-    """Register a catalog item"""
+    """Register"""
     client = _get_client(ctx)
     result = client.catalog_register(name, version)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def get(
     ctx: typer.Context,
     item_id: str = typer.Argument(help="Item ID"),
 ):
-    """Get a catalog item"""
+    """Get item"""
     client = _get_client(ctx)
     result = client.catalog_get(item_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,7 +48,7 @@ def score(
     ctx: typer.Context,
     item_id: str = typer.Argument(help="Item ID"),
 ):
-    """Get catalog score"""
+    """Score"""
     client = _get_client(ctx)
     result = client.catalog_score(item_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -57,7 +56,7 @@ def score(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get catalog summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.catalog_summary()
     print_output(result, ctx.obj.get("output", "table"))

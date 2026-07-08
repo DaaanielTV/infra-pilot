@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List storage providers"""
+    """List providers"""
     client = _get_client(ctx)
     result = client.storage_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def create(
     name: str = typer.Argument(help="Storage name"),
     provider: str = typer.Argument(help="Provider type"),
 ):
-    """Create a storage resource"""
+    """Create"""
     client = _get_client(ctx)
     result = client.storage_create(name, provider)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def pin(
     ctx: typer.Context,
     cid: str = typer.Argument(help="Content ID"),
 ):
-    """Pin content to storage"""
+    """Pin"""
     client = _get_client(ctx)
     result = client.storage_pin(cid)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,7 +48,7 @@ def status(
     ctx: typer.Context,
     storage_id: str = typer.Argument(help="Storage ID"),
 ):
-    """Get storage status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.storage_status(storage_id)
     print_output(result, ctx.obj.get("output", "table"))

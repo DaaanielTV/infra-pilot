@@ -1,33 +1,33 @@
 # Security
 
-## LLM Data
+## AI Data
 
-If AI features are enabled, server metadata, logs, or config may be sent to the configured LLM API.
+If you turn on AI features, some server data may be sent to the AI.
 
-**Local mode** (no data leaves the machine):
+**Local mode** (data stays on your computer):
 ```env
 AI_API_ENDPOINT=http://localhost:1234/v1
 AI_API_KEY=not-needed
 AI_MODEL=llama3-8b
 ```
 
-## Telemetry
+## Tracking
 
-None. No tracking, analytics, or phone-home. Opt-in only if changed in future.
+None. The tool does not track you. No data is sent home.
 
 ## Secrets
 
-- `.env` is gitignored — never committed
-- Use env vars or a secrets manager (Vault supported)
-- TLS for transport, Fernet encryption at rest
+- `.env` is ignored by git — never commit it
+- Use environment variables or a secrets tool (Vault works)
+- TLS for sending data. Fernet for stored data.
 
 ## Security Features
 
 JWT auth · RBAC · 2FA/TOTP · WebAuthn/Passkeys · PAM (JIT access) · Audit trail
 
-## Reporting
+## Reporting Problems
 
-**Do not** open public issues. Email maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). 48h acknowledgment.
+**Do not** open public issues. Email the maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). They'll reply in 48 hours.
 
 ---
 

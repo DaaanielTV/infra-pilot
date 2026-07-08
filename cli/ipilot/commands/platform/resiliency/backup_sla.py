@@ -1,7 +1,7 @@
 import typer
 from ....output.formatters import print_output
 
-app = typer.Typer(help="Backup SLA management")
+app = typer.Typer(help="Backup SLA")
 
 
 def _get_client(ctx: typer.Context):
@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def list(ctx: typer.Context):
-    """List backup SLAs"""
+    """List SLAs"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -21,7 +21,7 @@ def create(
     rto: str = typer.Argument(help="Recovery time objective"),
     rpo: str = typer.Argument(help="Recovery point objective"),
 ):
-    """Create a backup SLA"""
+    """Create"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -30,7 +30,7 @@ def verify(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
 ):
-    """Verify a backup SLA"""
+    """Verify"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -39,7 +39,7 @@ def report(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
 ):
-    """Get backup SLA report"""
+    """Report"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -48,7 +48,7 @@ def policy(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
 ):
-    """Get backup SLA policy"""
+    """Policy"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -57,5 +57,5 @@ def storage(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
 ):
-    """Get backup storage status"""
+    """Storage"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

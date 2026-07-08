@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List blockchain networks"""
+    """List networks"""
     client = _get_client(ctx)
     result = client.blockchain_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def create(
     name: str = typer.Argument(help="Network name"),
     consensus: str = typer.Argument(help="Consensus mechanism"),
 ):
-    """Create a blockchain network"""
+    """Create"""
     client = _get_client(ctx)
     result = client.blockchain_create(name, consensus)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def status(
     ctx: typer.Context,
     network_id: str = typer.Argument(help="Network ID"),
 ):
-    """Get blockchain network status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.blockchain_status(network_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,9 +48,8 @@ def validators(
     ctx: typer.Context,
     network_id: str = typer.Argument(help="Network ID"),
 ):
-    """List blockchain validators"""
+    """Validators"""
     client = _get_client(ctx)
     result = client.blockchain_validators(network_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

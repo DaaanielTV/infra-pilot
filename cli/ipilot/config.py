@@ -1,11 +1,10 @@
 import json
 import os
-from typing import Any, Dict, Optional
 
 CONFIG_DIR = os.path.expanduser("~/.ipilot")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
-DEFAULT_CONFIG: Dict[str, Any] = {
+DEFAULT_CONFIG = {
     "api_url": os.environ.get("IPILOT_API_URL", "http://localhost:8080"),
     "api_key": None,
     "token": None,
@@ -18,12 +17,10 @@ def ensure_config_dir():
     os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
-def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
-    """Load config, optionally merging a named profile."""
+def load_config(profile=None):
     ensure_config_dir()
     config = dict(DEFAULT_CONFIG)
 
-    # Load base config
     config_path = _profile_path(None)
     if os.path.exists(config_path):
         try:
@@ -32,7 +29,6 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
         except (json.JSONDecodeError, IOError):
             pass
 
-    # Merge profile if specified
     profile = profile or config.get("profile")
     if profile:
         profile_path = _profile_path(profile)
@@ -44,7 +40,6 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
             except (json.JSONDecodeError, IOError):
                 pass
 
-    # Override from env
     if os.environ.get("IPILOT_API_URL"):
         config["api_url"] = os.environ["IPILOT_API_URL"]
     if os.environ.get("IPILOT_TOKEN"):
@@ -55,7 +50,7 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
     return config
 
 
-def save_config(config: Dict[str, Any]):
+def save_config(config):
     ensure_config_dir()
     profile = config.pop("profile", None)
     path = _profile_path(profile)
@@ -65,24 +60,23 @@ def save_config(config: Dict[str, Any]):
         config["profile"] = profile
 
 
-def get(key: str, profile: Optional[str] = None) -> Any:
+def get(key, profile=None):
     return load_config(profile=profile).get(key)
 
 
-def set_key(key: str, value: Any, profile: Optional[str] = None):
+def set_key(key, value, profile=None):
     config = load_config(profile=profile)
     config[key] = value
     save_config(config)
 
 
-def unset_key(key: str, profile: Optional[str] = None):
+def unset_key(key, profile=None):
     config = load_config(profile=profile)
     config.pop(key, None)
     save_config(config)
 
 
-def list_profiles() -> list:
-    """List all saved configuration profiles."""
+def list_profiles():
     ensure_config_dir()
     profiles = []
     for fname in os.listdir(CONFIG_DIR):
@@ -91,13 +85,13 @@ def list_profiles() -> list:
     return profiles
 
 
-def delete_profile(profile: str):
+def delete_profile(profile):
     path = _profile_path(profile)
     if os.path.exists(path):
         os.remove(path)
 
 
-def _profile_path(profile: Optional[str]) -> str:
+def _profile_path(profile):
     if profile:
         return os.path.join(CONFIG_DIR, f"config-{profile}.json")
     return CONFIG_FILE

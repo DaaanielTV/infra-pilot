@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List audits"""
     client = _get_client(ctx)
     result = client.am_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def schedule(
     name: str = typer.Argument(help="Audit name"),
     date: str = typer.Argument(help="Audit date"),
 ):
-    """Schedule an audit"""
+    """Schedule"""
     client = _get_client(ctx)
     result = client.am_schedule(name, date)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,17 +34,16 @@ def schedule(
 
 @app.command()
 def rights(ctx: typer.Context):
-    """List audit rights"""
+    """Rights"""
     client = _get_client(ctx)
     result = client.am_rights()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get audit statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.am_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,21 +51,19 @@ def stats(ctx: typer.Context):
 
 @app.command()
 def upcoming(ctx: typer.Context):
-    """List upcoming audits"""
+    """Upcoming"""
     client = _get_client(ctx)
     result = client.am_upcoming()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def overdue(ctx: typer.Context):
-    """List overdue audits"""
+    """Overdue"""
     client = _get_client(ctx)
     result = client.am_overdue()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -76,7 +72,7 @@ def workflow(
     ctx: typer.Context,
     audit_id: str = typer.Argument(help="Audit ID"),
 ):
-    """Get audit workflow"""
+    """Workflow"""
     client = _get_client(ctx)
     result = client.am_workflow(audit_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -87,7 +83,7 @@ def report(
     ctx: typer.Context,
     audit_id: str = typer.Argument(help="Audit ID"),
 ):
-    """Get audit report"""
+    """Report"""
     client = _get_client(ctx)
     result = client.am_report(audit_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -99,7 +95,7 @@ def register_right(
     name: str = typer.Argument(help="Right name"),
     description: str = typer.Argument(help="Right description"),
 ):
-    """Register an audit right"""
+    """Register right"""
     client = _get_client(ctx)
     result = client.am_register_right(name, description)
     print_output(result, ctx.obj.get("output", "table"))
@@ -107,9 +103,8 @@ def register_right(
 
 @app.command()
 def calendar(ctx: typer.Context):
-    """Get audit calendar"""
+    """Calendar"""
     client = _get_client(ctx)
     result = client.am_calendar()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

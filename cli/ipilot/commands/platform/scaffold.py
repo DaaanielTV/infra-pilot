@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List scaffolds"""
     client = _get_client(ctx)
     result = client.scaffold_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def generate(
     template: str = typer.Argument(help="Template name"),
     name: str = typer.Argument(help="Project name"),
 ):
-    """Generate a scaffold"""
+    """Generate"""
     client = _get_client(ctx)
     result = client.scaffold_generate(template, name)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def status(
     ctx: typer.Context,
     scaffold_id: str = typer.Argument(help="Scaffold ID"),
 ):
-    """Get scaffold status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.scaffold_status(scaffold_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -50,7 +49,7 @@ def step_command(
     scaffold_id: str = typer.Argument(help="Scaffold ID"),
     step_name: str = typer.Argument(help="Step name"),
 ):
-    """Execute a scaffold step"""
+    """Step"""
     client = _get_client(ctx)
     result = client.scaffold_step(scaffold_id, step_name)
     print_output(result, ctx.obj.get("output", "table"))

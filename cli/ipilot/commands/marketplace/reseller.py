@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List resellers"""
     client = _get_client(ctx)
     result = client.reseller_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

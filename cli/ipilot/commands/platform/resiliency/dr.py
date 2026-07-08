@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def list(ctx: typer.Context):
-    """List disaster recovery plans"""
+    """List plans"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -20,7 +20,7 @@ def create(
     name: str = typer.Argument(help="Plan name"),
     config: str = typer.Argument(help="Plan config"),
 ):
-    """Create a disaster recovery plan"""
+    """Create"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,7 +29,7 @@ def status(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """Get disaster recovery status"""
+    """Status"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -38,13 +38,13 @@ def failover(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """Execute a failover"""
+    """Failover"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def readiness(ctx: typer.Context):
-    """Check DR readiness"""
+    """Readiness"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -53,7 +53,7 @@ def delete(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """Delete a disaster recovery plan"""
+    """Delete"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -62,7 +62,7 @@ def scenarios(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """List DR scenarios"""
+    """Scenarios"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -71,7 +71,7 @@ def versions(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """List DR plan versions"""
+    """Versions"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -80,7 +80,7 @@ def notifications(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """Get DR notifications"""
+    """Notifications"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -89,5 +89,5 @@ def compliance(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
 ):
-    """Get DR compliance status"""
+    """Compliance"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

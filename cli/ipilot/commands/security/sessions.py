@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Session management")
+app = typer.Typer(help="Sessions")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -18,10 +16,10 @@ def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
 ):
-    """List active sessions"""
+    """List sessions"""
     client = _get_client(ctx)
     result = client.list_sessions()
-    data = result if isinstance(result, _list_type) else result.get("sessions", result)
+    data = result if isinstance(result, list) else result.get("sessions", result)
     print_output(data, output or ctx.obj.get("output", "table"))
 
 
@@ -30,7 +28,7 @@ def revoke(
     ctx: typer.Context,
     session_id: str = typer.Argument(..., help="Session ID"),
 ):
-    """Revoke a session"""
+    """Revoke session"""
     client = _get_client(ctx)
     result = client.revoke_session(session_id)
     print_output(result, ctx.obj.get("output", "table"))

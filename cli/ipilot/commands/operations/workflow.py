@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="Workflow automation commands")
+app = typer.Typer(help="Workflow automation")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -19,7 +16,7 @@ def list(ctx: typer.Context):
     """List all workflows"""
     client = _get_client(ctx)
     result = client.workflow_list()
-    data = result if isinstance(result, _list_type) else result.get("workflows", result)
+    data = result if isinstance(result, list) else result.get("workflows", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

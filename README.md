@@ -1,6 +1,6 @@
 # Infra Pilot
 
-Manage servers from terminal, web, or Discord.
+A tool to manage your servers from terminal, web, or Discord.
 
 ```bash
 git clone https://github.com/drosemann/infra-pilot.git

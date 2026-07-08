@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Edge device management")
+app = typer.Typer(help="Edge devices")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -22,7 +20,7 @@ def list(
     """List edge devices"""
     client = _get_client(ctx)
     result = client.list_edge_devices(device_type, status)
-    data = result if isinstance(result, _list_type) else result.get("devices", result)
+    data = result if isinstance(result, list) else result.get("devices", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

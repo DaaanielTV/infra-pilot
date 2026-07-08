@@ -1,25 +1,8 @@
-"""Health Check Modul für CLI
-
-Dieses Modul bietet Funktionen zur Überprüfung der Systemgesundheit,
-einschließlich API-Verbindungen, Datenbankzugriff und Speichernutzung.
-"""
-
 from ..client import ApiClient
 from ..config import load_config
 
 
 def get_health_status():
-    """
-    Führt einen vollständigen Health Check durch.
-    
-    Überprüft:
-    - API-Konnektivität
-    - Backend-Status
-    - Dienstverfügbarkeit
-    
-    Returns:
-        dict: Status mit Informationen zu verschiedenen Komponenten
-    """
     try:
         config = load_config()
         client = ApiClient(
@@ -36,23 +19,12 @@ def get_health_status():
 
 
 def format_health_output(health_data):
-    """
-    Formatiert Health Check Daten für die Ausgabe.
-    
-    Args:
-        health_data (dict): Rohe Health Check Daten vom Server
-        
-    Returns:
-        dict: Formatierte Ausgabe
-    """
     if 'error' in health_data:
         return {
             'status': 'UNHEALTHY',
             'error': health_data['error'],
             'timestamp': health_data.get('timestamp')
         }
-    
-    # Standard Health Check Struktur
     return {
         'status': health_data.get('status', 'UNKNOWN').upper(),
         'api': health_data.get('api', 'UNKNOWN'),

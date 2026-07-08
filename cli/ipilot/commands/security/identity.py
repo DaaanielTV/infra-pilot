@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Identity authentication commands")
+app = typer.Typer(help="Identity auth")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -16,7 +16,7 @@ def login(
     ctx: typer.Context,
     api_key: str = typer.Argument(..., help="API key for authentication"),
 ):
-    """Authenticate with API key"""
+    """Login"""
     client = _get_client(ctx)
     result = client.login(api_key)
     print_output(result, ctx.obj.get("output", "table"))
@@ -24,7 +24,7 @@ def login(
 
 @app.command()
 def logout(ctx: typer.Context):
-    """End current session"""
+    """Logout"""
     client = _get_client(ctx)
     result = client.logout()
     print_output(result, ctx.obj.get("output", "table"))

@@ -4,31 +4,31 @@
 
 | Error | Fix |
 |-------|-----|
-| `Connection refused` | API not running — `docker compose ps`, check URL with `ipilot config get` |
-| `Unauthorized` | `ipilot login <api-key>` again |
-| `404 Not Found` | Update to latest version |
+| `Connection refused` | API is not running — check `docker compose ps`, check URL with `ipilot config get` |
+| `Unauthorized` | Log in again with `ipilot login <api-key>` |
+| `404 Not Found` | Update to the newest version |
 
 ## Docker Stack
 
 | Problem | Fix |
 |---------|-----|
-| Container restarting | Missing `.env` vars — copy `.env.example` |
-| `port is already allocated` | Stop conflicting containers or override ports |
-| PostgreSQL unreachable | Check `docker compose logs postgres` |
+| Container keeps restarting | Missing `.env` settings — copy `.env.example` |
+| `port is already allocated` | Stop other programs or change ports |
+| PostgreSQL won't connect | Check `docker compose logs postgres` |
 
 ## Discord Bot
 
 | Problem | Fix |
 |---------|-----|
-| Bot not responding | Check `DISCORD_TOKEN` in `.env` |
-| Missing Gateway Intents | Enable all 3 intents in Discord Developer Portal |
+| Bot does not respond | Check `DISCORD_TOKEN` in `.env` |
+| Missing Gateway Intents | Turn on all 3 intents in Discord Developer Portal |
 
 ## AI Features
 
 | Problem | Fix |
 |---------|-----|
-| AI not responding | Check `AI_API_ENDPOINT` and `AI_API_KEY` |
-| "Model not found" | Set `AI_MODEL` to an available model |
+| AI does not respond | Check `AI_API_ENDPOINT` and `AI_API_KEY` |
+| "Model not found" | Set `AI_MODEL` to a model you have |
 
 ## Logs
 

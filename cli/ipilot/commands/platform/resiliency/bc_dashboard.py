@@ -1,7 +1,7 @@
 import typer
 from ....output.formatters import print_output
 
-app = typer.Typer(help="Business continuity dashboard")
+app = typer.Typer(help="BC dashboard")
 
 
 def _get_client(ctx: typer.Context):
@@ -10,19 +10,19 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def show(ctx: typer.Context):
-    """Show business continuity dashboard"""
+    """Show dashboard"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def report(ctx: typer.Context):
-    """Get business continuity report"""
+    """Report"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def scenarios(ctx: typer.Context):
-    """List business continuity scenarios"""
+    """Scenarios"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -31,7 +31,7 @@ def subscribe(
     ctx: typer.Context,
     email: str = typer.Argument(help="Subscription email"),
 ):
-    """Subscribe to BC dashboard updates"""
+    """Subscribe"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -40,5 +40,5 @@ def simulate(
     ctx: typer.Context,
     scenario: str = typer.Argument(help="Scenario name"),
 ):
-    """Run a business continuity simulation"""
+    """Simulate"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

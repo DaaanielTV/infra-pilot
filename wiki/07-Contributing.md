@@ -21,21 +21,21 @@ cd services/management-panel && npm test
 
 `unit` · `integration` · `e2e` · `smoke`
 
-## Branch Naming
+## Branch Names
 
-`feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/` prefix + description.
+Use a prefix like `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/` plus a short name.
 
 ## Commits
 
-[Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
 
 ## PR Workflow
 
-1. Branch from `main`
+1. Make a new branch from `main`
 2. Commit and push
-3. Open PR against `main`
-4. CI runs tests, lint, security scans
-5. Merge after review + green checks
+3. Open a pull request against `main`
+4. CI runs tests, lint, and security checks
+5. Merge after someone reviews it and all checks pass
 
 ---
 

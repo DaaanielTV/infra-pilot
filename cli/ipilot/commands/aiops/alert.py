@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def ingest(ctx: typer.Context, source: str = typer.Argument(..., help="Alert source"), message: str = typer.Argument(..., help="Alert message"), severity: str = typer.Option("info", help="Severity level")):
+def ingest(ctx: typer.Context, source: str = typer.Argument(..., help="Ingest source"), message: str = typer.Argument(..., help="Alert message"), severity: str = typer.Option("info", help="Severity level")):
     """Ingest an alert"""
     client = _get_client(ctx)
     result = client.aiops_alert_ingest(source, message, severity)
@@ -31,7 +31,7 @@ def stats(ctx: typer.Context):
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def suppress(ctx: typer.Context, alert_id: str = typer.Argument(..., help="Alert ID to suppress")):
+def suppress(ctx: typer.Context, alert_id: str = typer.Argument(..., help="Alert ID")):
     """Suppress an alert"""
     client = _get_client(ctx)
     result = client.aiops_alert_suppress(alert_id)

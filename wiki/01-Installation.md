@@ -1,6 +1,6 @@
 # Installation
 
-## Full-Stack (Recommended)
+## Full Setup (Best Way)
 
 ```bash
 git clone https://github.com/drosemann/infra-pilot.git
@@ -8,24 +8,24 @@ cd infra-pilot && cp .env.example .env
 docker compose up -d
 ```
 
-Starts: PostgreSQL 16, Redis 7, Orchestrator, Integration Service, Management Panel, Discord Service.
+This starts: PostgreSQL 16, Redis 7, Orchestrator, Integration Service, Management Panel, Discord Service.
 
-Optional profiles:
+Extra options:
 ```bash
 docker compose --profile monitoring up -d   # Prometheus, Grafana
 docker compose --profile cli up -d          # ipilot CLI container
 ```
 
-## CLI Standalone
+## CLI Only
 
 ```bash
 cd cli && pip install -e .
 ipilot --version
 ```
 
-## Requirements
+## What You Need
 
-| Component | Version |
+| Thing | Version |
 |-----------|---------|
 | Docker / Compose | 24+ / v2 |
 | Python | 3.9+ |

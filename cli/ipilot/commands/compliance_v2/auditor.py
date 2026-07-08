@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def sessions(ctx: typer.Context):
-    """List auditor sessions"""
+    """Sessions"""
     client = _get_client(ctx)
     result = client.ap_sessions()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,11 +25,10 @@ def evidence(
     ctx: typer.Context,
     session_id: str = typer.Argument(help="Session ID"),
 ):
-    """Get auditor evidence"""
+    """Evidence"""
     client = _get_client(ctx)
     result = client.ap_evidence(session_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -39,17 +37,16 @@ def findings(
     ctx: typer.Context,
     session_id: str = typer.Argument(help="Session ID"),
 ):
-    """List auditor findings"""
+    """Findings"""
     client = _get_client(ctx)
     result = client.ap_findings(session_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get auditor statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.ap_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -61,7 +58,7 @@ def engagement_create(
     name: str = typer.Argument(help="Engagement name"),
     auditor_id: str = typer.Argument(help="Auditor ID"),
 ):
-    """Create an auditor engagement"""
+    """Create engagement"""
     client = _get_client(ctx)
     result = client.ap_engagement_create(name, auditor_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -72,7 +69,7 @@ def engagement_complete(
     ctx: typer.Context,
     engagement_id: str = typer.Argument(help="Engagement ID"),
 ):
-    """Complete an auditor engagement"""
+    """Complete engagement"""
     client = _get_client(ctx)
     result = client.ap_engagement_complete(engagement_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -85,7 +82,7 @@ def finding_create(
     description: str = typer.Argument(help="Finding description"),
     severity: str = typer.Argument(help="Finding severity"),
 ):
-    """Create an auditor finding"""
+    """Create finding"""
     client = _get_client(ctx)
     result = client.ap_finding_create(session_id, description, severity)
     print_output(result, ctx.obj.get("output", "table"))
@@ -96,7 +93,7 @@ def session_revoke(
     ctx: typer.Context,
     session_id: str = typer.Argument(help="Session ID"),
 ):
-    """Revoke an auditor session"""
+    """Revoke session"""
     client = _get_client(ctx)
     result = client.ap_session_revoke(session_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -108,7 +105,7 @@ def session_extend(
     session_id: str = typer.Argument(help="Session ID"),
     hours: int = typer.Argument(help="Extension hours"),
 ):
-    """Extend an auditor session"""
+    """Extend session"""
     client = _get_client(ctx)
     result = client.ap_session_extend(session_id, hours)
     print_output(result, ctx.obj.get("output", "table"))
@@ -120,7 +117,7 @@ def finding_update(
     finding_id: str = typer.Argument(help="Finding ID"),
     status: str = typer.Argument(help="New status"),
 ):
-    """Update an auditor finding"""
+    """Update finding"""
     client = _get_client(ctx)
     result = client.ap_finding_update(finding_id, status)
     print_output(result, ctx.obj.get("output", "table"))

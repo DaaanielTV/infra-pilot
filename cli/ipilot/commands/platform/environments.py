@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List environments"""
+    """List envs"""
     client = _get_client(ctx)
     result = client.environments_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def create(
     name: str = typer.Argument(help="Environment name"),
     env_type: str = typer.Argument(help="Environment type"),
 ):
-    """Create an environment"""
+    """Create"""
     client = _get_client(ctx)
     result = client.environments_create(name, env_type)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def get(
     ctx: typer.Context,
     env_id: str = typer.Argument(help="Environment ID"),
 ):
-    """Get an environment"""
+    """Get env"""
     client = _get_client(ctx)
     result = client.environments_get(env_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,7 +48,7 @@ def delete(
     ctx: typer.Context,
     env_id: str = typer.Argument(help="Environment ID"),
 ):
-    """Delete an environment"""
+    """Delete"""
     client = _get_client(ctx)
     result = client.environments_delete(env_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -61,7 +60,7 @@ def extend(
     env_id: str = typer.Argument(help="Environment ID"),
     extensions: str = typer.Argument(help="Extensions (JSON)"),
 ):
-    """Extend an environment"""
+    """Extend"""
     client = _get_client(ctx)
     result = client.environments_extend(env_id, extensions)
     print_output(result, ctx.obj.get("output", "table"))
@@ -69,7 +68,7 @@ def extend(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get environment summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.environments_summary()
     print_output(result, ctx.obj.get("output", "table"))

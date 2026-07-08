@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="Auto-remediation commands")
+app = typer.Typer(help="Auto-remediation")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -19,7 +16,7 @@ def rules(ctx: typer.Context):
     """List remediation rules"""
     client = _get_client(ctx)
     result = client.remediate_rules()
-    data = result if isinstance(result, _list_type) else result.get("rules", result)
+    data = result if isinstance(result, list) else result.get("rules", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -28,5 +25,5 @@ def history(ctx: typer.Context):
     """Show remediation history"""
     client = _get_client(ctx)
     result = client.remediate_history()
-    data = result if isinstance(result, _list_type) else result.get("history", result)
+    data = result if isinstance(result, list) else result.get("history", result)
     print_output(data, ctx.obj.get("output", "table"))

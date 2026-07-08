@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="IoT data pipeline")
+app = typer.Typer(help="IoT pipeline")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:

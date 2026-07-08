@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List confidential computing enclaves"""
+    """List enclaves"""
     client = _get_client(ctx)
     result = client.confidential_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def create(
     name: str = typer.Argument(help="Enclave name"),
     image: str = typer.Argument(help="Enclave image"),
 ):
-    """Create a confidential computing enclave"""
+    """Create"""
     client = _get_client(ctx)
     result = client.confidential_create(name, image)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def attest(
     ctx: typer.Context,
     enclave_id: str = typer.Argument(help="Enclave ID"),
 ):
-    """Attest a confidential enclave"""
+    """Attest"""
     client = _get_client(ctx)
     result = client.confidential_attest(enclave_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,9 +48,8 @@ def secrets(
     ctx: typer.Context,
     enclave_id: str = typer.Argument(help="Enclave ID"),
 ):
-    """List confidential secrets"""
+    """Secrets"""
     client = _get_client(ctx)
     result = client.confidential_secrets(enclave_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

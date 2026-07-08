@@ -11,28 +11,28 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def recommend(ctx: typer.Context):
-    """Get capacity recommendations"""
+    """Capacity recommendations"""
     client = _get_client(ctx)
     result = client.aiops_capacity_recommend()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def usage(ctx: typer.Context, resource: str = typer.Argument(..., help="Resource name")):
-    """Get capacity usage for a resource"""
+    """Capacity usage"""
     client = _get_client(ctx)
     result = client.aiops_capacity_usage(resource)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def simulate(ctx: typer.Context, resource: str = typer.Argument(..., help="Resource name"), load: float = typer.Argument(..., help="Load factor")):
-    """Simulate capacity load"""
+    """Simulate load"""
     client = _get_client(ctx)
     result = client.aiops_capacity_simulate(resource, load)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get capacity summary"""
+    """Capacity summary"""
     client = _get_client(ctx)
     result = client.aiops_capacity_summary()
     print_output(result, ctx.obj.get("output", "table"))

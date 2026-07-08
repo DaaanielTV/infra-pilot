@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List plans"""
     client = _get_client(ctx)
     result = client.plans_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -49,6 +48,5 @@ def subscriptions(ctx: typer.Context):
     """List subscriptions"""
     client = _get_client(ctx)
     result = client.plans_subscriptions()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List data residency configurations"""
+    """List configs"""
     client = _get_client(ctx)
     result = client.dr_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def register(
     name: str = typer.Argument(help="Configuration name"),
     region: str = typer.Argument(help="Region"),
 ):
-    """Register a data residency config"""
+    """Register"""
     client = _get_client(ctx)
     result = client.dr_register(name, region)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def check(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
 ):
-    """Check data residency compliance"""
+    """Check compliance"""
     client = _get_client(ctx)
     result = client.dr_check(config_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,7 +45,7 @@ def check(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get data residency summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.dr_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -57,11 +56,10 @@ def flows(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
 ):
-    """Get data flows"""
+    """Data flows"""
     client = _get_client(ctx)
     result = client.dr_flows(config_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -71,7 +69,7 @@ def move(
     config_id: str = typer.Argument(help="Config ID"),
     target_region: str = typer.Argument(help="Target region"),
 ):
-    """Move data to a new region"""
+    """Move data"""
     client = _get_client(ctx)
     result = client.dr_move(config_id, target_region)
     print_output(result, ctx.obj.get("output", "table"))
@@ -82,7 +80,7 @@ def audit(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
 ):
-    """Audit data residency"""
+    """Audit"""
     client = _get_client(ctx)
     result = client.dr_audit(config_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -90,11 +88,10 @@ def audit(
 
 @app.command()
 def violations(ctx: typer.Context):
-    """List data residency violations"""
+    """Violations"""
     client = _get_client(ctx)
     result = client.dr_violations()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -103,7 +100,7 @@ def compliance_report(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
 ):
-    """Get data residency compliance report"""
+    """Compliance report"""
     client = _get_client(ctx)
     result = client.dr_compliance_report(config_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -114,9 +111,8 @@ def asset_search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
 ):
-    """Search data residency assets"""
+    """Asset search"""
     client = _get_client(ctx)
     result = client.dr_asset_search(query)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

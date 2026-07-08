@@ -16,8 +16,7 @@ def rates(ctx: typer.Context):
     """Get tax rates"""
     client = _get_client(ctx)
     result = client.tax_rates()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,8 +25,7 @@ def invoices(ctx: typer.Context):
     """List tax invoices"""
     client = _get_client(ctx)
     result = client.tax_invoices()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

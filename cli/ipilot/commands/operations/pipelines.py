@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="CI/CD pipeline commands")
+app = typer.Typer(help="CI/CD pipelines")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -19,7 +16,7 @@ def list(ctx: typer.Context):
     """List all infrastructure pipelines"""
     client = _get_client(ctx)
     result = client.infra_pipeline_list()
-    data = result if isinstance(result, _list_type) else result.get("pipelines", result)
+    data = result if isinstance(result, list) else result.get("pipelines", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

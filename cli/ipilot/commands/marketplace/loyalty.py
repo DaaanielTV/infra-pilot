@@ -24,8 +24,7 @@ def badges(ctx: typer.Context):
     """List loyalty badges"""
     client = _get_client(ctx)
     result = client.loyalty_badges()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -34,8 +33,7 @@ def rewards(ctx: typer.Context):
     """List available rewards"""
     client = _get_client(ctx)
     result = client.loyalty_rewards()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -55,6 +53,5 @@ def leaderboard(ctx: typer.Context):
     """Get loyalty leaderboard"""
     client = _get_client(ctx)
     result = client.loyalty_leaderboard()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

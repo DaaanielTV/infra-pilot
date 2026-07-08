@@ -20,7 +20,7 @@ def create(
     name: str = typer.Argument(help="Runbook name"),
     steps: str = typer.Argument(help="Runbook steps (JSON)"),
 ):
-    """Create a runbook"""
+    """Create"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,13 +29,13 @@ def execute(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
 ):
-    """Execute a runbook"""
+    """Execute"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def templates(ctx: typer.Context):
-    """List runbook templates"""
+    """Templates"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -44,7 +44,7 @@ def audit(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
 ):
-    """Get runbook audit log"""
+    """Audit"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -53,7 +53,7 @@ def versions(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
 ):
-    """List runbook versions"""
+    """Versions"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -62,5 +62,5 @@ def approve(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
 ):
-    """Approve a runbook"""
+    """Approve"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

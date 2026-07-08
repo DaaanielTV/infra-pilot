@@ -1,6 +1,6 @@
 # Architecture
 
-Modular microservice architecture. Each service has a clear responsibility.
+Think of it like a factory. Each part does one job.
 
 ```
 ┌─ Clients ─────────────────────┐
@@ -18,19 +18,19 @@ Modular microservice architecture. Each service has a clear responsibility.
 └─────────────┘  └──────────────┘
 ```
 
-| Service | Lang | Port | Role |
+| Service | Language | Port | What It Does |
 |---------|------|------|------|
-| Management Panel | TS/React/Express | 5173/3001 | Dashboard |
-| Orchestrator Agent | Python | 8500 | Provisioning, Discord |
-| Integration Service | Python | 9000 | External APIs, webhooks |
-| Discord Service | Node.js | 3002 | Discord bot |
-| CLI (ipilot) | Python | — | Terminal interface |
+| Management Panel | TS/React/Express | 5173/3001 | The web page you see |
+| Orchestrator Agent | Python | 8500 | Runs servers, talks to Discord |
+| Integration Service | Python | 9000 | Talks to other services |
+| Discord Service | Node.js | 3002 | The Discord bot |
+| CLI (ipilot) | Python | — | The command line tool |
 
-## Data Flow
+## How Data Moves
 
-- **AI/LLM features** (optional): can use local LLM (Ollama, LM Studio) — set `AI_API_ENDPOINT=http://localhost:1234/v1`
-- **Cloud providers**: Orchestrator sends API requests to AWS, Azure, GCP, Hetzner
-- **Protocol**: REST/JSON between services, WebSocket for live metrics
+- **AI stuff** (optional): You can use a local AI like Ollama or LM Studio. Set `AI_API_ENDPOINT=http://localhost:1234/v1`
+- **Cloud stuff**: The Orchestrator sends requests to AWS, Azure, GCP, Hetzner
+- **Talking between parts**: REST/JSON is used normally. WebSocket is used for live data.
 
 ---
 

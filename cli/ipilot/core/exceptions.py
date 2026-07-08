@@ -1,11 +1,11 @@
 class CLIError(Exception):
-    """Base CLI exception."""
+    pass
 
 class APIError(CLIError):
-    """API communication error."""
+    pass
 
 class ConfigError(CLIError):
-    """Configuration error."""
+    pass
 
 class CommandNotFoundError(CLIError):
-    """Unknown command."""
+    pass

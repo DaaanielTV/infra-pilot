@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Mesh network management")
+app = typer.Typer(help="Mesh networks")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -18,7 +16,7 @@ def list(ctx: typer.Context):
     """List mesh networks"""
     client = _get_client(ctx)
     result = client.list_mesh_networks()
-    data = result if isinstance(result, _list_type) else result.get("networks", result)
+    data = result if isinstance(result, list) else result.get("networks", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

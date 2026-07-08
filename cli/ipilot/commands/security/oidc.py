@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="OIDC client management")
+app = typer.Typer(help="OIDC management")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -15,10 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def clients(ctx: typer.Context):
-    """List OIDC clients"""
+    """List clients"""
     client = _get_client(ctx)
     result = client.oidc_clients()
-    data = result if isinstance(result, _list_type) else result.get("clients", result)
+    data = result if isinstance(result, list) else result.get("clients", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -28,7 +26,7 @@ def register(
     name: str = typer.Argument(..., help="Client name"),
     redirect_uris: str = typer.Option(..., "--redirect-uris", help="Comma-separated redirect URIs"),
 ):
-    """Register a new OIDC client"""
+    """Register client"""
     client = _get_client(ctx)
     uris = [u.strip() for u in redirect_uris.split(",")]
     result = client.oidc_register(name, uris)
@@ -40,7 +38,7 @@ def delete(
     ctx: typer.Context,
     client_id: str = typer.Argument(..., help="OIDC client ID"),
 ):
-    """Delete an OIDC client"""
+    """Delete client"""
     client = _get_client(ctx)
     result = client.oidc_delete(client_id)
     print_output(result, ctx.obj.get("output", "table"))

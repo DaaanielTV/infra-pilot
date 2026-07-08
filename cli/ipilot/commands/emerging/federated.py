@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List federated learning jobs"""
+    """List jobs"""
     client = _get_client(ctx)
     result = client.federated_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def create(
     name: str = typer.Argument(help="Job name"),
     config: str = typer.Argument(help="Job config (JSON)"),
 ):
-    """Create a federated learning job"""
+    """Create"""
     client = _get_client(ctx)
     result = client.federated_create(name, config)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def status(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
 ):
-    """Get federated learning job status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.federated_status(job_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,9 +48,8 @@ def rounds(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
 ):
-    """Get federated learning rounds"""
+    """Rounds"""
     client = _get_client(ctx)
     result = client.federated_rounds(job_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

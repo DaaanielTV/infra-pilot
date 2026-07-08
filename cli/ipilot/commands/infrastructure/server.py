@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="Server management commands")
+app = typer.Typer(help="Server management")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -22,7 +19,7 @@ def list(
     """List all servers"""
     client = _get_client(ctx)
     result = client.list_servers()
-    data = result if isinstance(result, _list_type) else result.get("servers", result)
+    data = result if isinstance(result, list) else result.get("servers", result)
     print_output(data, output or ctx.obj.get("output", "table"))
 
 

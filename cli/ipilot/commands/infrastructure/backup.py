@@ -1,10 +1,8 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
 app = typer.Typer(help="Backup management")
 
 
@@ -21,7 +19,7 @@ def list(
     """List backups"""
     client = _get_client(ctx)
     result = client.list_backups(server)
-    data = result if isinstance(result, _list_type) else result.get("backups", result)
+    data = result if isinstance(result, list) else result.get("backups", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

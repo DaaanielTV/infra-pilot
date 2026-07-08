@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Marketplace recommendations")
+app = typer.Typer(help="Recommendations")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List recommendations"""
     client = _get_client(ctx)
     result = client.reco_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

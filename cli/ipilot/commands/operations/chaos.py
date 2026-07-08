@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="Chaos engineering commands")
+app = typer.Typer(help="Chaos engineering")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -19,7 +16,7 @@ def experiments(ctx: typer.Context):
     """List chaos experiments"""
     client = _get_client(ctx)
     result = client.chaos_experiments()
-    data = result if isinstance(result, _list_type) else result.get("experiments", result)
+    data = result if isinstance(result, list) else result.get("experiments", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -63,5 +60,5 @@ def faults(ctx: typer.Context):
     """List available fault types"""
     client = _get_client(ctx)
     result = client.chaos_faults()
-    data = result if isinstance(result, _list_type) else result.get("faults", result)
+    data = result if isinstance(result, list) else result.get("faults", result)
     print_output(data, ctx.obj.get("output", "table"))

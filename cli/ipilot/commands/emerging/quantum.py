@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List quantum resources"""
+    """List resources"""
     client = _get_client(ctx)
     result = client.quantum_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def generate(
     ctx: typer.Context,
     key_type: str = typer.Argument(help="Key type"),
 ):
-    """Generate quantum-safe keys"""
+    """Generate keys"""
     client = _get_client(ctx)
     result = client.quantum_generate(key_type)
     print_output(result, ctx.obj.get("output", "table"))
@@ -37,7 +36,7 @@ def cert(
     ctx: typer.Context,
     name: str = typer.Argument(help="Certificate name"),
 ):
-    """Generate a quantum-safe certificate"""
+    """Certificate"""
     client = _get_client(ctx)
     result = client.quantum_cert(name)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,7 +48,7 @@ def encrypt(
     data: str = typer.Argument(help="Data to encrypt"),
     key_id: str = typer.Argument(help="Key ID"),
 ):
-    """Encrypt with quantum-safe algorithm"""
+    """Encrypt"""
     client = _get_client(ctx)
     result = client.quantum_encrypt(data, key_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -61,7 +60,7 @@ def decrypt(
     data: str = typer.Argument(help="Data to decrypt"),
     key_id: str = typer.Argument(help="Key ID"),
 ):
-    """Decrypt with quantum-safe algorithm"""
+    """Decrypt"""
     client = _get_client(ctx)
     result = client.quantum_decrypt(data, key_id)
     print_output(result, ctx.obj.get("output", "table"))

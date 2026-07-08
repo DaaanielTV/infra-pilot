@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Audit log analysis")
+app = typer.Typer(help="Audit analysis")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -15,25 +13,25 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def anomalies(ctx: typer.Context):
-    """Detect audit anomalies"""
+    """Anomalies"""
     client = _get_client(ctx)
     result = client.audit_anomalies()
-    data = result if isinstance(result, _list_type) else result.get("anomalies", result)
+    data = result if isinstance(result, list) else result.get("anomalies", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def trend(ctx: typer.Context):
-    """Show audit activity trends"""
+    """Trends"""
     client = _get_client(ctx)
     result = client.audit_trend()
-    data = result if isinstance(result, _list_type) else result.get("trends", result)
+    data = result if isinstance(result, list) else result.get("trends", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Audit summary statistics"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.audit_summary()
     print_output(result, ctx.obj.get("output", "table"))

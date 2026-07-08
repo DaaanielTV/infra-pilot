@@ -16,8 +16,7 @@ def wallets(ctx: typer.Context):
     """List crypto wallets"""
     client = _get_client(ctx)
     result = client.crypto_wallets()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -40,8 +39,7 @@ def transactions(
     """List crypto transactions"""
     client = _get_client(ctx)
     result = client.crypto_transactions(wallet_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

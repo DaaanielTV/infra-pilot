@@ -13,17 +13,16 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List tech debt items"""
+    """List items"""
     client = _get_client(ctx)
     result = client.techdebt_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def report(ctx: typer.Context):
-    """Report tech debt"""
+    """Report"""
     client = _get_client(ctx)
     result = client.techdebt_report()
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,7 +33,7 @@ def get(
     ctx: typer.Context,
     debt_id: str = typer.Argument(help="Debt ID"),
 ):
-    """Get a tech debt item"""
+    """Get item"""
     client = _get_client(ctx)
     result = client.techdebt_get(debt_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -45,7 +44,7 @@ def fix_debt(
     ctx: typer.Context,
     debt_id: str = typer.Argument(help="Debt ID"),
 ):
-    """Fix a tech debt item"""
+    """Fix"""
     client = _get_client(ctx)
     result = client.techdebt_fix(debt_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,7 +52,7 @@ def fix_debt(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get tech debt summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.techdebt_summary()
     print_output(result, ctx.obj.get("output", "table"))

@@ -1,1 +1,1 @@
-"""Helper utilities for test scaffolding."""
+# Helper tools for tests

@@ -1,12 +1,9 @@
-import builtins
 import json
-from typing import Any
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
 app = typer.Typer(help="Policy management")
 
 
@@ -20,10 +17,10 @@ def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
 ):
-    """List governance policies"""
+    """List policies"""
     client = _get_client(ctx)
     result = client.policy_list()
-    data = result if isinstance(result, _list_type) else result.get("policies", result)
+    data = result if isinstance(result, list) else result.get("policies", result)
     print_output(data, output or ctx.obj.get("output", "table"))
 
 
@@ -33,7 +30,7 @@ def create(
     name: str = typer.Argument(..., help="Policy name"),
     rules: str = typer.Option(..., "--rules", "-r", help="JSON rules"),
 ):
-    """Create a governance policy"""
+    """Create policy"""
     client = _get_client(ctx)
     parsed = json.loads(rules)
     result = client.policy_create(name, parsed)
@@ -46,7 +43,7 @@ def evaluate(
     policy_id: str = typer.Argument(..., help="Policy ID"),
     resource: str = typer.Argument(..., help="Resource to evaluate"),
 ):
-    """Evaluate a policy against a resource"""
+    """Evaluate policy"""
     client = _get_client(ctx)
     result = client.policy_evaluate(policy_id, resource)
     print_output(result, ctx.obj.get("output", "table"))

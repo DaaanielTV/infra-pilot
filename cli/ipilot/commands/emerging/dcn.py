@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Decentralized compute network")
+app = typer.Typer(help="Decentralized compute")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List DCN jobs"""
+    """List jobs"""
     client = _get_client(ctx)
     result = client.dcn_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def submit(
     name: str = typer.Argument(help="Job name"),
     workload: str = typer.Argument(help="Workload spec"),
 ):
-    """Submit a DCN job"""
+    """Submit"""
     client = _get_client(ctx)
     result = client.dcn_submit(name, workload)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def status(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
 ):
-    """Get DCN job status"""
+    """Status"""
     client = _get_client(ctx)
     result = client.dcn_status(job_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,9 +48,8 @@ def workers(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
 ):
-    """List DCN workers"""
+    """Workers"""
     client = _get_client(ctx)
     result = client.dcn_workers(job_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def changes(ctx: typer.Context):
-    """Get regulatory changes"""
+    """Changes"""
     client = _get_client(ctx)
     result = client.ri_changes()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def detect(
     ctx: typer.Context,
     change_id: str = typer.Argument(help="Change ID"),
 ):
-    """Detect regulatory impact"""
+    """Detect impact"""
     client = _get_client(ctx)
     result = client.ri_detect(change_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,17 +33,16 @@ def detect(
 
 @app.command()
 def sources(ctx: typer.Context):
-    """List regulatory sources"""
+    """Sources"""
     client = _get_client(ctx)
     result = client.ri_sources()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get regulatory intelligence stats"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.ri_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -55,7 +53,7 @@ def impact(
     ctx: typer.Context,
     change_id: str = typer.Argument(help="Change ID"),
 ):
-    """Get regulatory impact analysis"""
+    """Impact analysis"""
     client = _get_client(ctx)
     result = client.ri_impact(change_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -66,7 +64,7 @@ def matrix(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
 ):
-    """Get regulatory matrix"""
+    """Regulatory matrix"""
     client = _get_client(ctx)
     result = client.ri_matrix(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -74,11 +72,10 @@ def matrix(
 
 @app.command()
 def calendar(ctx: typer.Context):
-    """Get regulatory calendar"""
+    """Calendar"""
     client = _get_client(ctx)
     result = client.ri_calendar()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -88,7 +85,7 @@ def notify(
     change_id: str = typer.Argument(help="Change ID"),
     email: str = typer.Argument(help="Notification email"),
 ):
-    """Set up regulatory notification"""
+    """Notify"""
     client = _get_client(ctx)
     result = client.ri_notify(change_id, email)
     print_output(result, ctx.obj.get("output", "table"))
@@ -96,11 +93,10 @@ def notify(
 
 @app.command()
 def pending(ctx: typer.Context):
-    """Get pending regulatory items"""
+    """Pending items"""
     client = _get_client(ctx)
     result = client.ri_pending()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -109,9 +105,8 @@ def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
 ):
-    """Search regulatory content"""
+    """Search"""
     client = _get_client(ctx)
     result = client.ri_search(query)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

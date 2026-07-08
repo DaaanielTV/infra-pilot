@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="WebAuthn credential management")
+app = typer.Typer(help="WebAuthn")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -15,10 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def credentials(ctx: typer.Context):
-    """List WebAuthn credentials"""
+    """List credentials"""
     client = _get_client(ctx)
     result = client.webauthn_credentials()
-    data = result if isinstance(result, _list_type) else result.get("credentials", result)
+    data = result if isinstance(result, list) else result.get("credentials", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +25,7 @@ def remove(
     ctx: typer.Context,
     credential_id: str = typer.Argument(..., help="WebAuthn credential ID"),
 ):
-    """Remove a WebAuthn credential"""
+    """Remove credential"""
     client = _get_client(ctx)
     result = client.webauthn_remove(credential_id)
     print_output(result, ctx.obj.get("output", "table"))

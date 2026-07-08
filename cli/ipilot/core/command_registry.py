@@ -1,14 +1,12 @@
 import importlib
 import pkgutil
 import typer
-from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 _registry: Dict[str, typer.Typer] = {}
 
 
 def register(name: str, help_text: str = ""):
-    """Decorator to register a command module with the CLI."""
     def decorator(app: typer.Typer):
         _registry[name] = (app, help_text)
         return app
@@ -16,7 +14,6 @@ def register(name: str, help_text: str = ""):
 
 
 def discover_commands(package_path: str = "ipilot.commands"):
-    """Auto-discover and register all command modules."""
     pkg = importlib.import_module(package_path)
     for importer, modname, ispkg in pkgutil.walk_packages(pkg.__path__, prefix=f"{package_path}."):
         if not ispkg:
@@ -31,7 +28,6 @@ def discover_commands(package_path: str = "ipilot.commands"):
 
 
 def attach_to_app(app: typer.Typer):
-    """Attach all discovered commands to the main app."""
     for name, (sub_app, _) in _registry.items():
         app.add_typer(sub_app, name=name)
 

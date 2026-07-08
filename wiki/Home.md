@@ -1,6 +1,7 @@
 # Infra Pilot
 
-Modular orchestration framework for containers, cloud, and game servers — via CLI, web, or Discord.
+A tool to run your apps, containers, and game servers.
+You can use it from the command line, a web page, or Discord.
 
 ## Quick Start
 

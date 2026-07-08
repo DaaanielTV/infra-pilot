@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List generated docs"""
+    """List docs"""
     client = _get_client(ctx)
     result = client.docgen_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def generate(
     template: str = typer.Argument(help="Doc template"),
     params: str = typer.Argument(help="Doc params (JSON)"),
 ):
-    """Generate a document"""
+    """Generate"""
     client = _get_client(ctx)
     result = client.docgen_generate(template, params)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def get(
     ctx: typer.Context,
     doc_id: str = typer.Argument(help="Doc ID"),
 ):
-    """Get a generated document"""
+    """Get doc"""
     client = _get_client(ctx)
     result = client.docgen_get(doc_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,7 +45,7 @@ def get(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get doc generation summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.docgen_summary()
     print_output(result, ctx.obj.get("output", "table"))

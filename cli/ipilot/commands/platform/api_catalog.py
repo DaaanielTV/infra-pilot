@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List API catalog items"""
+    """List items"""
     client = _get_client(ctx)
     result = client.apicatalog_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def register(
     name: str = typer.Argument(help="API name"),
     spec: str = typer.Argument(help="API spec"),
 ):
-    """Register an API"""
+    """Register"""
     client = _get_client(ctx)
     result = client.apicatalog_register(name, spec)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def get(
     ctx: typer.Context,
     api_id: str = typer.Argument(help="API ID"),
 ):
-    """Get an API catalog item"""
+    """Get item"""
     client = _get_client(ctx)
     result = client.apicatalog_get(api_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,7 +45,7 @@ def get(
 
 @app.command()
 def summary(ctx: typer.Context):
-    """Get API catalog summary"""
+    """Summary"""
     client = _get_client(ctx)
     result = client.apicatalog_summary()
     print_output(result, ctx.obj.get("output", "table"))

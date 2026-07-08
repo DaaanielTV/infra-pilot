@@ -1,6 +1,6 @@
 # CLI Reference
 
-## Usage
+## How to Use
 
 ```bash
 ipilot [global-flags] <command> [subcommand] [flags]

@@ -16,8 +16,7 @@ def metrics(ctx: typer.Context):
     """Get PPU metrics"""
     client = _get_client(ctx)
     result = client.ppu_metrics()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,8 +25,7 @@ def usage(ctx: typer.Context):
     """Get PPU usage"""
     client = _get_client(ctx)
     result = client.ppu_usage()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

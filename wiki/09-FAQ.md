@@ -1,25 +1,25 @@
 # FAQ
 
 **What is Infra Pilot?**
-A modular orchestration framework for IaC, containers, and multi-cloud — via CLI, web, or Discord.
+A tool that runs your apps and servers. You use it from the command line, a web page, or Discord.
 
-**Why not just Terraform/Pulumi?**
-Infra Pilot builds on top of them with a unified API, AI features, Discord control, green tracking, and a dashboard.
+**Why not just Terraform or Pulumi?**
+Infra Pilot works on top of them. It adds AI features, Discord control, energy tracking, and a web page.
 
-**Connection failed on `ipilot health`?**
-Check `docker compose ps`. Set correct URL: `ipilot config set api_url http://localhost:3001`.
+**I get "Connection failed" on `ipilot health`?**
+Check `docker compose ps`. Set the right URL: `ipilot config set api_url http://localhost:3001`.
 
-**Can I run single services?**
+**Can I run just some services?**
 Yes. `docker compose up -d postgres redis`.
 
-**How to change output format?**
+**How do I change the output format?**
 `ipilot config set output_format json`
 
-**200+ commands — how to keep track?**
-`ipilot --help` for top-level, `ipilot <command> --help` for subcommands.
+**200+ commands — how do I remember them?**
+Use `ipilot --help` for the main list. Use `ipilot <command> --help` for more details.
 
 **Can I work offline?**
-Yes. Use a local LLM (Ollama, LM Studio) — set `AI_API_ENDPOINT` in `.env`.
+Yes. Use a local AI (Ollama, LM Studio). Set `AI_API_ENDPOINT` in `.env`.
 
 ---
 

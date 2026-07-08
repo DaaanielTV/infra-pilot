@@ -1,21 +1,10 @@
-"""Infra Pilot CLI - CLI-first infrastructure orchestration platform.
-
-Usage:
-    ipilot [OPTIONS] COMMAND [ARGS]...
-    ipilot --help
-    ipilot --install-completion
-    ipilot server list
-    ipilot --profile prod server create myserver --type web --memory 1024
-"""
 import typer
-from typing import Optional
 
 from .core.cli import create_app, legacy_bridge
 from .core.command_registry import discover_commands, attach_to_app
 
 app = create_app()
 
-# Register native command modules
 import ipilot.commands
 from .core.command_registry import attach_to_app
 attach_to_app(app)
@@ -24,9 +13,9 @@ attach_to_app(app)
 @app.command()
 def login(
     ctx: typer.Context,
-    api_key: str = typer.Argument(..., help="API key for authentication"),
+    api_key: str = typer.Argument(..., help="Your API key"),
 ):
-    """Authenticate with the API."""
+    """Log in to the API."""
     from .client import ApiClient
     from .config import load_config
     from .output.formatters import print_output
@@ -41,7 +30,7 @@ def login(
 
 @app.command()
 def logout(ctx: typer.Context):
-    """Clear authentication token."""
+    """Log out and clear your token."""
     from .config import unset_key
     unset_key("token", profile=ctx.obj.get("profile"))
     from .output.formatters import print_output
@@ -57,7 +46,7 @@ def version():
 
 @app.command()
 def interactive():
-    """Enter interactive mode."""
+    """Open interactive mode."""
     _run_interactive()
 
 
@@ -66,7 +55,7 @@ def completion(
     shell: str = typer.Argument("auto", help="Shell type: bash, zsh, fish, powershell"),
     install: bool = typer.Option(False, "--install", help="Install completion"),
 ):
-    """Shell completion setup."""
+    """Set up shell completion."""
     if install:
         from typer._completion import install as install_completion
         install_completion()
@@ -81,7 +70,7 @@ def batch(
     ctx: typer.Context,
     file: str = typer.Option(..., "--file", "-f", help="YAML batch operations file"),
 ):
-    """Execute batch operations from a YAML file."""
+    """Run many commands from a YAML file."""
     import yaml
     with open(file) as f:
         ops = yaml.safe_load(f)
@@ -89,19 +78,17 @@ def batch(
         cmd = op.get("command", "")
         args = op.get("args", {})
         typer.echo(f"Running: ipilot {cmd} {args}")
-        # TODO: dispatch through Typer app
 
 
 @app.command()
 def docs(
     output: str = typer.Option("docs/cli-reference.md", "--output", "-o", help="Output file"),
 ):
-    """Generate CLI reference documentation."""
+    """Generate CLI reference docs."""
     _generate_docs(output)
 
 
 def _run_interactive():
-    """Interactive REPL mode."""
     from rich.prompt import Prompt
     from rich.console import Console
     console = Console()
@@ -113,7 +100,6 @@ def _run_interactive():
             if cmd in ("exit", "quit", "q"):
                 break
             if cmd.strip():
-                # Parse and dispatch through Typer
                 from typer.testing import CliRunner
                 runner = CliRunner()
                 result = runner.invoke(app, cmd.split())
@@ -123,9 +109,7 @@ def _run_interactive():
 
 
 def _generate_docs(output_path: str):
-    """Auto-generate CLI reference markdown."""
     lines = ["# CLI Reference\n", "Auto-generated from `ipilot --help`.\n", "## Global Options\n"]
-    # Capture top-level help
     from typer.testing import CliRunner
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])

@@ -1,7 +1,7 @@
 import typer
 from ....output.formatters import print_output
 
-app = typer.Typer(help="Active-active configuration")
+app = typer.Typer(help="Active-active")
 
 
 def _get_client(ctx: typer.Context):
@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def regions(ctx: typer.Context):
-    """List active-active regions"""
+    """Regions"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -20,7 +20,7 @@ def register(
     name: str = typer.Argument(help="Region name"),
     endpoint: str = typer.Argument(help="Region endpoint"),
 ):
-    """Register an active-active region"""
+    """Register"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,13 +29,13 @@ def status(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
 ):
-    """Get active-active region status"""
+    """Status"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def health(ctx: typer.Context):
-    """Get active-active health"""
+    """Health"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -45,7 +45,7 @@ def weight(
     region_id: str = typer.Argument(help="Region ID"),
     weight: int = typer.Argument(help="Traffic weight"),
 ):
-    """Set active-active region weight"""
+    """Set weight"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -54,7 +54,7 @@ def replication(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
 ):
-    """Get replication status"""
+    """Replication"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -63,11 +63,11 @@ def capacity(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
 ):
-    """Get region capacity"""
+    """Capacity"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def availability(ctx: typer.Context):
-    """Get active-active availability"""
+    """Availability"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

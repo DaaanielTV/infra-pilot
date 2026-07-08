@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Compliance scanning and reporting")
+app = typer.Typer(help="Compliance")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -18,7 +16,7 @@ def scan(
     ctx: typer.Context,
     framework: str = typer.Argument(..., help="Compliance framework (e.g. SOC2, ISO27001)"),
 ):
-    """Run a compliance scan"""
+    """Scan framework"""
     client = _get_client(ctx)
     result = client.compliance_scan(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -29,7 +27,7 @@ def report(
     ctx: typer.Context,
     scan_id: str = typer.Argument(..., help="Scan ID"),
 ):
-    """Get compliance report for a scan"""
+    """Compliance report"""
     client = _get_client(ctx)
     result = client.compliance_report(scan_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -37,8 +35,8 @@ def report(
 
 @app.command()
 def checks(ctx: typer.Context):
-    """List all compliance checks"""
+    """List checks"""
     client = _get_client(ctx)
     result = client.compliance_checks()
-    data = result if isinstance(result, _list_type) else result.get("checks", result)
+    data = result if isinstance(result, list) else result.get("checks", result)
     print_output(data, ctx.obj.get("output", "table"))

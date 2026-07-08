@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Control automation and customization")
+app = typer.Typer(help="Control automation")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -16,8 +16,7 @@ def list(ctx: typer.Context):
     """List controls"""
     client = _get_client(ctx)
     result = client.cac_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def evaluate(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
 ):
-    """Evaluate a control"""
+    """Evaluate"""
     client = _get_client(ctx)
     result = client.cac_evaluate(control_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,17 +33,16 @@ def evaluate(
 
 @app.command()
 def templates(ctx: typer.Context):
-    """List control templates"""
+    """Templates"""
     client = _get_client(ctx)
     result = client.cac_templates()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Get CAC statistics"""
+    """Stats"""
     client = _get_client(ctx)
     result = client.cac_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -56,7 +54,7 @@ def create(
     name: str = typer.Argument(help="Control name"),
     definition: str = typer.Argument(help="Control definition"),
 ):
-    """Create a control"""
+    """Create"""
     client = _get_client(ctx)
     result = client.cac_create(name, definition)
     print_output(result, ctx.obj.get("output", "table"))
@@ -67,7 +65,7 @@ def gap(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
 ):
-    """Analyze control gaps"""
+    """Gap analysis"""
     client = _get_client(ctx)
     result = client.cac_gap(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -78,7 +76,7 @@ def test(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
 ):
-    """Test a control"""
+    """Test"""
     client = _get_client(ctx)
     result = client.cac_test(control_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -89,7 +87,7 @@ def dry_run(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
 ):
-    """Dry-run a control evaluation"""
+    """Dry run"""
     client = _get_client(ctx)
     result = client.cac_dry_run(control_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -100,7 +98,7 @@ def version(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
 ):
-    """Get control version history"""
+    """Version history"""
     client = _get_client(ctx)
     result = client.cac_version(control_id)
     print_output(result, ctx.obj.get("output", "table"))

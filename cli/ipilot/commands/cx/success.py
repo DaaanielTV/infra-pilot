@@ -5,21 +5,17 @@ from ...output.formatters import print_output
 
 app = typer.Typer(help="Customer success plays")
 
-
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
-
 
 @app.command()
 def plays(ctx: typer.Context):
     """List success plays"""
     client = _get_client(ctx)
     result = client.cx_success_plays()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def create(
@@ -28,22 +24,20 @@ def create(
     trigger: str = typer.Argument(help="Trigger condition"),
     actions: str = typer.Argument(help="Actions (JSON)"),
 ):
-    """Create a success play"""
+    """Create a play"""
     client = _get_client(ctx)
     result = client.cx_success_create(name, trigger, actions)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def status(
     ctx: typer.Context,
     play_id: str = typer.Argument(help="Play ID"),
 ):
-    """Get success play status"""
+    """Play status"""
     client = _get_client(ctx)
     result = client.cx_success_status(play_id)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def trigger(
@@ -51,28 +45,25 @@ def trigger(
     play_id: str = typer.Argument(help="Play ID"),
     customer_id: str = typer.Argument(help="Customer ID"),
 ):
-    """Trigger a success play for a customer"""
+    """Trigger a play"""
     client = _get_client(ctx)
     result = client.cx_success_trigger(play_id, customer_id)
     print_output(result, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def executions(
     ctx: typer.Context,
     play_id: str = typer.Argument(help="Play ID"),
 ):
-    """List executions for a success play"""
+    """List executions"""
     client = _get_client(ctx)
     result = client.cx_success_executions(play_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
-
 
 @app.command()
 def stats(ctx: typer.Context):
-    """Success play statistics"""
+    """Success play stats"""
     client = _get_client(ctx)
     result = client.cx_success_stats()
     print_output(result, ctx.obj.get("output", "table"))

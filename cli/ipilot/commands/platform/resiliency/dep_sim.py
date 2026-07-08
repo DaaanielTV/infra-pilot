@@ -10,7 +10,7 @@ def _get_client(ctx: typer.Context):
 
 @app.command()
 def list(ctx: typer.Context):
-    """List dependency simulations"""
+    """List simulations"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -20,7 +20,7 @@ def create(
     name: str = typer.Argument(help="Simulation name"),
     config: str = typer.Argument(help="Simulation config"),
 ):
-    """Create a dependency simulation"""
+    """Create"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,7 +29,7 @@ def run(
     ctx: typer.Context,
     simulation_id: str = typer.Argument(help="Simulation ID"),
 ):
-    """Run a dependency simulation"""
+    """Run"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -38,7 +38,7 @@ def classify(
     ctx: typer.Context,
     simulation_id: str = typer.Argument(help="Simulation ID"),
 ):
-    """Classify dependencies"""
+    """Classify"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -47,7 +47,7 @@ def health(
     ctx: typer.Context,
     simulation_id: str = typer.Argument(help="Simulation ID"),
 ):
-    """Get dependency health"""
+    """Health"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -56,5 +56,5 @@ def report(
     ctx: typer.Context,
     simulation_id: str = typer.Argument(help="Simulation ID"),
 ):
-    """Get dependency simulation report"""
+    """Report"""
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

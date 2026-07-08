@@ -1,12 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-
-app = typer.Typer(help="Drift detection commands")
+app = typer.Typer(help="Drift detection")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -30,5 +27,5 @@ def list(ctx: typer.Context):
     """List drift detection results"""
     client = _get_client(ctx)
     result = client.drift_list()
-    data = result if isinstance(result, _list_type) else result.get("drifts", result)
+    data = result if isinstance(result, list) else result.get("drifts", result)
     print_output(data, ctx.obj.get("output", "table"))

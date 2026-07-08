@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Edge ML management")
+app = typer.Typer(help="Edge ML")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -21,7 +19,7 @@ def models(
     """List ML models"""
     client = _get_client(ctx)
     result = client.list_ml_models(device_id)
-    data = result if isinstance(result, _list_type) else result.get("models", result)
+    data = result if isinstance(result, list) else result.get("models", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 

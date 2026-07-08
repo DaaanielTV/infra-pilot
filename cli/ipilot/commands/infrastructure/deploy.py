@@ -3,7 +3,7 @@ from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-app = typer.Typer(help="Deployment commands")
+app = typer.Typer(help="Deployment")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -17,7 +17,7 @@ def deploy(
     server: str = typer.Argument(..., help="Server ID or name"),
     branch: str = typer.Argument(..., help="Branch to deploy"),
 ):
-    """Deploy a branch to a server"""
+    """Deploy a branch"""
     client = _get_client(ctx)
     result = client.deploy(server, branch)
     print_output(result, ctx.obj.get("output", "table"))

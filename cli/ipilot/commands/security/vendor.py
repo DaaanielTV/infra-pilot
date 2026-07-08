@@ -1,11 +1,9 @@
-import builtins
 import typer
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
 
-_list_type = builtins.list
-app = typer.Typer(help="Vendor risk management")
+app = typer.Typer(help="Vendor risk")
 
 
 def _get_client(ctx: typer.Context) -> ApiClient:
@@ -21,7 +19,7 @@ def list(
     """List vendors"""
     client = _get_client(ctx)
     result = client.vendor_list()
-    data = result if isinstance(result, _list_type) else result.get("vendors", result)
+    data = result if isinstance(result, list) else result.get("vendors", result)
     print_output(data, output or ctx.obj.get("output", "table"))
 
 
@@ -31,7 +29,7 @@ def create(
     name: str = typer.Argument(..., help="Vendor name"),
     risk_level: str = typer.Option(..., "--risk-level", "-r", help="Risk level (low/medium/high/critical)"),
 ):
-    """Register a new vendor"""
+    """Create vendor"""
     client = _get_client(ctx)
     result = client.vendor_create(name, risk_level)
     print_output(result, ctx.obj.get("output", "table"))
@@ -42,7 +40,7 @@ def assess(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(..., help="Vendor ID"),
 ):
-    """Trigger a vendor risk assessment"""
+    """Assess vendor"""
     client = _get_client(ctx)
     result = client.vendor_assess(vendor_id)
     print_output(result, ctx.obj.get("output", "table"))

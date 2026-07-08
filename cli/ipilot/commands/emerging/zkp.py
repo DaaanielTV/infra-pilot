@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List ZK proofs"""
+    """List proofs"""
     client = _get_client(ctx)
     result = client.zkp_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -27,7 +26,7 @@ def generate(
     circuit_id: str = typer.Argument(help="Circuit ID"),
     inputs: str = typer.Argument(help="Inputs (JSON)"),
 ):
-    """Generate a ZK proof"""
+    """Generate proof"""
     client = _get_client(ctx)
     result = client.zkp_generate(circuit_id, inputs)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def verify(
     ctx: typer.Context,
     proof_id: str = typer.Argument(help="Proof ID"),
 ):
-    """Verify a ZK proof"""
+    """Verify proof"""
     client = _get_client(ctx)
     result = client.zkp_verify(proof_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,9 +45,8 @@ def verify(
 
 @app.command()
 def circuits(ctx: typer.Context):
-    """List ZK circuits"""
+    """Circuits"""
     client = _get_client(ctx)
     result = client.zkp_circuits()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

@@ -13,11 +13,10 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 @app.command()
 def list(ctx: typer.Context):
-    """List Web3 identities"""
+    """List identities"""
     client = _get_client(ctx)
     result = client.web3id_list()
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -26,7 +25,7 @@ def create(
     ctx: typer.Context,
     alias: str = typer.Argument(help="Identity alias"),
 ):
-    """Create a Web3 identity"""
+    """Create"""
     client = _get_client(ctx)
     result = client.web3id_create(alias)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,7 +37,7 @@ def auth(
     identity_id: str = typer.Argument(help="Identity ID"),
     challenge: str = typer.Argument(help="Authentication challenge"),
 ):
-    """Authenticate with Web3 identity"""
+    """Authenticate"""
     client = _get_client(ctx)
     result = client.web3id_auth(identity_id, challenge)
     print_output(result, ctx.obj.get("output", "table"))
@@ -49,9 +48,8 @@ def sessions(
     ctx: typer.Context,
     identity_id: str = typer.Argument(help="Identity ID"),
 ):
-    """List Web3 identity sessions"""
+    """Sessions"""
     client = _get_client(ctx)
     result = client.web3id_sessions(identity_id)
-    import builtins; _list_type = builtins.list
-    data = result if isinstance(result, _list_type) else result.get("key", result)
+    data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))

@@ -1,3 +1,4 @@
+# TODO: this command discovery is janky af
 import importlib
 import pkgutil
 import typer
@@ -13,6 +14,7 @@ def register(name: str, help_text: str = ""):
     return decorator
 
 
+# FIXME: silent fail on import errors is bad practice
 def discover_commands(package_path: str = "ipilot.commands"):
     pkg = importlib.import_module(package_path)
     for importer, modname, ispkg in pkgutil.walk_packages(pkg.__path__, prefix=f"{package_path}."):
@@ -24,7 +26,7 @@ def discover_commands(package_path: str = "ipilot.commands"):
                     name = "_".join(parts) if len(parts) > 1 else parts[0]
                     _registry[name] = (mod.app, mod.app.info.help or "")
             except Exception:
-                pass
+                pass  # HACK: silence all errors lmao
 
 
 def attach_to_app(app: typer.Typer):
@@ -32,5 +34,6 @@ def attach_to_app(app: typer.Typer):
         app.add_typer(sub_app, name=name)
 
 
+# NOTE: nobody uses this function wtf
 def get_registry() -> Dict[str, typer.Typer]:
     return {k: v[0] for k, v in _registry.items()}

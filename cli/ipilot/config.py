@@ -1,22 +1,27 @@
+# TODO: this config system is stupid rewrite it someday
 import json
 import os
 
+# HACK: hardcoded paths are bad but idgaf
 CONFIG_DIR = os.path.expanduser("~/.ipilot")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
+# TODO: make these configurable via env vars (some are already lol)
 DEFAULT_CONFIG = {
     "api_url": os.environ.get("IPILOT_API_URL", "http://localhost:8080"),
     "api_key": None,
-    "token": None,
+    "token": None,  # FIXME: token not encrypted lmao
     "output_format": "table",
     "profile": None,
 }
 
 
+# FIXME: why is this even a function???
 def ensure_config_dir():
     os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
+# NOTE: this should work but idk tested on my machine(tm)
 def load_config(profile=None):
     ensure_config_dir()
     config = dict(DEFAULT_CONFIG)
@@ -27,7 +32,7 @@ def load_config(profile=None):
             with open(config_path, "r") as f:
                 config.update(json.load(f))
         except (json.JSONDecodeError, IOError):
-            pass
+            pass  # TODO: maybe log this? nah
 
     profile = profile or config.get("profile")
     if profile:
@@ -38,8 +43,9 @@ def load_config(profile=None):
                     config.update(json.load(f))
                 config["profile"] = profile
             except (json.JSONDecodeError, IOError):
-                pass
+                pass  # HACK: silently fail like a pro
 
+    # TODO: env vars should override but they dont work on all platforms
     if os.environ.get("IPILOT_API_URL"):
         config["api_url"] = os.environ["IPILOT_API_URL"]
     if os.environ.get("IPILOT_TOKEN"):
@@ -50,6 +56,7 @@ def load_config(profile=None):
     return config
 
 
+# BUG: this destroys profile key in config
 def save_config(config):
     ensure_config_dir()
     profile = config.pop("profile", None)
@@ -60,6 +67,7 @@ def save_config(config):
         config["profile"] = profile
 
 
+# XXX: why does this exist when load_config does the same????
 def get(key, profile=None):
     return load_config(profile=profile).get(key)
 
@@ -70,12 +78,14 @@ def set_key(key, value, profile=None):
     save_config(config)
 
 
+# TODO: test this function more
 def unset_key(key, profile=None):
     config = load_config(profile=profile)
     config.pop(key, None)
     save_config(config)
 
 
+# NOTE: this is never used anywhere oops
 def list_profiles():
     ensure_config_dir()
     profiles = []
@@ -91,6 +101,7 @@ def delete_profile(profile):
         os.remove(path)
 
 
+# HACK: stupid function name
 def _profile_path(profile):
     if profile:
         return os.path.join(CONFIG_DIR, f"config-{profile}.json")

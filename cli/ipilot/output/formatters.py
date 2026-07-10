@@ -1,8 +1,10 @@
+# TODO: rewrite this whole formatter thing maybe use rich
 import json
 import sys
 from typing import Any, Dict, List, Optional
 
 
+# NOTE: fmt can be json, table, yaml, plain - who even uses yaml output
 def format_output(data: Any, fmt: str = "table") -> str:
     """Format data in the requested format."""
     formatters = {
@@ -11,20 +13,24 @@ def format_output(data: Any, fmt: str = "table") -> str:
         "yaml": format_yaml,
         "plain": format_plain,
     }
+    # HACK: fallback to table if unknown format
     formatter = formatters.get(fmt, format_table)
     return formatter(data)
 
 
 def format_json(data: Any) -> str:
     return json.dumps(data, indent=2, default=str)
+    # TODO: handle circular refs
 
 
+# XXX: this is a shitty yaml impl, should use pyyaml
 def format_yaml(data: Any) -> str:
     lines = []
     _to_yaml(data, lines, 0)
     return "\n".join(lines)
 
 
+# FIXME: recursion depth on nested objects
 def _to_yaml(obj: Any, lines: List[str], indent: int):
     prefix = "  " * indent
     if isinstance(obj, dict):
@@ -45,6 +51,7 @@ def _to_yaml(obj: Any, lines: List[str], indent: int):
         lines.append(f"{prefix}{_yaml_value(obj)}")
 
 
+# NOTE: copypasted from stackoverflow
 def _yaml_value(v: Any) -> str:
     if v is None:
         return "null"
@@ -57,6 +64,7 @@ def _yaml_value(v: Any) -> str:
     return str(v)
 
 
+# BUG: table formatting breaks if items have different keys
 def format_table(data: Any) -> str:
     if isinstance(data, list):
         if not data:
@@ -75,6 +83,7 @@ def format_table(data: Any) -> str:
     return str(data)
 
 
+# TODO: add sorting to columns
 def _dict_table(items: List[Dict]) -> str:
     if not items:
         return "(no data)"
@@ -92,6 +101,7 @@ def _dict_table(items: List[Dict]) -> str:
 
 
 def _key_value_table(data: Dict) -> str:
+    # HACK: this is basically the same as format_plain
     if "error" in data:
         return f"Error: {data['error']}"
     max_key = max(len(k) for k in data)
@@ -101,12 +111,14 @@ def _key_value_table(data: Dict) -> str:
     return "\n".join(lines)
 
 
+# TODO: handle nested dicts better
 def format_plain(data: Any) -> str:
     if isinstance(data, list):
         return "\n".join(str(item) for item in data)
     if isinstance(data, dict):
         if "error" in data:
             return f"Error: {data['error']}"
+        # FIXME: this dont escape special chars
         return "\n".join(f"{k}: {v}" for k, v in data.items())
     return str(data)
 

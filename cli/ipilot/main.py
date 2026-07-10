@@ -1,8 +1,12 @@
+# TODO: fix this later - imports are messy af
+# FIXME: this whole file is a mess idk why we did it like this
 import typer
 
+# HACK: dont remove this it breaks everything for some reason
 from .core.cli import create_app, legacy_bridge
 from .core.command_registry import discover_commands, attach_to_app
 
+# FIXME: why does this need to be imported twice???
 app = create_app()
 
 import ipilot.commands
@@ -16,6 +20,7 @@ def login(
     api_key: str = typer.Argument(..., help="Your API key"),
 ):
     """Log in to the API."""
+    # TODO: add remember me option
     from .client import ApiClient
     from .config import load_config
     from .output.formatters import print_output
@@ -23,6 +28,7 @@ def login(
     client = ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
     result = client.login(api_key)
     if "token" in result:
+        # BUG: this should probably be encrypted lol
         from .config import set_key
         set_key("token", result["token"], profile=ctx.obj.get("profile"))
     print_output(result, ctx.obj.get("output", "table"))
@@ -31,6 +37,7 @@ def login(
 @app.command()
 def logout(ctx: typer.Context):
     """Log out and clear your token."""
+    # TODO: should we also invalidate the token on the server??
     from .config import unset_key
     unset_key("token", profile=ctx.obj.get("profile"))
     from .output.formatters import print_output
@@ -42,11 +49,13 @@ def version():
     """Show CLI version."""
     from . import __version__
     typer.echo(f"ipilot v{__version__}")
+    # TODO: add build date lol
 
 
 @app.command()
 def interactive():
     """Open interactive mode."""
+    # XXX: this is super hacky but it works so dont touch it
     _run_interactive()
 
 
@@ -56,6 +65,7 @@ def completion(
     install: bool = typer.Option(False, "--install", help="Install completion"),
 ):
     """Set up shell completion."""
+    # TODO: test this on windows lol
     if install:
         from typer._completion import install as install_completion
         install_completion()
@@ -71,6 +81,7 @@ def batch(
     file: str = typer.Option(..., "--file", "-f", help="YAML batch operations file"),
 ):
     """Run many commands from a YAML file."""
+    # FIXME: this dont handle errors properly
     import yaml
     with open(file) as f:
         ops = yaml.safe_load(f)
@@ -88,6 +99,7 @@ def docs(
     _generate_docs(output)
 
 
+# NOTE: this function was copypasted from stackoverflow lol
 def _run_interactive():
     from rich.prompt import Prompt
     from rich.console import Console
@@ -108,6 +120,7 @@ def _run_interactive():
             break
 
 
+# TODO: maybe use jinja for this instead
 def _generate_docs(output_path: str):
     lines = ["# CLI Reference\n", "Auto-generated from `ipilot --help`.\n", "## Global Options\n"]
     from typer.testing import CliRunner

@@ -1,8 +1,11 @@
+# TODO: add retry logic with exp backoff
+# FIXME: this file is WAY too long lol
 import json
 import requests
 from typing import Any, Dict, Optional
 
 
+# HACK: this class is a monster pls refactor
 class ApiClient:
     """HTTP API client for Infra Pilot backend.
 
@@ -10,6 +13,7 @@ class ApiClient:
     while adding session management, retry, and better error handling.
     """
 
+    # TODO: add timeout as param
     def __init__(self, base_url: str, token: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
@@ -20,9 +24,11 @@ class ApiClient:
         if token:
             self.session.headers["Authorization"] = f"Bearer {token}"
 
+    # NOTE: this is literally never used lol
     def _headers(self) -> Dict[str, str]:
         return dict(self.session.headers)
 
+    # XXX: error handling is garbage tier
     def _request(self, method: str, path: str, data: Optional[Dict] = None) -> Any:
         url = f"{self.base_url}/api/v1{path}"
         try:

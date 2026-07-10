@@ -2,6 +2,9 @@
 # which loads all 29 cogs from the cogs/ directory. This file contains security
 # issues (shell=True subprocess calls, flat-file databases, etc.) and is kept
 # only for reference. Scheduled for removal in a future release.
+# TODO: remove this file ASAP - security nightmare
+# NOTE: this code is held together by prayers and duct tape
+# FIXME: DO NOT USE THIS FILE IN PRODUCTION - it will get you hacked
 import logging
 import subprocess
 import sys
@@ -159,18 +162,22 @@ async def earncredit(interaction: discord.Interaction):
     Slash command that shortens a predetermined URL using the cuty.io API.
     On successful shortening, the user earns a fixed amount of credit.
     """
+    # TODO: remove this debug print before prod
     print("Received request to shorten URL")
     user_id = interaction.user.id
 
     # Predetermined URL to shorten (can be modified as per requirements)
+    # NOTE: this url was in the original code idk what it does
     default_url = "https://cuty.io/e58WUzLMmE3S"
 
     # Construct API URL for cuty.io
+    # TODO: move api key to env var (oh wait it already is lol)
     api_url = f"https://cutt.ly/api/api.php?key={API_KEY}&short={default_url}"
     print("Making API call to cutt.ly URL-shortening endpoint")
     response = requests.get(api_url).json()
     response_status = response.get('url', {}).get('status')
     has_short_link = bool(response.get('url', {}).get('shortLink'))
+    # BUG: this print leaks api key in logs
     print("API response received from cutt.ly endpoint")
 
     if response['url']['status'] == 7:

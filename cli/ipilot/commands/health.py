@@ -1,7 +1,9 @@
+# TODO: add caching so we dont hammer the api
 from ..client import ApiClient
 from ..config import load_config
 
 
+# FIXME: this should return proper error codes not strings
 def get_health_status():
     try:
         config = load_config()
@@ -11,6 +13,7 @@ def get_health_status():
         )
         return client.health_check()
     except Exception as e:
+        # HACK: broad except catching everything lmao
         return {
             'status': 'error',
             'message': f'Health check failed: {str(e)}',
@@ -18,6 +21,7 @@ def get_health_status():
         }
 
 
+# NOTE: this was written at 3am, dont judge
 def format_health_output(health_data):
     if 'error' in health_data:
         return {

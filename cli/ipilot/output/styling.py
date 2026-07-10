@@ -1,3 +1,4 @@
+# TODO: this whole file is redundant with formatters.py
 from typing import Any, Dict, List, Optional
 from rich.console import Console
 from rich.table import Table as RichTable
@@ -9,6 +10,7 @@ import json
 _console = Console()
 
 
+# NOTE: why is this a function and not just a const???
 def get_console():
     return _console
 
@@ -18,6 +20,7 @@ def print_table(data: List[Dict], title: Optional[str] = None):
         _console.print("[yellow](no data)[/yellow]")
         return
     keys = list(data[0].keys())
+    # HACK: title_style is hardcoded - should be configurable
     table = RichTable(title=title, title_style="bold cyan")
     for key in keys:
         table.add_column(key, style="cyan", no_wrap=True)
@@ -31,6 +34,7 @@ def print_panel(text: str, title: Optional[str] = None, style: str = "green"):
 
 
 def print_json(data: Any):
+    # FIXME: this might fail on non-serializable objects
     _console.print_json(json.dumps(data, default=str))
 
 
@@ -46,6 +50,7 @@ def print_info(message: str):
     _console.print(f"[blue]{message}[/blue]")
 
 
+# XXX: this progress spinner never gets used anywhere
 def spinner():
     return Progress(
         SpinnerColumn(),

@@ -1,3 +1,4 @@
+# TODO: cleanup this file its a mess
 import argparse
 import typer
 from typing import Optional, Dict, Callable
@@ -6,6 +7,7 @@ from ..config import load_config
 from ..client import ApiClient
 
 
+# FIXME: create_app should accept config param not hardcode
 def create_app():
     app = typer.Typer(
         name="ipilot",
@@ -30,6 +32,7 @@ def create_app():
             help="Turn off colored output",
         ),
     ):
+        # HACK: this context stuff is confusing
         ctx.ensure_object(dict)
         ctx.obj["output"] = output or load_config().get("output_format", "table")
         ctx.obj["profile"] = profile
@@ -38,6 +41,7 @@ def create_app():
     return app
 
 
+# NOTE: this function is literally 2 lines why does it exist
 def get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(
@@ -46,6 +50,7 @@ def get_client(ctx: typer.Context) -> ApiClient:
     )
 
 
+# TODO: remove this legacy stuff once migration is done
 class LegacyBridge:
     def __init__(self):
         self._cmd_map: Dict[str, Callable] = {}
@@ -57,6 +62,7 @@ class LegacyBridge:
     def add_group(self, name: str, subcommands: Dict[str, Callable]):
         self._sub_router[name] = subcommands
 
+    # BUG: this throws typer.Exit(1) which is confusing af
     def dispatch(self, cmd: str, subcmd: Optional[str], args: argparse.Namespace):
         if cmd in self._sub_router and subcmd in self._sub_router[cmd]:
             self._sub_router[cmd][subcmd](args)

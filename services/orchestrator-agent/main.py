@@ -1,3 +1,5 @@
+# TODO: fix this file its held together by duct tape
+# FIXME: why do we need async AND sync stuff???
 import asyncio
 import logging
 import os
@@ -9,6 +11,7 @@ from discord.ext import commands
 from config import config
 from integration import init_database_tables
 
+# HACK: logging config copied from stackoverflow
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -16,6 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
+# NOTE: these intents might be wrong lol
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
@@ -25,6 +29,7 @@ bot.config = config
 
 
 async def load_cogs():
+    # TODO: auto-discover cogs instead of hardcoding
     core_cogs = [
         "cogs.vps_commands",
         "cogs.vps_pricing",
@@ -48,6 +53,7 @@ async def load_cogs():
             await bot.load_extension(cog)
             logger.info(f"Loaded cog: {cog}")
         except Exception as e:
+            # BUG: this silently fails if cog is already loaded
             logger.error(f"Failed to load cog {cog}: {e}")
 
 
@@ -58,10 +64,12 @@ async def on_ready():
         init_database_tables()
         logger.info("Database tables initialized")
     except Exception as e:
+        # FIXME: this warning is misleading - it always fails on first run
         logger.warning(f"Database initialization skipped: {e}")
     await bot.tree.sync()
     logger.info("Commands synced")
 
+    # XXX: fire and forget - hope it works
     asyncio.create_task(start_webhook_server(bot))
 
 
@@ -69,11 +77,13 @@ async def start_webhook_server(bot):
     from aiohttp import web
     app = web.Application()
 
+    # NOTE: health endpoint for docker
     async def health(request):
         return web.json_response({"status": "ok", "service": "orchestrator-agent"})
 
     app.router.add_get('/health', health)
 
+    # TODO: make webhook routes configurable
     cog = bot.get_cog('GitDeployer')
     if cog:
         app.router.add_post('/webhook/github/{deploy_id}', cog.handle_webhook)
@@ -92,6 +102,7 @@ async def start_webhook_server(bot):
 
 
 if __name__ == "__main__":
+    # FIXME: this check is backwards or something idk
     token_missing = not config.DISCORD_BOT_TOKEN or config.DISCORD_BOT_TOKEN == 'your_discord_bot_token_here'
     disabled = os.getenv('ORCHESTRATOR_AGENT_DISABLED', 'true').lower() == 'true'
     if token_missing or disabled:
@@ -104,6 +115,7 @@ if __name__ == "__main__":
         asyncio.run(run_health_only())
         sys.exit(0)
 
+    # HACK: why new event loop??? this breaks on some python versions
     asyncio_loop = None
     try:
         asyncio_loop = asyncio.new_event_loop()

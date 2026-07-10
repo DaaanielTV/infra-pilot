@@ -27,7 +27,7 @@ Full list: [`.env.example`](https://github.com/drosemann/infra-pilot/blob/main/.
 
 ## Multiple Cloud Providers
 
-The file `infra/naming/provider_map.yaml` maps names to AWS, Azure, Hetzner, etc.
+Provider mappings are configured via environment variables or overrides.
 
 ---
 

@@ -3,9 +3,7 @@
     { "path": "services/management-panel", "name": "Management Panel" },
     { "path": "services/orchestrator-agent", "name": "Orchestrator Agent" },
     { "path": "services/discord-service", "name": "Discord Service" },
-    { "path": "services/integration-service", "name": "Integration Service" },
     { "path": "cli", "name": "CLI" },
-    { "path": "mobile", "name": "Mobile App" },
     { "path": ".", "name": "Infra Pilot (Root)" }
   ],
   "settings": {

@@ -43,7 +43,7 @@
     "pg": "^8.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.2.7",
-    "react-intl": "^10.1.13",
+    "react-intl": "^10.1.16",
     "react-router-dom": "^7.17.0",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.6.0",

@@ -27,7 +27,7 @@
     "desktop:doctor": "zero-native doctor --manifest app.zon --strict"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.2",
+    "@supabase/supabase-js": "^2.110.3",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",

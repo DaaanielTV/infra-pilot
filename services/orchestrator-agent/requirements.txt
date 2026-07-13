@@ -11,5 +11,5 @@ cryptography==49.0.0
 pillow==12.2.0
 typing-extensions==4.15.0
 requests==2.34.2
-croniter==6.2.2
+croniter==6.2.4
 aiofiles==25.1.0

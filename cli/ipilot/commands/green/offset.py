@@ -13,8 +13,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def quote(
     ctx: typer.Context,
     amount: float = typer.Argument(..., help="CO2 amount in tonnes"),
-):
-    """Get offset quote"""
+) -> None:
+    """Get offset quote
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.offset_quote(amount)
     print_output(result, ctx.obj.get("output", "table"))
@@ -24,15 +31,29 @@ def purchase(
     ctx: typer.Context,
     amount: float = typer.Argument(..., help="CO2 amount in tonnes"),
     provider: str = typer.Argument(..., help="Offset provider"),
-):
-    """Purchase carbon offset"""
+) -> None:
+    """Purchase carbon offset
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.offset_purchase(amount, provider)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def certs(ctx: typer.Context):
-    """List carbon offset certificates"""
+def certs(ctx: typer.Context) -> None:
+    """List carbon offset certificates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.offset_certs()
     data = result if isinstance(result, list) else result.get("certificates", result)

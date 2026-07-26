@@ -10,23 +10,44 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List reclaimable resources"""
+def list(ctx: typer.Context) -> None:
+    """List reclaimable resources
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reclaim_list()
     data = result if isinstance(result, list) else result.get("resources", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def scan(ctx: typer.Context):
-    """Scan for idle resources"""
+def scan(ctx: typer.Context) -> None:
+    """Scan for idle resources
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reclaim_scan()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def report(ctx: typer.Context):
-    """Reclamation report"""
+def report(ctx: typer.Context) -> None:
+    """Reclamation report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reclaim_report()
     print_output(result, ctx.obj.get("output", "table"))

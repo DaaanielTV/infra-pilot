@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def policies(ctx: typer.Context):
-    """List shutdown policies"""
+def policies(ctx: typer.Context) -> None:
+    """List shutdown policies
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.shutdown_policies()
     data = result if isinstance(result, list) else result.get("policies", result)
@@ -23,15 +30,29 @@ def create(
     name: str = typer.Argument(..., help="Policy name"),
     schedule: str = typer.Argument(..., help="Cron schedule"),
     conditions: str = typer.Argument(..., help="Conditions (JSON)"),
-):
-    """Create shutdown policy"""
+) -> None:
+    """Create shutdown policy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.create_shutdown_policy(name, schedule, conditions)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def savings(ctx: typer.Context):
-    """Show savings from auto-shutdown"""
+def savings(ctx: typer.Context) -> None:
+    """Show savings from auto-shutdown
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.shutdown_savings()
     print_output(result, ctx.obj.get("output", "table"))

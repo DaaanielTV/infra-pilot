@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List hardware assets"""
+def list(ctx: typer.Context) -> None:
+    """List hardware assets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_hardware()
     data = result if isinstance(result, list) else result.get("hardware", result)
@@ -23,8 +30,15 @@ def add(
     name: str = typer.Argument(..., help="Hardware name"),
     hardware_type: str = typer.Argument(..., help="Hardware type"),
     specs: str = typer.Argument(..., help="Hardware specs (JSON)"),
-):
-    """Add hardware asset"""
+) -> None:
+    """Add hardware asset
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.add_hardware(name, hardware_type, specs)
     print_output(result, ctx.obj.get("output", "table"))

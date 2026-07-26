@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def rank(ctx: typer.Context):
-    """Rank providers by green score"""
+def rank(ctx: typer.Context) -> None:
+    """Rank providers by green score
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.provider_rank()
     print_output(result, ctx.obj.get("output", "table"))

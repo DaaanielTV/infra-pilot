@@ -10,15 +10,29 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def current(ctx: typer.Context):
-    """Current CO2 output"""
+def current(ctx: typer.Context) -> None:
+    """Current CO2 output
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.carbon_current()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def history(ctx: typer.Context):
-    """Historical CO2 data"""
+def history(ctx: typer.Context) -> None:
+    """Historical CO2 data
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.carbon_history()
     print_output(result, ctx.obj.get("output", "table"))

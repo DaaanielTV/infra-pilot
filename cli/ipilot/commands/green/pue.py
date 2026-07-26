@@ -10,15 +10,29 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def current(ctx: typer.Context):
-    """Current PUE"""
+def current(ctx: typer.Context) -> None:
+    """Current PUE
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pue_current()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def history(ctx: typer.Context):
-    """Historical PUE data"""
+def history(ctx: typer.Context) -> None:
+    """Historical PUE data
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pue_history()
     print_output(result, ctx.obj.get("output", "table"))

@@ -9,7 +9,7 @@ from .canned_responses import app as canned_responses_app
 from .sentiment import app as sentiment_app
 from .adoption import app as adoption_app
 from .onboarding import app as onboarding_app
-from .kb import app as kb_app
+from .knowledge_base import app as knowledge_base_app
 from .community import app as community_app
 from .communications import app as communications_app
 from .nps import app as nps_app
@@ -22,7 +22,7 @@ app.add_typer(canned_responses_app, name="canned")
 app.add_typer(sentiment_app, name="sentiment")
 app.add_typer(adoption_app, name="adoption")
 app.add_typer(onboarding_app, name="onboarding")
-app.add_typer(kb_app, name="kb")
+app.add_typer(knowledge_base_app, name="kb")
 app.add_typer(community_app, name="community")
 app.add_typer(communications_app, name="comm")
 app.add_typer(nps_app, name="nps")

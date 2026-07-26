@@ -10,15 +10,29 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def status(ctx: typer.Context):
-    """Show DNS filter status"""
+def status(ctx: typer.Context) -> None:
+    """Show DNS filter status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dnsfilter_status()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def rules(ctx: typer.Context):
-    """List DNS filter rules"""
+def rules(ctx: typer.Context) -> None:
+    """List DNS filter rules
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dnsfilter_rules()
     data = result if isinstance(result, list) else result.get("rules", result)
@@ -29,8 +43,15 @@ def add(
     ctx: typer.Context,
     domain: str = typer.Argument(..., help="Domain to filter"),
     action: str = typer.Option("block", "--action", "-a", help="Action (block, allow)"),
-):
-    """Add DNS filter rule"""
+) -> None:
+    """Add DNS filter rule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dnsfilter_add(domain, action)
     print_output(result, ctx.obj.get("output", "table"))
@@ -39,8 +60,15 @@ def add(
 def remove(
     ctx: typer.Context,
     rule_id: str = typer.Argument(..., help="Rule ID"),
-):
-    """Remove DNS filter rule"""
+) -> None:
+    """Remove DNS filter rule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dnsfilter_remove(rule_id)
     print_output(result, ctx.obj.get("output", "table"))

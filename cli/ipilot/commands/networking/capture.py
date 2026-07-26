@@ -13,8 +13,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List active captures"""
+) -> None:
+    """List active captures
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.capture_list()
     data = result if isinstance(result, list) else result.get("captures", result)
@@ -25,8 +32,15 @@ def start(
     ctx: typer.Context,
     interface: str = typer.Argument(..., help="Network interface"),
     filter_expr: str = typer.Option(None, "--filter", "-f", help="BPF filter"),
-):
-    """Start packet capture"""
+) -> None:
+    """Start packet capture
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.capture_start(interface, filter_expr)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,8 +49,15 @@ def start(
 def stop(
     ctx: typer.Context,
     capture_id: str = typer.Argument(..., help="Capture ID"),
-):
-    """Stop packet capture"""
+) -> None:
+    """Stop packet capture
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.capture_stop(capture_id)
     print_output(result, ctx.obj.get("output", "table"))

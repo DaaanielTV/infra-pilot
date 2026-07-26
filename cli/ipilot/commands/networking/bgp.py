@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def sessions(ctx: typer.Context):
-    """List BGP sessions"""
+def sessions(ctx: typer.Context) -> None:
+    """List BGP sessions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.bgp_sessions()
     data = result if isinstance(result, list) else result.get("sessions", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(..., help="Session name"),
     asn: int = typer.Argument(..., help="ASN number"),
     neighbor: str = typer.Argument(..., help="Neighbor IP"),
-):
-    """Create BGP session"""
+) -> None:
+    """Create BGP session
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.bgp_create(name, asn, neighbor)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def delete(
     ctx: typer.Context,
     session_id: str = typer.Argument(..., help="Session ID"),
-):
-    """Delete BGP session"""
+) -> None:
+    """Delete BGP session
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.bgp_delete(session_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def delete(
 def routes(
     ctx: typer.Context,
     session_id: str = typer.Option(None, "--session-id", "-s", help="Session ID (optional)"),
-):
-    """Show BGP routes"""
+) -> None:
+    """Show BGP routes
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.bgp_routes(session_id)
     data = result if isinstance(result, list) else result.get("routes", result)

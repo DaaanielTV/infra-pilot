@@ -13,8 +13,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List network segments"""
+) -> None:
+    """List network segments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.segment_list()
     data = result if isinstance(result, list) else result.get("segments", result)
@@ -26,8 +33,15 @@ def create(
     name: str = typer.Argument(..., help="Segment name"),
     cidr: str = typer.Argument(..., help="CIDR notation"),
     vlan: int = typer.Option(None, "--vlan", help="VLAN ID"),
-):
-    """Create network segment"""
+) -> None:
+    """Create network segment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.segment_create(name, cidr, vlan)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def delete(
     ctx: typer.Context,
     segment_id: str = typer.Argument(..., help="Segment ID"),
-):
-    """Delete network segment"""
+) -> None:
+    """Delete network segment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.segment_delete(segment_id)
     print_output(result, ctx.obj.get("output", "table"))

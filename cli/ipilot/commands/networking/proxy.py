@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def rules(ctx: typer.Context):
-    """List proxy rules"""
+def rules(ctx: typer.Context) -> None:
+    """List proxy rules
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.proxy_rules()
     data = result if isinstance(result, list) else result.get("rules", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(..., help="Rule name"),
     source: str = typer.Argument(..., help="Source pattern"),
     target: str = typer.Argument(..., help="Target URL"),
-):
-    """Create proxy rule"""
+) -> None:
+    """Create proxy rule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.proxy_create(name, source, target)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def delete(
     ctx: typer.Context,
     rule_id: str = typer.Argument(..., help="Rule ID"),
-):
-    """Delete proxy rule"""
+) -> None:
+    """Delete proxy rule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.proxy_delete(rule_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def delete(
 def toggle(
     ctx: typer.Context,
     rule_id: str = typer.Argument(..., help="Rule ID"),
-):
-    """Toggle proxy rule"""
+) -> None:
+    """Toggle proxy rule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.proxy_toggle(rule_id)
     print_output(result, ctx.obj.get("output", "table"))

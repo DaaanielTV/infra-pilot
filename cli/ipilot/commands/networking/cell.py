@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def networks(ctx: typer.Context):
-    """List cellular networks"""
+def networks(ctx: typer.Context) -> None:
+    """List cellular networks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_networks()
     data = result if isinstance(result, list) else result.get("networks", result)
@@ -23,8 +30,15 @@ def register(
     name: str = typer.Argument(..., help="Network name"),
     provider: str = typer.Argument(..., help="Provider name"),
     apn: str = typer.Argument(..., help="APN name"),
-):
-    """Register cellular network"""
+) -> None:
+    """Register cellular network
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_register(name, provider, apn)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def register(
 def delete(
     ctx: typer.Context,
     network_id: str = typer.Argument(..., help="Network ID"),
-):
-    """Delete cellular network"""
+) -> None:
+    """Delete cellular network
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_delete(network_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def delete(
 def status(
     ctx: typer.Context,
     network_id: str = typer.Argument(..., help="Network ID"),
-):
-    """Get network status"""
+) -> None:
+    """Get network status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_status(network_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,8 +81,15 @@ def status(
 def sims(
     ctx: typer.Context,
     network_id: str = typer.Argument(..., help="Network ID"),
-):
-    """List SIM cards"""
+) -> None:
+    """List SIM cards
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_sims(network_id)
     data = result if isinstance(result, list) else result.get("sims", result)
@@ -64,8 +99,15 @@ def sims(
 def activate(
     ctx: typer.Context,
     sim_id: str = typer.Argument(..., help="SIM ID"),
-):
-    """Activate SIM card"""
+) -> None:
+    """Activate SIM card
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_activate(sim_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -74,8 +116,15 @@ def activate(
 def deactivate(
     ctx: typer.Context,
     sim_id: str = typer.Argument(..., help="SIM ID"),
-):
-    """Deactivate SIM card"""
+) -> None:
+    """Deactivate SIM card
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cell_deactivate(sim_id)
     print_output(result, ctx.obj.get("output", "table"))

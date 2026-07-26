@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def zones(ctx: typer.Context):
-    """List DNS zones"""
+def zones(ctx: typer.Context) -> None:
+    """List DNS zones
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_zones()
     data = result if isinstance(result, list) else result.get("zones", result)
@@ -22,8 +29,15 @@ def create_zone(
     ctx: typer.Context,
     domain: str = typer.Argument(..., help="Domain name"),
     ttl: int = typer.Option(3600, "--ttl", help="TTL seconds"),
-):
-    """Create DNS zone"""
+) -> None:
+    """Create DNS zone
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_create_zone(domain, ttl)
     print_output(result, ctx.obj.get("output", "table"))
@@ -32,8 +46,15 @@ def create_zone(
 def delete_zone(
     ctx: typer.Context,
     zone_id: str = typer.Argument(..., help="Zone ID"),
-):
-    """Delete DNS zone"""
+) -> None:
+    """Delete DNS zone
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_delete_zone(zone_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -42,8 +63,15 @@ def delete_zone(
 def records(
     ctx: typer.Context,
     zone_id: str = typer.Argument(..., help="Zone ID"),
-):
-    """List DNS records"""
+) -> None:
+    """List DNS records
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_records(zone_id)
     data = result if isinstance(result, list) else result.get("records", result)
@@ -57,8 +85,15 @@ def add_record(
     name: str = typer.Argument(..., help="Record name"),
     value: str = typer.Argument(..., help="Record value"),
     ttl: int = typer.Option(300, "--ttl", help="TTL seconds"),
-):
-    """Add DNS record"""
+) -> None:
+    """Add DNS record
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_add_record(zone_id, record_type, name, value, ttl)
     print_output(result, ctx.obj.get("output", "table"))
@@ -68,8 +103,15 @@ def delete_record(
     ctx: typer.Context,
     zone_id: str = typer.Argument(..., help="Zone ID"),
     record_id: str = typer.Argument(..., help="Record ID"),
-):
-    """Delete DNS record"""
+) -> None:
+    """Delete DNS record
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dns_delete_record(zone_id, record_id)
     print_output(result, ctx.obj.get("output", "table"))

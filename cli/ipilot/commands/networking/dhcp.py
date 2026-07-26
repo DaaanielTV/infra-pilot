@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def leases(ctx: typer.Context):
-    """List DHCP leases"""
+def leases(ctx: typer.Context) -> None:
+    """List DHCP leases
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dhcp_leases()
     data = result if isinstance(result, list) else result.get("leases", result)

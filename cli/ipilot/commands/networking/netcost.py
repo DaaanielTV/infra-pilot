@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def show(ctx: typer.Context):
-    """Show network costs"""
+def show(ctx: typer.Context) -> None:
+    """Show network costs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.netcost_show()
     print_output(result, ctx.obj.get("output", "table"))
@@ -20,8 +27,15 @@ def show(ctx: typer.Context):
 def budget(
     ctx: typer.Context,
     budget: float = typer.Argument(..., help="Budget amount"),
-):
-    """Set cost budget"""
+) -> None:
+    """Set cost budget
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.netcost_budget(budget)
     print_output(result, ctx.obj.get("output", "table"))

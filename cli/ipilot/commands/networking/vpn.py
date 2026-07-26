@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def configs(ctx: typer.Context):
-    """List VPN configs"""
+def configs(ctx: typer.Context) -> None:
+    """List VPN configs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vpn_configs()
     data = result if isinstance(result, list) else result.get("configs", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(..., help="Config name"),
     protocol: str = typer.Argument(..., help="VPN protocol"),
     server: str = typer.Argument(..., help="Server address"),
-):
-    """Create VPN config"""
+) -> None:
+    """Create VPN config
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vpn_create(name, protocol, server)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def delete(
     ctx: typer.Context,
     config_id: str = typer.Argument(..., help="Config ID"),
-):
-    """Delete VPN config"""
+) -> None:
+    """Delete VPN config
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vpn_delete(config_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def delete(
 def status(
     ctx: typer.Context,
     config_id: str = typer.Argument(..., help="Config ID"),
-):
-    """Get VPN status"""
+) -> None:
+    """Get VPN status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vpn_status(config_id)
     print_output(result, ctx.obj.get("output", "table"))

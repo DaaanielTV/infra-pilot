@@ -31,4 +31,4 @@ Provider mappings are configured via environment variables or overrides.
 
 ---
 
-*[.env.example](https://github.com/drosemann/infra-pilot/blob/main/.env.example)*
+*See [.env.example](https://github.com/drosemann/infra-pilot/blob/main/.env.example) for all available options.*

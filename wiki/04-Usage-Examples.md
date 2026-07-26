@@ -1,6 +1,6 @@
 # Usage Examples
 
-## Make a Server and See Logs
+## Create a Server and View Logs
 
 ```bash
 ipilot server create --name web-prod --type web --memory 4096
@@ -29,7 +29,7 @@ ipilot carbon current
 ipilot provider rank
 ```
 
-## FinOps (Save Money)
+## FinOps (Cost Optimization)
 
 ```bash
 ipilot reclaim scan
@@ -38,4 +38,4 @@ ipilot shutdown create --name "night-shutdown" --tags "env:staging" --shutdown-h
 
 ---
 
-*[CLI Reference](05-CLI-Reference)*
+*See [CLI Reference](05-CLI-Reference) for all available commands.*

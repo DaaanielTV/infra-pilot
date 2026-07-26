@@ -6,20 +6,20 @@ We promise to make this project a safe and welcoming place for everyone, no matt
 
 We promise to act in ways that build an open, friendly, and healthy community.
 
-## How We Treat Each Other
+## Our Standards
 
-**Be good to each other:**
+**Expected behavior:**
 - Be kind and understanding
 - Respect different opinions and experiences
 - Give and accept helpful feedback
 - Own your mistakes, apologize, and learn
 - Think about what's best for the whole community
 
-**Don't do these things:**
-- Use sexual language, images, or unwanted attention
-- Troll, insult, or attack others
-- Harass anyone in public or private
-- Share someone's private info without permission
+**Unacceptable behavior:**
+- Sexual language, images, or unwanted attention
+- Trolling, insults, or personal attacks
+- Harassment in public or private
+- Sharing private information without permission
 - Anything else that doesn't belong in a professional space
 
 ## Our Responsibility
@@ -30,11 +30,11 @@ Project leaders will:
 - Remove, edit, or reject comments, code, and issues that don't follow this policy
 - Explain why they made a moderation decision
 
-## Where This Applies
+## Scope
 
 This code of conduct applies in all project spaces (GitHub, Discord, etc.) and when representing the project in public.
 
-## Reporting Problems
+## Reporting
 
 If someone is being abusive or harassing you, tell the project maintainers. We will review every report quickly and fairly. We will keep your report private.
 

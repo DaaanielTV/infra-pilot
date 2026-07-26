@@ -1,4 +1,4 @@
-# Infra-Pilot Wiki
+# Infra Pilot Wiki
 
 - [Home](Home)
 - [Installation](01-Installation)

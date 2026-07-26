@@ -1,6 +1,6 @@
 # Contributing
 
-## Dev Setup
+## Development Setup
 
 ```bash
 git clone https://github.com/drosemann/infra-pilot.git
@@ -10,7 +10,7 @@ cd services/management-panel && npm install && cd ../..
 cd services/discord-service && npm install && cd ../..
 ```
 
-## Tests
+## Running Tests
 
 ```bash
 pytest tests/
@@ -21,21 +21,21 @@ cd services/management-panel && npm test
 
 `unit` · `integration` · `e2e` · `smoke`
 
-## Branch Names
+## Branch Naming
 
-Use a prefix like `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/` plus a short name.
+Use a prefix: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/` plus a short name.
 
-## Commits
+## Commit Messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
 
-## PR Workflow
+## Pull Request Workflow
 
-1. Make a new branch from `main`
+1. Create a new branch from `main`
 2. Commit and push
 3. Open a pull request against `main`
 4. CI runs tests, lint, and security checks
-5. Merge after someone reviews it and all checks pass
+5. Merge after review and all checks pass
 
 ---
 

@@ -1,6 +1,6 @@
 # CLI Reference
 
-## How to Use
+## Usage
 
 ```bash
 ipilot [global-flags] <command> [subcommand] [flags]
@@ -49,4 +49,4 @@ Global flags: `--version`, `--output`/`-o` (json, table, yaml, plain)
 
 ---
 
-*[Source: cli/ipilot/cli.py](https://github.com/drosemann/infra-pilot/blob/main/cli/ipilot/cli.py)*
+*Source: [cli.py](https://github.com/drosemann/infra-pilot/blob/main/cli/ipilot/cli.py)*

@@ -2,6 +2,14 @@
 
 Thanks for wanting to help! We welcome bug fixes, new features, docs, and ideas.
 
+## Table of Contents
+
+- [How to Contribute](#how-to-contribute)
+- [Branch Names](#branch-names)
+- [Commits](#commits)
+- [PR Checklist](#pr-checklist)
+- [Running Tests](#running-tests)
+
 ## How to Contribute
 
 1. **Fork** the repo and clone your copy
@@ -23,7 +31,7 @@ Prefixes: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`, `perf/`, `st
 Write clear commit messages. Use this format:
 
 ```
-<type>: <short description>
+<type>(<scope>): <short description>
 ```
 
 Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`

@@ -11,10 +11,10 @@ cd infra-pilot && cp .env.example .env
 docker compose up -d
 ```
 
-| Service | URL |
-|---------|-----|
-| Panel | http://localhost:5173 |
-| API | http://localhost:3001 |
+| Service | URL                   |
+|---------|-----------------------|
+| Panel   | http://localhost:5173 |
+| API     | http://localhost:3001 |
 
 ## Next Steps
 

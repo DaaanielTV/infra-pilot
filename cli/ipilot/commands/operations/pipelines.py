@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List all infrastructure pipelines"""
+def list(ctx: typer.Context) -> None:
+    """List all infrastructure pipelines
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.infra_pipeline_list()
     data = result if isinstance(result, list) else result.get("pipelines", result)
@@ -25,8 +32,15 @@ def run(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(..., help="Pipeline ID"),
     branch: str = typer.Option(None, "--branch", help="Branch to run"),
-):
-    """Run an infrastructure pipeline"""
+) -> None:
+    """Run an infrastructure pipeline
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.infra_pipeline_run(pipeline_id, branch)
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List all resource quotas"""
+def list(ctx: typer.Context) -> None:
+    """List all resource quotas
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quota_list()
     data = result if isinstance(result, list) else result.get("quotas", result)
@@ -25,8 +32,15 @@ def check(
     ctx: typer.Context,
     resource_type: str = typer.Argument(..., help="Resource type to check"),
     amount: int = typer.Argument(..., help="Amount to check against quota"),
-):
-    """Check if a resource request exceeds quota"""
+) -> None:
+    """Check if a resource request exceeds quota
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quota_check(resource_type, amount)
     print_output(result, ctx.obj.get("output", "table"))

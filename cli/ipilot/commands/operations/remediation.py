@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def rules(ctx: typer.Context):
-    """List remediation rules"""
+def rules(ctx: typer.Context) -> None:
+    """List remediation rules
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.remediate_rules()
     data = result if isinstance(result, list) else result.get("rules", result)
@@ -21,8 +28,15 @@ def rules(ctx: typer.Context):
 
 
 @app.command()
-def history(ctx: typer.Context):
-    """Show remediation history"""
+def history(ctx: typer.Context) -> None:
+    """Show remediation history
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.remediate_history()
     data = result if isinstance(result, list) else result.get("history", result)

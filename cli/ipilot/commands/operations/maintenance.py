@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List scheduled maintenance windows"""
+def list(ctx: typer.Context) -> None:
+    """List scheduled maintenance windows
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.maintenance_list()
     data = result if isinstance(result, list) else result.get("maintenance", result)
@@ -27,8 +34,15 @@ def schedule(
     start_time: str = typer.Argument(..., help="Start time (ISO 8601)"),
     end_time: str = typer.Argument(..., help="End time (ISO 8601)"),
     description: str = typer.Option(None, "--description", help="Maintenance description"),
-):
-    """Schedule a maintenance window"""
+) -> None:
+    """Schedule a maintenance window
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.maintenance_schedule(resource_id, start_time, end_time, description)
     print_output(result, ctx.obj.get("output", "table"))

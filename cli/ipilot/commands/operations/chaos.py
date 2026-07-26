@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def experiments(ctx: typer.Context):
-    """List chaos experiments"""
+def experiments(ctx: typer.Context) -> None:
+    """List chaos experiments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.chaos_experiments()
     data = result if isinstance(result, list) else result.get("experiments", result)
@@ -26,8 +33,15 @@ def create(
     name: str = typer.Argument(..., help="Experiment name"),
     target: str = typer.Argument(..., help="Target resource"),
     fault_type: str = typer.Argument(..., help="Type of fault to inject"),
-):
-    """Create a new chaos experiment"""
+) -> None:
+    """Create a new chaos experiment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.chaos_create(name, target, fault_type)
     print_output(result, ctx.obj.get("output", "table"))
@@ -37,8 +51,15 @@ def create(
 def run(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID"),
-):
-    """Run a chaos experiment"""
+) -> None:
+    """Run a chaos experiment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.chaos_run(experiment_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -48,16 +69,30 @@ def run(
 def stop(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID"),
-):
-    """Stop a running chaos experiment"""
+) -> None:
+    """Stop a running chaos experiment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.chaos_stop(experiment_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def faults(ctx: typer.Context):
-    """List available fault types"""
+def faults(ctx: typer.Context) -> None:
+    """List available fault types
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.chaos_faults()
     data = result if isinstance(result, list) else result.get("faults", result)

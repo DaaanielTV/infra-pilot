@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Component, useEffect, useState, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { IntlProvider } from 'react-intl';
 import { Toaster } from 'sonner';
@@ -45,6 +45,7 @@ const messages: Record<string, Record<string, string>> = {
   en, de, zh, es, fr, ja, pt, ru, ar, ko, tr,
 };
 
+/** Simple loading/fallback logo component */
 const SimpleLogo = ({ size = 64 }: { size?: number }) => (
   <div
     className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-3xl"
@@ -54,6 +55,48 @@ const SimpleLogo = ({ size = 64 }: { size?: number }) => (
   </div>
 );
 
+/**
+ * Error boundary to catch rendering errors and display a fallback UI.
+ */
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
+            <p className="text-slate-400 mb-4">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            <button
+              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Root application component.
+ * Handles setup mode detection, authentication, locale, theme, and routing.
+ */
 export default function App() {
   const [mode, setMode] = useState<SetupMode>('personal');
   const [authenticated, setAuthenticated] = useState(false);
@@ -106,6 +149,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <IntlProvider messages={messages[locale]} locale={locale} defaultLocale="en">
       <I18nContext.Provider value={i18nCtx}>
         <RTLProvider>
@@ -150,5 +194,6 @@ export default function App() {
         </RTLProvider>
       </I18nContext.Provider>
     </IntlProvider>
+    </ErrorBoundary>
   );
 }

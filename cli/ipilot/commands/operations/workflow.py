@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List all workflows"""
+def list(ctx: typer.Context) -> None:
+    """List all workflows
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.workflow_list()
     data = result if isinstance(result, list) else result.get("workflows", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Workflow name"),
     definition: str = typer.Argument(..., help="Workflow definition (YAML/JSON)"),
-):
-    """Create a new workflow"""
+) -> None:
+    """Create a new workflow
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.workflow_create(name, definition)
     print_output(result, ctx.obj.get("output", "table"))
@@ -37,8 +51,15 @@ def run(
     ctx: typer.Context,
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
     params: str = typer.Option(None, "--params", help="Runtime parameters (JSON)"),
-):
-    """Run a workflow"""
+) -> None:
+    """Run a workflow
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.workflow_run(workflow_id, params)
     print_output(result, ctx.obj.get("output", "table"))

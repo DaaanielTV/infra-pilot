@@ -15,16 +15,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def scan(
     ctx: typer.Context,
     resource_id: str = typer.Option(None, "--resource-id", help="Specific resource to scan"),
-):
-    """Scan for configuration drift"""
+) -> None:
+    """Scan for configuration drift
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.drift_scan(resource_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List drift detection results"""
+def list(ctx: typer.Context) -> None:
+    """List drift detection results
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.drift_list()
     data = result if isinstance(result, list) else result.get("drifts", result)

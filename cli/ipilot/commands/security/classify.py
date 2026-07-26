@@ -12,16 +12,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def scan(ctx: typer.Context):
-    """Scan data"""
+def scan(ctx: typer.Context) -> None:
+    """Scan data
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.classify_scan()
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def inventory(ctx: typer.Context):
-    """Inventory"""
+def inventory(ctx: typer.Context) -> None:
+    """Inventory
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.classify_inventory()
     data = result if isinstance(result, list) else result.get("inventory", result)

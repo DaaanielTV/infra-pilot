@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List breaches"""
+) -> None:
+    """List breaches
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.breach_list()
     data = result if isinstance(result, list) else result.get("breaches", result)
@@ -28,8 +35,15 @@ def report(
     ctx: typer.Context,
     breach_id: str = typer.Argument(..., help="Breach ID"),
     details: str = typer.Option("{}", "--details", "-d", help="JSON details"),
-):
-    """Report breach"""
+) -> None:
+    """Report breach
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     import json
     parsed = json.loads(details)

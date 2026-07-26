@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List sessions"""
+) -> None:
+    """List sessions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_sessions()
     data = result if isinstance(result, list) else result.get("sessions", result)
@@ -27,8 +34,15 @@ def list(
 def revoke(
     ctx: typer.Context,
     session_id: str = typer.Argument(..., help="Session ID"),
-):
-    """Revoke session"""
+) -> None:
+    """Revoke session
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.revoke_session(session_id)
     print_output(result, ctx.obj.get("output", "table"))

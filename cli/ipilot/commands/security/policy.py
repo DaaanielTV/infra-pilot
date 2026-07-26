@@ -16,8 +16,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List policies"""
+) -> None:
+    """List policies
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.policy_list()
     data = result if isinstance(result, list) else result.get("policies", result)
@@ -29,8 +36,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Policy name"),
     rules: str = typer.Option(..., "--rules", "-r", help="JSON rules"),
-):
-    """Create policy"""
+) -> None:
+    """Create policy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     parsed = json.loads(rules)
     result = client.policy_create(name, parsed)
@@ -42,8 +56,15 @@ def evaluate(
     ctx: typer.Context,
     policy_id: str = typer.Argument(..., help="Policy ID"),
     resource: str = typer.Argument(..., help="Resource to evaluate"),
-):
-    """Evaluate policy"""
+) -> None:
+    """Evaluate policy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.policy_evaluate(policy_id, resource)
     print_output(result, ctx.obj.get("output", "table"))

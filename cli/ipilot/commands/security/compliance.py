@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def scan(
     ctx: typer.Context,
     framework: str = typer.Argument(..., help="Compliance framework (e.g. SOC2, ISO27001)"),
-):
-    """Scan framework"""
+) -> None:
+    """Scan framework
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.compliance_scan(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -26,16 +33,30 @@ def scan(
 def report(
     ctx: typer.Context,
     scan_id: str = typer.Argument(..., help="Scan ID"),
-):
-    """Compliance report"""
+) -> None:
+    """Compliance report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.compliance_report(scan_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def checks(ctx: typer.Context):
-    """List checks"""
+def checks(ctx: typer.Context) -> None:
+    """List checks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.compliance_checks()
     data = result if isinstance(result, list) else result.get("checks", result)

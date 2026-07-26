@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def clients(ctx: typer.Context):
-    """List clients"""
+def clients(ctx: typer.Context) -> None:
+    """List clients
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.oidc_clients()
     data = result if isinstance(result, list) else result.get("clients", result)
@@ -25,8 +32,15 @@ def register(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Client name"),
     redirect_uris: str = typer.Option(..., "--redirect-uris", help="Comma-separated redirect URIs"),
-):
-    """Register client"""
+) -> None:
+    """Register client
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     uris = [u.strip() for u in redirect_uris.split(",")]
     result = client.oidc_register(name, uris)
@@ -37,8 +51,15 @@ def register(
 def delete(
     ctx: typer.Context,
     client_id: str = typer.Argument(..., help="OIDC client ID"),
-):
-    """Delete client"""
+) -> None:
+    """Delete client
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.oidc_delete(client_id)
     print_output(result, ctx.obj.get("output", "table"))

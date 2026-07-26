@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def anomalies(ctx: typer.Context):
-    """Anomalies"""
+def anomalies(ctx: typer.Context) -> None:
+    """Anomalies
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.audit_anomalies()
     data = result if isinstance(result, list) else result.get("anomalies", result)
@@ -21,8 +28,15 @@ def anomalies(ctx: typer.Context):
 
 
 @app.command()
-def trend(ctx: typer.Context):
-    """Trends"""
+def trend(ctx: typer.Context) -> None:
+    """Trends
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.audit_trend()
     data = result if isinstance(result, list) else result.get("trends", result)
@@ -30,8 +44,15 @@ def trend(ctx: typer.Context):
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.audit_summary()
     print_output(result, ctx.obj.get("output", "table"))

@@ -34,8 +34,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @soar_app.command()
-def playbooks(ctx: typer.Context):
-    """List playbooks"""
+def playbooks(ctx: typer.Context) -> None:
+    """List playbooks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.soar_playbooks()
     data = result if isinstance(result, list) else result.get("playbooks", result)
@@ -47,7 +54,14 @@ def playbook(
     ctx: typer.Context,
     playbook_id: str = typer.Argument(..., help="Playbook ID"),
 ):
-    """Get playbook"""
+    """Get playbook
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.soar_playbook(playbook_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -59,7 +73,14 @@ def run(
     playbook_id: str = typer.Argument(..., help="Playbook ID"),
     params: str = typer.Option("{}", "--params", "-p", help="JSON parameters"),
 ):
-    """Run playbook"""
+    """Run playbook
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     import json
     parsed = json.loads(params)
@@ -74,7 +95,14 @@ def create(
     steps: str = typer.Option(..., "--steps", "-s", help="JSON steps"),
     trigger: str = typer.Option(..., "--trigger", "-t", help="Trigger event"),
 ):
-    """Create playbook"""
+    """Create playbook
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     import json
     parsed_steps = json.loads(steps)
@@ -84,7 +112,14 @@ def create(
 
 @soar_app.command()
 def cases(ctx: typer.Context):
-    """List cases"""
+    """List cases
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.soar_cases()
     data = result if isinstance(result, list) else result.get("cases", result)
@@ -93,7 +128,14 @@ def cases(ctx: typer.Context):
 
 @soar_app.command()
 def connectors(ctx: typer.Context):
-    """List connectors"""
+    """List connectors
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.soar_connectors()
     data = result if isinstance(result, list) else result.get("connectors", result)
@@ -102,7 +144,14 @@ def connectors(ctx: typer.Context):
 
 @threatintel_app.command()
 def feeds(ctx: typer.Context):
-    """List feeds"""
+    """List feeds
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ti_feeds()
     data = result if isinstance(result, list) else result.get("feeds", result)
@@ -114,7 +163,14 @@ def iocs(
     ctx: typer.Context,
     feed_id: str = typer.Option(None, "--feed-id", "-f", help="Filter by feed ID"),
 ):
-    """List IoCs"""
+    """List IoCs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ti_iocs(feed_id)
     data = result if isinstance(result, list) else result.get("iocs", result)
@@ -123,7 +179,14 @@ def iocs(
 
 @threatintel_app.command()
 def blocklist(ctx: typer.Context):
-    """Blocklist"""
+    """Blocklist
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ti_blocklist()
     data = result if isinstance(result, list) else result.get("blocklist", result)
@@ -137,7 +200,14 @@ def add_ioc(
     ioc_type: str = typer.Option(..., "--type", "-t", help="IOC type (ip, domain, hash, url)"),
     confidence: str = typer.Option("medium", "--confidence", "-c", help="Confidence (low/medium/high)"),
 ):
-    """Add IoC"""
+    """Add IoC
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ti_add_ioc(ioc, ioc_type, confidence)
     print_output(result, ctx.obj.get("output", "table"))
@@ -148,7 +218,14 @@ def analyze(
     ctx: typer.Context,
     ioc: str = typer.Argument(..., help="IOC to analyze"),
 ):
-    """Analyze IoC"""
+    """Analyze IoC
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ti_analyze(ioc)
     print_output(result, ctx.obj.get("output", "table"))
@@ -159,7 +236,14 @@ def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
 ):
-    """List decoys"""
+    """List decoys
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.decoy_list()
     data = result if isinstance(result, list) else result.get("decoys", result)
@@ -168,7 +252,14 @@ def list(
 
 @decoy_app.command()
 def tokens(ctx: typer.Context):
-    """List tokens"""
+    """List tokens
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.decoy_tokens()
     data = result if isinstance(result, list) else result.get("tokens", result)
@@ -182,7 +273,14 @@ def create(
     decoy_type: str = typer.Option(..., "--type", "-t", help="Decoy type"),
     target: str = typer.Option(..., "--target", help="Decoy target"),
 ):
-    """Create decoy"""
+    """Create decoy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.decoy_create(name, decoy_type, target)
     print_output(result, ctx.obj.get("output", "table"))
@@ -193,7 +291,14 @@ def deploy(
     ctx: typer.Context,
     decoy_id: str = typer.Argument(..., help="Decoy ID"),
 ):
-    """Deploy decoy"""
+    """Deploy decoy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.decoy_deploy(decoy_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -204,7 +309,14 @@ def cves(
     ctx: typer.Context,
     severity: str = typer.Option(None, "--severity", "-s", help="Filter by severity (low/medium/high/critical)"),
 ):
-    """List CVEs"""
+    """List CVEs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vuln_cves(severity)
     data = result if isinstance(result, list) else result.get("cves", result)
@@ -216,7 +328,14 @@ def scan(
     ctx: typer.Context,
     target: str = typer.Argument(..., help="Target to scan"),
 ):
-    """Vuln scan"""
+    """Vuln scan
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vuln_scan(target)
     print_output(result, ctx.obj.get("output", "table"))
@@ -227,7 +346,14 @@ def patch(
     ctx: typer.Context,
     cve_id: str = typer.Argument(..., help="CVE ID to patch"),
 ):
-    """Patch CVE"""
+    """Patch CVE
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vuln_patch(cve_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -235,7 +361,14 @@ def patch(
 
 @vuln_app.command()
 def summary(ctx: typer.Context):
-    """Vuln summary"""
+    """Vuln summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vuln_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -246,7 +379,14 @@ def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
 ):
-    """List incidents"""
+    """List incidents
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_list()
     data = result if isinstance(result, list) else result.get("incidents", result)
@@ -258,7 +398,14 @@ def get(
     ctx: typer.Context,
     incident_id: str = typer.Argument(..., help="Incident ID"),
 ):
-    """Get incident"""
+    """Get incident
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_get(incident_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -271,7 +418,14 @@ def create(
     severity: str = typer.Option(..., "--severity", "-s", help="Severity (critical/high/medium/low)"),
     description: str = typer.Option(..., "--description", "-d", help="Incident description"),
 ):
-    """Create incident"""
+    """Create incident
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_create(title, severity, description)
     print_output(result, ctx.obj.get("output", "table"))
@@ -283,7 +437,14 @@ def status(
     incident_id: str = typer.Argument(..., help="Incident ID"),
     status_value: str = typer.Argument(..., help="New status"),
 ):
-    """Update status"""
+    """Update status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_status(incident_id, status_value)
     print_output(result, ctx.obj.get("output", "table"))
@@ -295,7 +456,14 @@ def evidence(
     incident_id: str = typer.Argument(..., help="Incident ID"),
     file: str = typer.Argument(..., help="Evidence file path"),
 ):
-    """Add evidence"""
+    """Add evidence
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_evidence(incident_id, file)
     print_output(result, ctx.obj.get("output", "table"))
@@ -306,7 +474,14 @@ def timeline(
     ctx: typer.Context,
     incident_id: str = typer.Argument(..., help="Incident ID"),
 ):
-    """Timeline"""
+    """Timeline
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_timeline(incident_id)
     data = result if isinstance(result, list) else result.get("timeline", result)
@@ -318,7 +493,14 @@ def report(
     ctx: typer.Context,
     incident_id: str = typer.Argument(..., help="Incident ID"),
 ):
-    """Generate report"""
+    """Generate report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ir_report(incident_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -326,7 +508,14 @@ def report(
 
 @ueba_app.command()
 def entities(ctx: typer.Context):
-    """List entities"""
+    """List entities
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ueba_entities()
     data = result if isinstance(result, list) else result.get("entities", result)
@@ -335,7 +524,14 @@ def entities(ctx: typer.Context):
 
 @ueba_app.command()
 def alerts(ctx: typer.Context):
-    """Alerts"""
+    """Alerts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ueba_alerts()
     data = result if isinstance(result, list) else result.get("alerts", result)
@@ -344,7 +540,14 @@ def alerts(ctx: typer.Context):
 
 @cspm_app.command()
 def accounts(ctx: typer.Context):
-    """Accounts"""
+    """Accounts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cspm_accounts()
     data = result if isinstance(result, list) else result.get("accounts", result)
@@ -356,7 +559,14 @@ def results(
     ctx: typer.Context,
     account_id: str = typer.Argument(..., help="CSPM account ID"),
 ):
-    """Scan results"""
+    """Scan results
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cspm_results(account_id)
     data = result if isinstance(result, list) else result.get("results", result)
@@ -368,7 +578,14 @@ def scan(
     ctx: typer.Context,
     account_id: str = typer.Argument(..., help="CSPM account ID"),
 ):
-    """Run scan"""
+    """Run scan
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cspm_scan(account_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -376,7 +593,14 @@ def scan(
 
 @ndr_app.command()
 def flows(ctx: typer.Context):
-    """Flows"""
+    """Flows
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ndr_flows()
     data = result if isinstance(result, list) else result.get("flows", result)
@@ -385,7 +609,14 @@ def flows(ctx: typer.Context):
 
 @ndr_app.command()
 def alerts(ctx: typer.Context):
-    """Alerts"""
+    """Alerts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ndr_alerts()
     data = result if isinstance(result, list) else result.get("alerts", result)
@@ -394,7 +625,14 @@ def alerts(ctx: typer.Context):
 
 @secrets_app.command()
 def findings(ctx: typer.Context):
-    """Findings"""
+    """Findings
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.secrets_findings()
     data = result if isinstance(result, list) else result.get("findings", result)
@@ -403,7 +641,14 @@ def findings(ctx: typer.Context):
 
 @secrets_app.command()
 def targets(ctx: typer.Context):
-    """Targets"""
+    """Targets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.secrets_targets()
     data = result if isinstance(result, list) else result.get("targets", result)
@@ -415,7 +660,14 @@ def rotate(
     ctx: typer.Context,
     finding_id: str = typer.Argument(..., help="Finding ID"),
 ):
-    """Rotate secret"""
+    """Rotate secret
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.secrets_rotate(finding_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -423,7 +675,14 @@ def rotate(
 
 @training_app.command()
 def modules(ctx: typer.Context):
-    """Modules"""
+    """Modules
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.training_modules()
     data = result if isinstance(result, list) else result.get("modules", result)
@@ -432,7 +691,14 @@ def modules(ctx: typer.Context):
 
 @training_app.command()
 def campaigns(ctx: typer.Context):
-    """Campaigns"""
+    """Campaigns
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.training_campaigns()
     data = result if isinstance(result, list) else result.get("campaigns", result)
@@ -441,7 +707,14 @@ def campaigns(ctx: typer.Context):
 
 @training_app.command()
 def assignments(ctx: typer.Context):
-    """Assignments"""
+    """Assignments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.training_assignments()
     data = result if isinstance(result, list) else result.get("assignments", result)

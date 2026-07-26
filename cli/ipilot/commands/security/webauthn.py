@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def credentials(ctx: typer.Context):
-    """List credentials"""
+def credentials(ctx: typer.Context) -> None:
+    """List credentials
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.webauthn_credentials()
     data = result if isinstance(result, list) else result.get("credentials", result)
@@ -24,8 +31,15 @@ def credentials(ctx: typer.Context):
 def remove(
     ctx: typer.Context,
     credential_id: str = typer.Argument(..., help="WebAuthn credential ID"),
-):
-    """Remove credential"""
+) -> None:
+    """Remove credential
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.webauthn_remove(credential_id)
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def requests(ctx: typer.Context):
-    """List requests"""
+def requests(ctx: typer.Context) -> None:
+    """List requests
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pam_requests()
     data = result if isinstance(result, list) else result.get("requests", result)
@@ -25,8 +32,15 @@ def request(
     ctx: typer.Context,
     resource: str = typer.Argument(..., help="Resource to access"),
     reason: str = typer.Argument(..., help="Reason for access"),
-):
-    """Request access"""
+) -> None:
+    """Request access
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pam_request(resource, reason)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def request(
 def approve(
     ctx: typer.Context,
     request_id: str = typer.Argument(..., help="PAM request ID"),
-):
-    """Approve"""
+) -> None:
+    """Approve
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pam_approve(request_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def approve(
 def deny(
     ctx: typer.Context,
     request_id: str = typer.Argument(..., help="PAM request ID"),
-):
-    """Deny"""
+) -> None:
+    """Deny
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pam_deny(request_id)
     print_output(result, ctx.obj.get("output", "table"))

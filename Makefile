@@ -1,35 +1,56 @@
 .PHONY: setup dev dev-services dev-services-down test test-coverage lint format clean help healthcheck
 
-setup:
+# ── Development ──────────────────────────────────────────────────────
+
+setup:           ## Set up the development environment
 	@bash scripts/setup.sh
 
-dev:
+dev:             ## Start core services and run management panel
 	@docker compose up -d postgres redis && \
 		npm run dev --prefix services/management-panel
 
-dev-services:
+dev-services:    ## Start all Docker services
 	@docker compose up -d
 
-dev-services-down:
+dev-services-down: ## Stop all Docker services
 	@docker compose down
 
-test:
+# ── Testing ──────────────────────────────────────────────────────────
+
+test:            ## Run all tests
 	@pytest tests/ -v
 
-test-coverage:
+test-coverage:   ## Run tests with coverage report
 	@pytest tests/ --cov=services
 
-lint:
+# ── Linting & Formatting ─────────────────────────────────────────────
+
+lint:            ## Run linting checks
 	@npm run lint --prefix services/management-panel
 
-format:
+format:          ## Format code with Prettier
 	@prettier --write "services/**/*.{ts,tsx,js,jsx}"
 
-clean:
+# ── Maintenance ──────────────────────────────────────────────────────
+
+clean:           ## Remove Docker volumes and node_modules
 	@docker compose down -v && rm -rf node_modules
 
-help:
-	@echo "Available commands: setup dev dev-services test lint format clean healthcheck"
-
-healthcheck:
+healthcheck:     ## Run project health checks
 	bash ./scripts/healthcheck.sh
+
+# ── Help ─────────────────────────────────────────────────────────────
+
+help:            ## Show this help message
+	@echo "Available commands:"
+	@echo "  setup              Set up the development environment"
+	@echo "  dev                Start core services and run management panel"
+	@echo "  dev-services       Start all Docker services"
+	@echo "  dev-services-down  Stop all Docker services"
+	@echo "  test               Run all tests"
+	@echo "  test-coverage      Run tests with coverage report"
+	@echo "  lint               Run linting checks"
+	@echo "  format             Format code with Prettier"
+	@echo "  clean              Remove Docker volumes and node_modules"
+	@echo "  healthcheck        Run project health checks"
+	@echo "  help               Show this help message"

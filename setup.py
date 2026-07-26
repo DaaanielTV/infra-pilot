@@ -1,11 +1,33 @@
-# TODO: add real package metadata and dependancies
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-# HACK: find_packages() might not find everything
 setup(
     name="infra-pilot",
     version="0.1.0",
+    description="A tool to manage your servers from terminal, web, or Discord",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/drosemann/infra-pilot",
+    author="Daniel Rosemann",
+    author_email="drosemann@users.noreply.github.com",
+    license="MIT",
     packages=find_packages(),
     python_requires=">=3.9",
-    # FIXME: missing install_requires lol
+    install_requires=[
+        "click>=8.0",
+        "requests>=2.28",
+        "pyyaml>=6.0",
+        "rich>=13.0",
+    ],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: System :: Systems Administration",
+    ],
 )

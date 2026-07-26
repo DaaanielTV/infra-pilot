@@ -139,7 +139,7 @@ from .aiops.v6.digital_experience import app as digital_experience_app
 from .aiops.v6.health_forecasting import app as health_forecasting_app
 from .aiops.v6.incident_remediation import app as incident_remediation_app
 from .aiops.v6.operations_chatbot import app as operations_chatbot_app
-from .aiops.v6.scaling_v6 import app as scaling_v6_app
+from .aiops.v6.predictive_scaling import app as predictive_scaling_app
 
 register("rca", "Root cause analysis")(root_cause_analysis_app)
 register("dem", "Digital experience")(digital_experience_monitoring_app)
@@ -159,7 +159,7 @@ register("dex", "Digital exp v6")(digital_experience_app)
 register("health-v6", "Health v6")(health_forecasting_app)
 register("incident", "Incidents")(incident_remediation_app)
 register("ops", "Ops bot")(operations_chatbot_app)
-register("scaling-v6", "Scaling v6")(scaling_v6_app)
+register("scaling-v6", "Scaling v6")(predictive_scaling_app)
 
 from .finops import app as finops_app
 
@@ -299,7 +299,7 @@ __all__: list[str] = [
     "assistant_app", "change_app", "capacity_app", "chatbot_app",
     "alert_correlation_app", "root_cause_analysis_v6_app", "capacity_planning_app", "change_risk_analysis_app",
     "conversational_ops_app", "digital_experience_app", "health_forecasting_app", "incident_remediation_app", "operations_chatbot_app",
-    "scaling_v6_app",
+    "predictive_scaling_app",
     "finops_app", "cx_app",
     "trade_app", "appmarket_app", "ppu_app", "reseller_app", "whitelabel_app",
     "mkt_sla_app", "credit_app", "crypto_app", "plans_app", "reco_app",

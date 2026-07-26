@@ -1,9 +1,19 @@
+/**
+ * @file API client for the management panel backend.
+ * Provides typed methods for all REST endpoints.
+ */
+
 import axios, { AxiosInstance } from 'axios';
 import { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 export type { APIClient };
+
+/**
+ * API client that wraps axios and provides typed methods for all endpoints.
+ * Manages JWT token lifecycle and request configuration.
+ */
 class APIClient {
   private api: AxiosInstance;
   private token: string | null = null;

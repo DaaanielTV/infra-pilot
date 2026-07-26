@@ -1,5 +1,11 @@
+/**
+ * @file Tailwind CSS configuration for the management panel.
+ * Defines custom brand colors and dark mode settings.
+ */
+
 const { } = require('tailwindcss/defaultTheme');
 
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
   mode: 'jit',
@@ -8,10 +14,10 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          primary: '#6C5CE7', // Cosmic Infra primary
-          'primary-dark': '#5A46CD', // hover/active variant
-          secondary: '#EC4899', // Cosmic Infra secondary
-          accent: '#22D3EE', // Cosmic Infra accent
+          primary: '#6C5CE7',
+          'primary-dark': '#5A46CD',
+          secondary: '#EC4899',
+          accent: '#22D3EE',
         },
       },
     },

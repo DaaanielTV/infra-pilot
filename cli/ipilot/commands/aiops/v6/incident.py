@@ -10,16 +10,37 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def remediate(ctx: typer.Context):
-    """Remediation suggestions"""
+def remediate(ctx: typer.Context) -> None:
+    """Remediation suggestions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def analytics(ctx: typer.Context):
-    """Incident analytics"""
+def analytics(ctx: typer.Context) -> None:
+    """Incident analytics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def mttr(ctx: typer.Context):
-    """MTTR metrics"""
+def mttr(ctx: typer.Context) -> None:
+    """MTTR metrics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))

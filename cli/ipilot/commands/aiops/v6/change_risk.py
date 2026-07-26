@@ -10,16 +10,37 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def analyze(ctx: typer.Context):
-    """Analyze risk"""
+def analyze(ctx: typer.Context) -> None:
+    """Analyze risk
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def trend(ctx: typer.Context):
-    """Risk trends"""
+def trend(ctx: typer.Context) -> None:
+    """Risk trends
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def ranking(ctx: typer.Context):
-    """Risk ranking"""
+def ranking(ctx: typer.Context) -> None:
+    """Risk ranking
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))

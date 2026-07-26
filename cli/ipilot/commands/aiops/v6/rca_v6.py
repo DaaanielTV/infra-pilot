@@ -10,21 +10,49 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def analyze(ctx: typer.Context):
-    """Analyze root cause"""
+def analyze(ctx: typer.Context) -> None:
+    """Analyze root cause
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def impact(ctx: typer.Context):
-    """Impact analysis"""
+def impact(ctx: typer.Context) -> None:
+    """Impact analysis
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def timeline(ctx: typer.Context):
-    """Incident timeline"""
+def timeline(ctx: typer.Context) -> None:
+    """Incident timeline
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def patterns(ctx: typer.Context):
-    """Failure patterns"""
+def patterns(ctx: typer.Context) -> None:
+    """Failure patterns
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))

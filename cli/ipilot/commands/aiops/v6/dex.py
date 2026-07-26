@@ -10,16 +10,37 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def monitors(ctx: typer.Context):
-    """List monitors"""
+def monitors(ctx: typer.Context) -> None:
+    """List monitors
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def regression(ctx: typer.Context):
-    """Regression analysis"""
+def regression(ctx: typer.Context) -> None:
+    """Regression analysis
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))
 
 @app.command()
-def health(ctx: typer.Context):
-    """DEX health"""
+def health(ctx: typer.Context) -> None:
+    """DEX health
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented", "message": "v6 API endpoint not configured"}, ctx.obj.get("output", "table"))

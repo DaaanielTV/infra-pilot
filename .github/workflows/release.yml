@@ -2,10 +2,8 @@ name: Release Management
 
 on:
   push:
-    branches: [ main ]
-  schedule:
-    # Runs every Saturday at 23:00 UTC (00:00 Sunday German Standard Time)
-    - cron: '0 23 * * 6'
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -43,7 +41,6 @@ jobs:
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
           else
-            # Safe fallback if no tags exist yet
             tag_count=$(git tag --list 'v*' | wc -l)
             next_version=$((tag_count + 1))
             echo "version=0.${next_version}.0" >> $GITHUB_OUTPUT
@@ -65,32 +62,27 @@ jobs:
       - name: Generate changelog
         id: gen
         run: |
-          echo "## Release ${{ needs.version.outputs.version }}" > changelog.md
-          echo "" >> changelog.md
-          echo "### Changes since last release" >> changelog.md
-          echo "" >> changelog.md
-          
-          # Get latest tag safely, fallback to first commit if no tags exist
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          if [ -z "$LATEST_TAG" ]; then
-            git log --oneline --no-decorate >> changelog.md || echo "- Initial release" >> changelog.md
-          else
-            git log --oneline --no-decorate "${LATEST_TAG}..HEAD" >> changelog.md || echo "- Maintenance updates" >> changelog.md
-          fi
-          
-          echo "" >> changelog.md
-          echo "### Services included" >> changelog.md
           {
+            echo "## Release ${{ needs.version.outputs.version }}"
+            echo ""
+            echo "### Changes since last release"
+            echo ""
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -z "$LATEST_TAG" ]; then
+              git log --oneline --no-decorate
+            else
+              git log --oneline --no-decorate "${LATEST_TAG}..HEAD"
+            fi
+            echo ""
+            echo "### Services included"
             echo "- CLI Service"
             echo "- Integration Service"
             echo "- Orchestrator Agent"
             echo "- Management Panel"
             echo "- Discord Service"
             echo "- Service Core"
-          } >> changelog.md
-          
-          # Secure and robust multiline output handling using a dynamic delimiter
+          } > changelog.md
+
           EOF_DELIMITER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64 | tr -dc 'a-zA-Z0-9')
           echo "changelog<<${EOF_DELIMITER}" >> $GITHUB_OUTPUT
           cat changelog.md >> $GITHUB_OUTPUT
@@ -115,8 +107,7 @@ jobs:
         with:
           tag_name: v${{ needs.version.outputs.version }}
           body: ${{ needs.changelog.outputs.changelog }}
-          # Cast the string to a strict boolean comparison
           prerelease: ${{ needs.version.outputs.is_prerelease == 'true' }}
-          generate_release_notes: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

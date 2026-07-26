@@ -9,6 +9,10 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    assignees:
+      - "drosemann"
+    reviewers:
+      - "drosemann"
 
   - package-ecosystem: "pip"
     directory: "/services/orchestrator-agent"
@@ -19,6 +23,8 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    assignees:
+      - "drosemann"
 
   - package-ecosystem: "npm"
     directory: "/services/management-panel"
@@ -29,6 +35,10 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    assignees:
+      - "drosemann"
+    reviewers:
+      - "drosemann"
 
   - package-ecosystem: "npm"
     directory: "/services/discord-service"
@@ -39,6 +49,8 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    assignees:
+      - "drosemann"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -49,3 +61,7 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    assignees:
+      - "drosemann"
+    reviewers:
+      - "drosemann"

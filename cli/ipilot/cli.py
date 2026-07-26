@@ -872,7 +872,12 @@ def cmd_dcn_workers(args):
     print_output(result, args.output)
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
+    """Build and configure the argparse-based CLI parser with all subcommands.
+
+    Returns:
+        A fully configured ``ArgumentParser`` instance.
+    """
     parser = argparse.ArgumentParser(
         prog='ipilot',
         description='Infra Pilot CLI - Infrastructure management tool',

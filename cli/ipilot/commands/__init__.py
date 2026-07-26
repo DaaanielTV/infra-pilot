@@ -219,7 +219,7 @@ register("pulse", "Developer pulse")(pulse_app)
 
 from .compliance_v2.cc import app as cc_app
 from .compliance_v2.evidence import app as evidence_app
-from .compliance_v2.cac import app as cac_app
+from .compliance_v2.compliance_as_code import app as compliance_as_code_app
 from .compliance_v2.attestation_reports import app as attestation_reports_app
 from .compliance_v2.vcom import app as vcom_app
 from .compliance_v2.regintel import app as regintel_app
@@ -230,7 +230,7 @@ from .compliance_v2.auditor_portal import app as auditor_portal_app
 
 register("cc", "Compliance")(cc_app)
 register("evidence", "Evidence")(evidence_app)
-register("cac", "Compliance as code")(cac_app)
+register("cac", "Compliance as code")(compliance_as_code_app)
 register("attest", "Attestation")(attestation_reports_app)
 register("vcom", "Vendor compliance")(vcom_app)
 register("regintel", "Regulatory intel")(regintel_app)
@@ -307,7 +307,7 @@ __all__: list[str] = [
     "devportal_app", "scaffold_app", "catalog_app", "scorecards_app",
     "templatereg_app", "techdebt_app", "environments_app", "apicatalog_app",
     "docgen_app", "pulse_app",
-    "cc_app", "evidence_app", "cac_app", "attestation_reports_app", "vcom_app",
+    "cc_app", "evidence_app", "compliance_as_code_app", "attestation_reports_app", "vcom_app",
     "regintel_app", "audit_management_app", "dres_app", "train_app", "auditor_portal_app",
     "blockchain_app", "storage_app", "quantum_app", "contracts_app",
     "web3id_app", "confidential_app", "federated_app", "zkp_app", "dcn_app",

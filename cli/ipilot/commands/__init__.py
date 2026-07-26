@@ -218,7 +218,7 @@ register("docgen", "Doc generator")(docgen_app)
 register("pulse", "Developer pulse")(pulse_app)
 
 from .compliance_v2.continuous_compliance import app as continuous_compliance_app
-from .compliance_v2.evidence import app as evidence_app
+from .compliance_v2.evidence_collection import app as evidence_collection_app
 from .compliance_v2.compliance_as_code import app as compliance_as_code_app
 from .compliance_v2.attestation_reports import app as attestation_reports_app
 from .compliance_v2.vcom import app as vcom_app
@@ -229,7 +229,7 @@ from .compliance_v2.train import app as train_app
 from .compliance_v2.auditor_portal import app as auditor_portal_app
 
 register("cc", "Compliance")(continuous_compliance_app)
-register("evidence", "Evidence")(evidence_app)
+register("evidence", "Evidence")(evidence_collection_app)
 register("cac", "Compliance as code")(compliance_as_code_app)
 register("attest", "Attestation")(attestation_reports_app)
 register("vcom", "Vendor compliance")(vcom_app)
@@ -307,7 +307,7 @@ __all__: list[str] = [
     "devportal_app", "scaffold_app", "catalog_app", "scorecards_app",
     "templatereg_app", "techdebt_app", "environments_app", "apicatalog_app",
     "docgen_app", "pulse_app",
-    "continuous_compliance_app", "evidence_app", "compliance_as_code_app", "attestation_reports_app", "vcom_app",
+    "continuous_compliance_app", "evidence_collection_app", "compliance_as_code_app", "attestation_reports_app", "vcom_app",
     "regintel_app", "audit_management_app", "data_residency_app", "train_app", "auditor_portal_app",
     "blockchain_app", "storage_app", "quantum_app", "contracts_app",
     "web3id_app", "confidential_app", "federated_app", "zkp_app", "dcn_app",

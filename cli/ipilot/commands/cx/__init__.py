@@ -11,7 +11,7 @@ from .adoption import app as adoption_app
 from .onboarding import app as onboarding_app
 from .kb import app as kb_app
 from .community import app as community_app
-from .comm import app as comm_app
+from .communications import app as communications_app
 from .nps import app as nps_app
 from .success import app as success_app
 
@@ -24,6 +24,6 @@ app.add_typer(adoption_app, name="adoption")
 app.add_typer(onboarding_app, name="onboarding")
 app.add_typer(kb_app, name="kb")
 app.add_typer(community_app, name="community")
-app.add_typer(comm_app, name="comm")
+app.add_typer(communications_app, name="comm")
 app.add_typer(nps_app, name="nps")
 app.add_typer(success_app, name="success")

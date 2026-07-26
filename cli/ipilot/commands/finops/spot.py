@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List advice"""
+def list(ctx: typer.Context) -> None:
+    """List advice
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_spot_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def create(
     instance_type: str = typer.Argument(help="Instance type"),
     max_price: float = typer.Argument(help="Max price"),
     region: str = typer.Argument(help="Region"),
-):
-    """Create request"""
+) -> None:
+    """Create request
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_spot_create(name, instance_type, max_price, region)
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,23 +48,44 @@ def create(
 def get(
     ctx: typer.Context,
     request_id: str = typer.Argument(help="Request ID"),
-):
-    """Get request"""
+) -> None:
+    """Get request
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_spot_get(request_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def instances(ctx: typer.Context):
-    """List instances"""
+def instances(ctx: typer.Context) -> None:
+    """List instances
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_spot_instances()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def savings(ctx: typer.Context):
-    """Savings summary"""
+def savings(ctx: typer.Context) -> None:
+    """Savings summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_spot_savings()
     print_output(result, ctx.obj.get("output", "table"))

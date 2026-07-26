@@ -10,16 +10,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List carbon data"""
+def list(ctx: typer.Context) -> None:
+    """List carbon data
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_carbon_list()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def assets(ctx: typer.Context):
-    """List assets"""
+def assets(ctx: typer.Context) -> None:
+    """List assets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_carbon_assets()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -31,15 +45,29 @@ def register(
     name: str = typer.Argument(help="Asset name"),
     asset_type: str = typer.Argument(help="Asset type"),
     emissions: float = typer.Argument(help="Emissions value"),
-):
-    """Register asset"""
+) -> None:
+    """Register asset
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_carbon_register(name, asset_type, emissions)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def sustainability(ctx: typer.Context):
-    """Sustainability metrics"""
+def sustainability(ctx: typer.Context) -> None:
+    """Sustainability metrics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_carbon_sustainability()
     print_output(result, ctx.obj.get("output", "table"))

@@ -10,23 +10,44 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List findings"""
+def list(ctx: typer.Context) -> None:
+    """List findings
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_list()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Waste summary"""
+def summary(ctx: typer.Context) -> None:
+    """Waste summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_summary()
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def scan(ctx: typer.Context):
-    """Run scan"""
+def scan(ctx: typer.Context) -> None:
+    """Run scan
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_scan()
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,8 +56,15 @@ def scan(ctx: typer.Context):
 def approve(
     ctx: typer.Context,
     waste_id: str = typer.Argument(help="Waste ID"),
-):
-    """Approve finding"""
+) -> None:
+    """Approve finding
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_approve(waste_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -45,8 +73,15 @@ def approve(
 def cleanup(
     ctx: typer.Context,
     waste_id: str = typer.Argument(help="Waste ID"),
-):
-    """Clean up"""
+) -> None:
+    """Clean up
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_cleanup(waste_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -55,8 +90,15 @@ def cleanup(
 def dismiss(
     ctx: typer.Context,
     waste_id: str = typer.Argument(help="Waste ID"),
-):
-    """Dismiss finding"""
+) -> None:
+    """Dismiss finding
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_waste_dismiss(waste_id)
     print_output(result, ctx.obj.get("output", "table"))

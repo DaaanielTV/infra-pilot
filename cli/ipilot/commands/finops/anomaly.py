@@ -10,16 +10,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List anomalies"""
+def list(ctx: typer.Context) -> None:
+    """List anomalies
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_list()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Anomaly summary"""
+def summary(ctx: typer.Context) -> None:
+    """Anomaly summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -28,8 +42,15 @@ def summary(ctx: typer.Context):
 def investigate(
     ctx: typer.Context,
     anomaly_id: str = typer.Argument(help="Anomaly ID"),
-):
-    """Investigate anomaly"""
+) -> None:
+    """Investigate anomaly
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_investigate(anomaly_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -38,15 +59,29 @@ def investigate(
 def resolve(
     ctx: typer.Context,
     anomaly_id: str = typer.Argument(help="Anomaly ID"),
-):
-    """Resolve anomaly"""
+) -> None:
+    """Resolve anomaly
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_resolve(anomaly_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def profiles(ctx: typer.Context):
-    """Detection profiles"""
+def profiles(ctx: typer.Context) -> None:
+    """Detection profiles
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_profiles()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -57,8 +92,15 @@ def create_profile(
     ctx: typer.Context,
     name: str = typer.Argument(help="Profile name"),
     rules: str = typer.Argument(help="Profile rules (JSON)"),
-):
-    """Create a profile"""
+) -> None:
+    """Create a profile
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_anomaly_create_profile(name, rules)
     print_output(result, ctx.obj.get("output", "table"))

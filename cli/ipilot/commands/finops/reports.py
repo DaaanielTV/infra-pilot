@@ -10,16 +10,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List reports"""
+def list(ctx: typer.Context) -> None:
+    """List reports
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_reports_list()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Reports summary"""
+def summary(ctx: typer.Context) -> None:
+    """Reports summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_reports_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -29,8 +43,15 @@ def generate(
     ctx: typer.Context,
     report_type: str = typer.Argument(help="Report type"),
     period: str = typer.Argument(help="Report period"),
-):
-    """Generate report"""
+) -> None:
+    """Generate report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_reports_generate(report_type, period)
     print_output(result, ctx.obj.get("output", "table"))

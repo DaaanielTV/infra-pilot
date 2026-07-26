@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List budgets"""
+def list(ctx: typer.Context) -> None:
+    """List budgets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(help="Budget name"),
     amount: float = typer.Argument(help="Budget amount"),
     period: str = typer.Argument(help="Budget period"),
-):
-    """Create a budget"""
+) -> None:
+    """Create a budget
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_create(name, amount, period)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def get(
     ctx: typer.Context,
     budget_id: str = typer.Argument(help="Budget ID"),
-):
-    """Get a budget"""
+) -> None:
+    """Get a budget
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_get(budget_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def get(
 def spend(
     ctx: typer.Context,
     budget_id: str = typer.Argument(help="Budget ID"),
-):
-    """Budget spend"""
+) -> None:
+    """Budget spend
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_spend(budget_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,8 +81,15 @@ def spend(
 def forecast(
     ctx: typer.Context,
     budget_id: str = typer.Argument(help="Budget ID"),
-):
-    """Budget forecast"""
+) -> None:
+    """Budget forecast
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_forecast(budget_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -64,15 +99,29 @@ def scenario(
     ctx: typer.Context,
     budget_id: str = typer.Argument(help="Budget ID"),
     adjustments: str = typer.Argument(help="Adjustments (JSON)"),
-):
-    """Run scenario"""
+) -> None:
+    """Run scenario
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_scenario(budget_id, adjustments)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Budget summary"""
+def summary(ctx: typer.Context) -> None:
+    """Budget summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.finops_budget_summary()
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List credits"""
+def list(ctx: typer.Context) -> None:
+    """List credits
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.credit_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def issue(
     ctx: typer.Context,
     customer: str = typer.Argument(help="Customer ID"),
     amount: float = typer.Argument(help="Credit amount"),
-):
-    """Issue a credit"""
+) -> None:
+    """Issue a credit
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.credit_issue(customer, amount)
     print_output(result, ctx.obj.get("output", "table"))

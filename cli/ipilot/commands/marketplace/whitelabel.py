@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def settings(ctx: typer.Context):
-    """Get white-label settings"""
+def settings(ctx: typer.Context) -> None:
+    """Get white-label settings
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.whitelabel_settings()
     print_output(result, ctx.obj.get("output", "table"))

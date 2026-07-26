@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def metrics(ctx: typer.Context):
-    """Get PPU metrics"""
+def metrics(ctx: typer.Context) -> None:
+    """Get PPU metrics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ppu_metrics()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -21,8 +28,15 @@ def metrics(ctx: typer.Context):
 
 
 @app.command()
-def usage(ctx: typer.Context):
-    """Get PPU usage"""
+def usage(ctx: typer.Context) -> None:
+    """Get PPU usage
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ppu_usage()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -30,8 +44,15 @@ def usage(ctx: typer.Context):
 
 
 @app.command()
-def budget(ctx: typer.Context):
-    """Get PPU budget"""
+def budget(ctx: typer.Context) -> None:
+    """Get PPU budget
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ppu_budget()
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List recommendations"""
+def list(ctx: typer.Context) -> None:
+    """List recommendations
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reco_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -21,8 +28,15 @@ def list(ctx: typer.Context):
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Get recommendation summary"""
+def summary(ctx: typer.Context) -> None:
+    """Get recommendation summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reco_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -32,8 +46,15 @@ def summary(ctx: typer.Context):
 def implement(
     ctx: typer.Context,
     reco_id: str = typer.Argument(help="Recommendation ID"),
-):
-    """Implement a recommendation"""
+) -> None:
+    """Implement a recommendation
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reco_implement(reco_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +64,15 @@ def implement(
 def dismiss(
     ctx: typer.Context,
     reco_id: str = typer.Argument(help="Recommendation ID"),
-):
-    """Dismiss a recommendation"""
+) -> None:
+    """Dismiss a recommendation
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reco_dismiss(reco_id)
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List SLAs"""
+def list(ctx: typer.Context) -> None:
+    """List SLAs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.sla_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="SLA name"),
     terms: str = typer.Argument(help="SLA terms"),
-):
-    """Create an SLA"""
+) -> None:
+    """Create an SLA
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.sla_create(name, terms)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def delete(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Delete an SLA"""
+) -> None:
+    """Delete an SLA
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.sla_delete(sla_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def delete(
 def status(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Get SLA status"""
+) -> None:
+    """Get SLA status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.sla_status(sla_id)
     print_output(result, ctx.obj.get("output", "table"))

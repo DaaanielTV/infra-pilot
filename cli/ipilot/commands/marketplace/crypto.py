@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def wallets(ctx: typer.Context):
-    """List crypto wallets"""
+def wallets(ctx: typer.Context) -> None:
+    """List crypto wallets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.crypto_wallets()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def wallets(ctx: typer.Context):
 def create_wallet(
     ctx: typer.Context,
     currency: str = typer.Argument(help="Currency"),
-):
-    """Create a crypto wallet"""
+) -> None:
+    """Create a crypto wallet
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.crypto_create_wallet(currency)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,8 +49,15 @@ def create_wallet(
 def transactions(
     ctx: typer.Context,
     wallet_id: str = typer.Argument(help="Wallet ID"),
-):
-    """List crypto transactions"""
+) -> None:
+    """List crypto transactions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.crypto_transactions(wallet_id)
     data = result if isinstance(result, list) else result.get("key", result)
@@ -44,8 +65,15 @@ def transactions(
 
 
 @app.command()
-def rates(ctx: typer.Context):
-    """Get crypto exchange rates"""
+def rates(ctx: typer.Context) -> None:
+    """Get crypto exchange rates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.crypto_rates()
     print_output(result, ctx.obj.get("output", "table"))

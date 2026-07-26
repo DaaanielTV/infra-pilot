@@ -12,16 +12,30 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def status(ctx: typer.Context):
-    """Get loyalty status"""
+def status(ctx: typer.Context) -> None:
+    """Get loyalty status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.loyalty_status()
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def badges(ctx: typer.Context):
-    """List loyalty badges"""
+def badges(ctx: typer.Context) -> None:
+    """List loyalty badges
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.loyalty_badges()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -29,8 +43,15 @@ def badges(ctx: typer.Context):
 
 
 @app.command()
-def rewards(ctx: typer.Context):
-    """List available rewards"""
+def rewards(ctx: typer.Context) -> None:
+    """List available rewards
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.loyalty_rewards()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -41,16 +62,30 @@ def rewards(ctx: typer.Context):
 def redeem(
     ctx: typer.Context,
     reward_id: str = typer.Argument(help="Reward ID"),
-):
-    """Redeem a reward"""
+) -> None:
+    """Redeem a reward
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.loyalty_redeem(reward_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def leaderboard(ctx: typer.Context):
-    """Get loyalty leaderboard"""
+def leaderboard(ctx: typer.Context) -> None:
+    """Get loyalty leaderboard
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.loyalty_leaderboard()
     data = result if isinstance(result, list) else result.get("key", result)

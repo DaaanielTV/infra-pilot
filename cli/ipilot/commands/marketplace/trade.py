@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List trades"""
+def list(ctx: typer.Context) -> None:
+    """List trades
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.trade_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     resource: str = typer.Argument(help="Resource type"),
     quantity: int = typer.Argument(help="Quantity"),
-):
-    """Create a trade"""
+) -> None:
+    """Create a trade
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.trade_create(resource, quantity)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def accept(
     ctx: typer.Context,
     trade_id: str = typer.Argument(help="Trade ID"),
-):
-    """Accept a trade"""
+) -> None:
+    """Accept a trade
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.trade_accept(trade_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def accept(
 def cancel(
     ctx: typer.Context,
     trade_id: str = typer.Argument(help="Trade ID"),
-):
-    """Cancel a trade"""
+) -> None:
+    """Cancel a trade
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.trade_cancel(trade_id)
     print_output(result, ctx.obj.get("output", "table"))

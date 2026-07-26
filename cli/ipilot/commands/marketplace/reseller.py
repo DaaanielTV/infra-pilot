@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List resellers"""
+def list(ctx: typer.Context) -> None:
+    """List resellers
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reseller_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def list(ctx: typer.Context):
 def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Reseller name"),
-):
-    """Create a reseller"""
+) -> None:
+    """Create a reseller
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reseller_create(name)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,8 +49,15 @@ def create(
 def delete(
     ctx: typer.Context,
     reseller_id: str = typer.Argument(help="Reseller ID"),
-):
-    """Delete a reseller"""
+) -> None:
+    """Delete a reseller
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reseller_delete(reseller_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -46,8 +67,15 @@ def delete(
 def analytics(
     ctx: typer.Context,
     reseller_id: str = typer.Argument(help="Reseller ID"),
-):
-    """Get reseller analytics"""
+) -> None:
+    """Get reseller analytics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.reseller_analytics(reseller_id)
     print_output(result, ctx.obj.get("output", "table"))

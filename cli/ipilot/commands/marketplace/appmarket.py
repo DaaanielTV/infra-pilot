@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List available apps"""
+def list(ctx: typer.Context) -> None:
+    """List available apps
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.appmarket_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,16 +31,30 @@ def list(ctx: typer.Context):
 def install(
     ctx: typer.Context,
     app_id: str = typer.Argument(help="App ID"),
-):
-    """Install an app"""
+) -> None:
+    """Install an app
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.appmarket_install(app_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def installations(ctx: typer.Context):
-    """List installations"""
+def installations(ctx: typer.Context) -> None:
+    """List installations
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.appmarket_installations()
     data = result if isinstance(result, list) else result.get("key", result)

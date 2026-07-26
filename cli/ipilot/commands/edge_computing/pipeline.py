@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Pipeline statistics"""
+def stats(ctx: typer.Context) -> None:
+    """Pipeline statistics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.pipeline_stats()
     print_output(result, ctx.obj.get("output", "table"))

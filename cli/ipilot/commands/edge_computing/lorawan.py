@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     status: str = typer.Option(None, "--status", help="Filter by status"),
-):
-    """List gateways"""
+) -> None:
+    """List gateways
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_lorawan_gateways(status)
     data = result if isinstance(result, list) else result.get("gateways", result)

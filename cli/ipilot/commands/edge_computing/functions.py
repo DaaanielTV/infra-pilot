@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     device_id: str = typer.Option(None, "--device-id", help="Filter by device"),
-):
-    """List edge functions"""
+) -> None:
+    """List edge functions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_edge_functions(device_id)
     data = result if isinstance(result, list) else result.get("functions", result)
@@ -31,8 +38,15 @@ def deploy(
     device_id: str = typer.Argument(..., help="Target device"),
     source: str = typer.Argument(..., help="Function source URL"),
     handler: str = typer.Argument(..., help="Entry handler"),
-):
-    """Deploy edge function"""
+) -> None:
+    """Deploy edge function
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.deploy_edge_function(name, runtime, device_id, source, handler)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,8 +57,15 @@ def invoke(
     ctx: typer.Context,
     func_id: str = typer.Argument(..., help="Function ID"),
     payload: str = typer.Option(None, "--payload", "-p", help="JSON payload"),
-):
-    """Invoke edge function"""
+) -> None:
+    """Invoke edge function
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.invoke_edge_function(func_id, payload)
     print_output(result, ctx.obj.get("output", "table"))

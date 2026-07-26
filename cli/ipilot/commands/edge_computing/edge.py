@@ -16,8 +16,15 @@ def list(
     ctx: typer.Context,
     device_type: str = typer.Option(None, "--device-type", "-t", help="Filter by device type"),
     status: str = typer.Option(None, "--status", "-s", help="Filter by status"),
-):
-    """List edge devices"""
+) -> None:
+    """List edge devices
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_edge_devices(device_type, status)
     data = result if isinstance(result, list) else result.get("devices", result)
@@ -30,8 +37,15 @@ def register(
     name: str = typer.Argument(..., help="Device name"),
     device_type: str = typer.Argument(..., help="Device type (raspberry_pi, jetson_nano, etc)"),
     hardware_id: str = typer.Argument(..., help="Hardware MAC/serial"),
-):
-    """Register edge device"""
+) -> None:
+    """Register edge device
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.register_edge_device(name, device_type, hardware_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -41,8 +55,15 @@ def register(
 def status(
     ctx: typer.Context,
     device_id: str = typer.Argument(..., help="Device ID"),
-):
-    """Get device status"""
+) -> None:
+    """Get device status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.edge_device_status(device_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,8 +74,15 @@ def command(
     ctx: typer.Context,
     device_id: str = typer.Argument(..., help="Device ID"),
     command_text: str = typer.Argument(..., help="Command to execute"),
-):
-    """Send command to device"""
+) -> None:
+    """Send command to device
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.edge_device_command(device_id, command_text)
     print_output(result, ctx.obj.get("output", "table"))
@@ -64,8 +92,15 @@ def command(
 def backup(
     ctx: typer.Context,
     device_id: str = typer.Argument(..., help="Device ID"),
-):
-    """Backup edge device"""
+) -> None:
+    """Backup edge device
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.backup_edge_device(device_id)
     print_output(result, ctx.obj.get("output", "table"))

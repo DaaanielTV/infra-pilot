@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List mesh networks"""
+def list(ctx: typer.Context) -> None:
+    """List mesh networks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_mesh_networks()
     data = result if isinstance(result, list) else result.get("networks", result)
@@ -26,8 +33,15 @@ def create(
     name: str = typer.Argument(..., help="Network name"),
     mesh_type: str = typer.Argument(..., help="Mesh type (wireguard/tinc)"),
     subnet: str = typer.Argument(..., help="Subnet CIDR"),
-):
-    """Create mesh network"""
+) -> None:
+    """Create mesh network
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.create_mesh_network(name, mesh_type, subnet)
     print_output(result, ctx.obj.get("output", "table"))

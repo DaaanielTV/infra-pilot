@@ -1,12 +1,26 @@
+/**
+ * @file Ticket command handlers for the Discord bot.
+ */
+
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord.js');
 
+/** @constant {string} */
+const TICKET_CHANNEL_PREFIX = 'ticket-';
+
 class TicketCommands {
+    /**
+     * @param {import('./ticketSystem')} ticketSystem - Ticket system instance
+     */
     constructor(ticketSystem) {
         this.ticketSystem = ticketSystem;
         this.commands = this.createCommands();
     }
 
+    /**
+     * Build slash command definitions.
+     * @returns {Array<Object>} Array of command JSON objects
+     */
     createCommands() {
         return [
             new SlashCommandBuilder()
@@ -41,25 +55,32 @@ class TicketCommands {
         ].map(command => command.toJSON());
     }
 
+    /**
+     * Route an interaction to the appropriate handler.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleCommand(interaction) {
         if (!interaction.isCommand()) return;
 
-        switch (interaction.commandName) {
-            case 'setuptickets':
-                await this.handleSetupCommand(interaction);
-                break;
-            case 'addstaff':
-                await this.handleAddStaffCommand(interaction);
-                break;
-            case 'removestaff':
-                await this.handleRemoveStaffCommand(interaction);
-                break;
-            case 'ticketstats':
-                await this.handleStatsCommand(interaction);
-                break;
+        const handlers = {
+            setuptickets: this.handleSetupCommand.bind(this),
+            addstaff: this.handleAddStaffCommand.bind(this),
+            removestaff: this.handleRemoveStaffCommand.bind(this),
+            ticketstats: this.handleStatsCommand.bind(this),
+        };
+
+        const handler = handlers[interaction.commandName];
+        if (handler) {
+            await handler(interaction);
         }
     }
 
+    /**
+     * Handle the /setuptickets command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleSetupCommand(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -75,7 +96,7 @@ class TicketCommands {
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Error setting up ticket system:', error);
+            console.error('[TicketCommands] Error setting up ticket system:', error);
             await interaction.editReply({
                 content: '❌ Failed to set up the ticket system. Please check the bot permissions and try again.',
                 ephemeral: true
@@ -83,8 +104,13 @@ class TicketCommands {
         }
     }
 
+    /**
+     * Handle the /addstaff command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleAddStaffCommand(interaction) {
-        if (!interaction.channel.name.startsWith('ticket-')) {
+        if (!interaction.channel.name.startsWith(TICKET_CHANNEL_PREFIX)) {
             await interaction.reply({
                 content: '❌ This command can only be used in ticket channels!',
                 ephemeral: true
@@ -102,7 +128,7 @@ class TicketCommands {
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Error adding staff to ticket:', error);
+            console.error('[TicketCommands] Error adding staff to ticket:', error);
             await interaction.reply({
                 content: '❌ Failed to add staff member to the ticket.',
                 ephemeral: true
@@ -110,8 +136,13 @@ class TicketCommands {
         }
     }
 
+    /**
+     * Handle the /removestaff command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleRemoveStaffCommand(interaction) {
-        if (!interaction.channel.name.startsWith('ticket-')) {
+        if (!interaction.channel.name.startsWith(TICKET_CHANNEL_PREFIX)) {
             await interaction.reply({
                 content: '❌ This command can only be used in ticket channels!',
                 ephemeral: true
@@ -129,7 +160,7 @@ class TicketCommands {
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Error removing staff from ticket:', error);
+            console.error('[TicketCommands] Error removing staff from ticket:', error);
             await interaction.reply({
                 content: '❌ Failed to remove staff member from the ticket.',
                 ephemeral: true
@@ -137,13 +168,20 @@ class TicketCommands {
         }
     }
 
+    /**
+     * Handle the /ticketstats command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleStatsCommand(interaction) {
         await interaction.deferReply();
 
+        const tickets = Array.from(this.ticketSystem.tickets.values());
+        const openCount = tickets.filter(t => t.status === 'open').length;
         const stats = {
             total: this.ticketSystem.ticketCounter,
-            open: Array.from(this.ticketSystem.tickets.values()).filter(t => t.status === 'open').length,
-            closed: this.ticketSystem.ticketCounter - Array.from(this.ticketSystem.tickets.values()).filter(t => t.status === 'open').length
+            open: openCount,
+            closed: this.ticketSystem.ticketCounter - openCount
         };
 
         const fields = [

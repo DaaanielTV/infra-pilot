@@ -1,14 +1,44 @@
-# TODO: add more specific exceptions
-class CLIError(Exception):
-    pass
+"""Custom exceptions for the Infra Pilot CLI."""
 
-# NOTE: nobody actually catches this specifically lol
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class CLIError(Exception):
+    """Base exception for all CLI errors."""
+
+
 class APIError(CLIError):
-    pass
+    """Raised when an API request fails."""
+
 
 class ConfigError(CLIError):
-    pass
+    """Raised when there is a configuration error."""
 
-# XXX: this is never raised anywhere in the codebase
+
 class CommandNotFoundError(CLIError):
-    pass
+    """Raised when a command is not found."""
+
+
+class AuthenticationError(CLIError):
+    """Raised when authentication fails."""
+
+
+class ConnectionError(CLIError):
+    """Raised when a connection to the API fails."""
+
+
+class ValidationError(CLIError):
+    """Raised when input validation fails."""
+
+
+__all__ = [
+    "CLIError",
+    "APIError",
+    "ConfigError",
+    "CommandNotFoundError",
+    "AuthenticationError",
+    "ConnectionError",
+    "ValidationError",
+]

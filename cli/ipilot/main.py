@@ -1,16 +1,21 @@
-# TODO: fix this later - imports are messy af
-# FIXME: this whole file is a mess idk why we did it like this
-import typer
+"""CLI entry point for Infra Pilot."""
 
-# HACK: dont remove this it breaks everything for some reason
+import logging
+import os
+from typing import Any, Dict, List
+
+import typer
+import yaml
+
 from .core.cli import create_app, legacy_bridge
 from .core.command_registry import discover_commands, attach_to_app
 
-# FIXME: why does this need to be imported twice???
+logger = logging.getLogger(__name__)
+
 app = create_app()
 
-import ipilot.commands
-from .core.command_registry import attach_to_app
+import ipilot.commands  # noqa: E402, F811
+from .core.command_registry import attach_to_app  # noqa: E402
 attach_to_app(app)
 
 
@@ -19,16 +24,18 @@ def login(
     ctx: typer.Context,
     api_key: str = typer.Argument(..., help="Your API key"),
 ):
-    """Log in to the API."""
-    # TODO: add remember me option
+    """Log in to the API with your API key."""
     from .client import ApiClient
     from .config import load_config
     from .output.formatters import print_output
+
     config = load_config(profile=ctx.obj.get("profile"))
-    client = ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    client = ApiClient(
+        config.get("api_url", "http://localhost:8080"),
+        config.get("token"),
+    )
     result = client.login(api_key)
     if "token" in result:
-        # BUG: this should probably be encrypted lol
         from .config import set_key
         set_key("token", result["token"], profile=ctx.obj.get("profile"))
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +43,7 @@ def login(
 
 @app.command()
 def logout(ctx: typer.Context):
-    """Log out and clear your token."""
-    # TODO: should we also invalidate the token on the server??
+    """Log out and clear your authentication token."""
     from .config import unset_key
     unset_key("token", profile=ctx.obj.get("profile"))
     from .output.formatters import print_output
@@ -46,26 +52,23 @@ def logout(ctx: typer.Context):
 
 @app.command()
 def version():
-    """Show CLI version."""
+    """Show the CLI version."""
     from . import __version__
     typer.echo(f"ipilot v{__version__}")
-    # TODO: add build date lol
 
 
 @app.command()
 def interactive():
-    """Open interactive mode."""
-    # XXX: this is super hacky but it works so dont touch it
+    """Open an interactive REPL-like mode."""
     _run_interactive()
 
 
 @app.command()
 def completion(
     shell: str = typer.Argument("auto", help="Shell type: bash, zsh, fish, powershell"),
-    install: bool = typer.Option(False, "--install", help="Install completion"),
+    install: bool = typer.Option(False, "--install", help="Install shell completion"),
 ):
-    """Set up shell completion."""
-    # TODO: test this on windows lol
+    """Set up shell completion for the CLI."""
     if install:
         from typer._completion import install as install_completion
         install_completion()
@@ -80,11 +83,14 @@ def batch(
     ctx: typer.Context,
     file: str = typer.Option(..., "--file", "-f", help="YAML batch operations file"),
 ):
-    """Run many commands from a YAML file."""
-    # FIXME: this dont handle errors properly
-    import yaml
-    with open(file) as f:
-        ops = yaml.safe_load(f)
+    """Run multiple commands defined in a YAML file."""
+    try:
+        with open(file) as f:
+            ops: Dict[str, List[Dict[str, Any]]] = yaml.safe_load(f)
+    except (FileNotFoundError, yaml.YAMLError) as exc:
+        typer.echo(f"Error loading batch file: {exc}", err=True)
+        raise typer.Exit(code=1)
+
     for op in ops.get("operations", []):
         cmd = op.get("command", "")
         args = op.get("args", {})
@@ -93,19 +99,24 @@ def batch(
 
 @app.command()
 def docs(
-    output: str = typer.Option("docs/cli-reference.md", "--output", "-o", help="Output file"),
+    output: str = typer.Option(
+        "docs/cli-reference.md", "--output", "-o",
+        help="Output file path for generated docs",
+    ),
 ):
-    """Generate CLI reference docs."""
+    """Generate CLI reference documentation."""
     _generate_docs(output)
 
 
-# NOTE: this function was copypasted from stackoverflow lol
 def _run_interactive():
-    from rich.prompt import Prompt
+    """Run the CLI in interactive mode using Rich prompts."""
     from rich.console import Console
+    from rich.prompt import Prompt
+
     console = Console()
     console.print("[bold cyan]Infra Pilot CLI[/bold cyan] - Interactive mode")
     console.print("Type commands directly, or 'exit' to quit.\n")
+
     while True:
         try:
             cmd = Prompt.ask("[bold]ipilot[/bold]")
@@ -120,15 +131,23 @@ def _run_interactive():
             break
 
 
-# TODO: maybe use jinja for this instead
 def _generate_docs(output_path: str):
-    lines = ["# CLI Reference\n", "Auto-generated from `ipilot --help`.\n", "## Global Options\n"]
+    """Generate CLI reference documentation from the Typer app.
+
+    Args:
+        output_path: Path to write the generated docs to.
+    """
     from typer.testing import CliRunner
+
+    lines = [
+        "# CLI Reference\n",
+        "Auto-generated from `ipilot --help`.\n",
+        "## Global Options\n",
+    ]
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     lines.append("```\n" + result.output + "```\n")
 
-    import os
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "w") as f:
         f.write("\n".join(lines))

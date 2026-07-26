@@ -30,7 +30,7 @@ jobs:
       is_prerelease: ${{ steps.semver.outputs.prerelease }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -55,7 +55,7 @@ jobs:
       changelog: ${{ steps.gen.outputs.changelog }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -100,7 +100,7 @@ jobs:
     needs: [version, changelog]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

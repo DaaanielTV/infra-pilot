@@ -1,3 +1,9 @@
+/**
+ * @file Main entry point for the Infra Pilot Discord bot.
+ * Handles slash commands, button interactions, server creation via Pterodactyl,
+ * and coordinates all sub-modules (tickets, stats, roles, etc.).
+ */
+
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const axios = require('axios');
 const dotenv = require('dotenv');
@@ -7,43 +13,58 @@ const path = require('path');
 dotenv.config();
 
 // --- Constants and Configuration ---
+
+/** @constant {string} Path to server limits JSON file */
 const SERVER_LIMITS_FILE = path.join(__dirname, 'server_limits.json');
+
+/** @constant {string|undefined} */
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+/** @constant {string|undefined} */
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
+/** @constant {string|undefined} */
 const PTERODACTYL_API_KEY = process.env.PTERODACTYL_API_KEY;
+/** @constant {string|undefined} */
 const SERVER_CREATION_CHANNEL_ID = process.env.SERVER_CREATION_CHANNEL_ID;
+/** @constant {string|undefined} */
 const SERVER_CREATOR_ROLE_ID = process.env.SERVER_CREATOR_ROLE_ID;
+/** @constant {string|undefined} */
 const LOCATION_ID = process.env.LOCATION_ID;
+/** @constant {number} */
 const MAX_SERVERS_PER_USER = parseInt(process.env.MAX_SERVERS_PER_USER) || 1;
+/** @constant {boolean} */
 const DISCORD_SERVICE_DISABLED = String(process.env.DISCORD_SERVICE_DISABLED || '').toLowerCase() === 'true';
 
 // --- Server Types Configuration ---
+
+/** @typedef {'minecraft'|'nodejs'|'teamspeak'|'database'|'python'} ServerTypeKey */
+
+/** @type {Object<ServerTypeKey, {name: string, eggId: string|undefined, memory: number, dockerImage: string}>} */
 const SERVER_TYPES = {
-  'minecraft': {
+  minecraft: {
     name: 'Minecraft Server',
     eggId: process.env.MINECRAFT_EGG_ID,
     memory: 1024,
     dockerImage: 'ghcr.io/pterodactyl/yolks:java_17'
   },
-  'nodejs': {
+  nodejs: {
     name: 'Node.js Server',
     eggId: process.env.NODEJS_EGG_ID,
     memory: 256,
     dockerImage: 'ghcr.io/pterodactyl/yolks:nodejs_18'
   },
-  'teamspeak': {
+  teamspeak: {
     name: 'TeamSpeak Server',
     eggId: process.env.TEAMSPEAK_EGG_ID,
     memory: 256,
     dockerImage: 'ghcr.io/pterodactyl/yolks:teamspeak'
   },
-  'database': {
+  database: {
     name: 'MySQL Datenbank',
     eggId: process.env.DATABASE_EGG_ID,
     memory: 256,
     dockerImage: 'ghcr.io/pterodactyl/yolks:mysql'
   },
-  'python': {
+  python: {
     name: 'Python Server',
     eggId: process.env.PYTHON_EGG_ID,
     memory: 512,
@@ -64,6 +85,11 @@ const CodeReviewBot = require('./modules/codeReviewBot');
 const ReportBot = require('./modules/reportBot');
 
 // --- Utility Functions ---
+
+/**
+ * Load server limits from the JSON file.
+ * @returns {Object} Server limits map keyed by Discord user ID
+ */
 function loadServerLimits() {
   try {
     if (!fs.existsSync(SERVER_LIMITS_FILE)) {
@@ -71,19 +97,37 @@ function loadServerLimits() {
     }
     return JSON.parse(fs.readFileSync(SERVER_LIMITS_FILE, 'utf8'));
   } catch (error) {
-    console.error('Fehler beim Laden der Serverlimits:', error);
+    console.error('[ServerLimits] Error loading server limits:', error);
     return {};
   }
 }
 
+/**
+ * Save server limits to the JSON file.
+ * @param {Object} limits - Server limits map
+ * @returns {void}
+ */
 function saveServerLimits(limits) {
   try {
     fs.writeFileSync(SERVER_LIMITS_FILE, JSON.stringify(limits, null, 2));
   } catch (error) {
-    console.error('Fehler beim Speichern der Serverlimits:', error);
+    console.error('[ServerLimits] Error saving server limits:', error);
   }
 }
 
+/**
+ * Create a user in Pterodactyl via the API.
+ * @param {Object} userData - User creation payload
+ * @param {string} userData.username
+ * @param {string} userData.email
+ * @param {string} userData.first_name
+ * @param {string} userData.last_name
+ * @param {string} userData.password
+ * @param {boolean} userData.root_admin
+ * @param {string} userData.language
+ * @returns {Promise<Object>} Created user attributes
+ * @throws {Error} If the API call fails
+ */
 async function createPterodactylUser(userData) {
   try {
     const response = await axios.post(`${PTERODACTYL_API_URL}/api/application/users`, userData, {
@@ -95,11 +139,17 @@ async function createPterodactylUser(userData) {
     });
     return response.data.attributes;
   } catch (error) {
-    console.error('API Error creating user:', error.response?.data || error.message);
+    console.error('[Pterodactyl] API error creating user:', error.response?.data || error.message);
     throw new Error(error.response?.data?.errors?.[0]?.detail || 'Failed to create user');
   }
 }
 
+/**
+ * Create a server in Pterodactyl via the API.
+ * @param {Object} serverData - Server creation payload
+ * @returns {Promise<Object>} Created server attributes
+ * @throws {Error} If the API call fails
+ */
 async function createPterodactylServer(serverData) {
   try {
     const response = await axios.post(`${PTERODACTYL_API_URL}/api/application/servers`, serverData, {
@@ -111,21 +161,36 @@ async function createPterodactylServer(serverData) {
     });
     return response.data.attributes;
   } catch (error) {
-    console.error('API Error creating server:', error.response?.data || error.message);
+    console.error('[Pterodactyl] API error creating server:', error.response?.data || error.message);
     throw new Error(error.response?.data?.errors?.[0]?.detail || 'Failed to create server');
   }
 }
 
+/**
+ * Validate an email address format.
+ * @param {string} email
+ * @returns {boolean}
+ */
 function validateEmail(email) {
   const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return re.test(String(email).toLowerCase());
 }
 
+/**
+ * Validate a username (3-20 alphanumeric chars + underscores).
+ * @param {string} username
+ * @returns {boolean}
+ */
 function validateUsername(username) {
   const re = /^[a-zA-Z0-9_]{3,20}$/;
   return re.test(username);
 }
 
+/**
+ * Validate password strength (min 8 chars, letters, numbers, special chars).
+ * @param {string} password
+ * @returns {boolean}
+ */
 function validatePassword(password) {
   return password.length >= 8 &&
     /[A-Za-z]/.test(password) &&
@@ -134,6 +199,8 @@ function validatePassword(password) {
 }
 
 // --- Discord Client Initialization ---
+
+/** @type {import('discord.js').Client} */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -141,7 +208,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildIntegrations,
@@ -186,6 +252,13 @@ const codeReviewBot = new CodeReviewBot(client);
 const reportBot = new ReportBot(client);
 
 // --- Helper Functions for Message Handling ---
+
+/**
+ * Handle email input step during server creation.
+ * @param {import('discord.js').Message} message
+ * @param {Object} userState - Current user registration state
+ * @returns {Promise<boolean>} Whether the input was valid
+ */
 async function handleEmailInput(message, userState) {
   if (!validateEmail(message.content)) {
     await message.reply({
@@ -208,6 +281,12 @@ async function handleEmailInput(message, userState) {
   return true;
 }
 
+/**
+ * Handle username input step during server creation.
+ * @param {import('discord.js').Message} message
+ * @param {Object} userState - Current user registration state
+ * @returns {Promise<boolean>} Whether the input was valid
+ */
 async function handleUsernameInput(message, userState) {
   if (!validateUsername(message.content)) {
     await message.reply({
@@ -230,6 +309,12 @@ async function handleUsernameInput(message, userState) {
   return true;
 }
 
+/**
+ * Handle password input step during server creation.
+ * @param {import('discord.js').Message} message
+ * @param {Object} userState - Current user registration state
+ * @returns {Promise<Object|boolean>} Object with processingMsg on success, false on invalid input
+ */
 async function handlePasswordInput(message, userState) {
   if (!validatePassword(message.content)) {
     await message.reply({
@@ -252,8 +337,19 @@ async function handlePasswordInput(message, userState) {
   return { processingMsg };
 }
 
+/**
+ * Process the full server creation flow (create Pterodactyl user + server).
+ * @param {import('discord.js').Message} message - Original user message
+ * @param {Object} userState - Accumulated user registration state
+ * @param {import('discord.js').Message} processingMsg - The "processing" status message to edit
+ * @returns {Promise<void>}
+ */
 async function processServerCreation(message, userState, processingMsg) {
   try {
+    if (!userState.data.serverType || !SERVER_TYPES[userState.data.serverType]) {
+      throw new Error('Ungültiger Server-Typ');
+    }
+
     const userData = {
       username: userState.data.username,
       email: userState.data.email,
@@ -273,7 +369,7 @@ async function processServerCreation(message, userState, processingMsg) {
     const serverData = {
       name: `${userState.data.username}'s ${serverConfig.name}`,
       user: userId,
-      egg: parseInt(serverConfig.eggId),
+      egg: parseInt(serverConfig.eggId, 10),
       docker_image: serverConfig.dockerImage,
       startup: serverType === 'nodejs' ? 'npm start' : '',
       environment: serverType === 'nodejs'
@@ -298,7 +394,7 @@ async function processServerCreation(message, userState, processingMsg) {
         default: null
       },
       deploy: {
-        locations: [parseInt(LOCATION_ID)],
+        locations: [parseInt(LOCATION_ID, 10)],
         dedicated_ip: false,
         port_range: []
       }
@@ -316,7 +412,7 @@ async function processServerCreation(message, userState, processingMsg) {
       const member = await message.guild.members.fetch(message.author.id);
       await member.roles.add(SERVER_CREATOR_ROLE_ID);
     } catch (roleError) {
-      console.error('Fehler beim Zuweisen der Rolle:', roleError);
+      console.error('[ServerCreation] Error assigning role:', roleError);
     }
 
     const successEmbed = new EmbedBuilder()
@@ -335,7 +431,7 @@ Du kannst dich nun mit deiner E-Mail und dem Passwort im Pterodactyl-Panel anmel
 
     await processingMsg.edit({ embeds: [successEmbed] });
   } catch (error) {
-    console.error('Fehler bei der Server-Erstellung:', error);
+    console.error('[ServerCreation] Error during server creation:', error);
 
     const errorEmbed = new EmbedBuilder()
       .setTitle('❌ Server-Erstellung fehlgeschlagen')
@@ -352,6 +448,11 @@ Bitte versuche es später erneut oder kontaktiere einen Administrator.`)
 }
 
 // --- Command Registration Helper ---
+
+/**
+ * Register all slash commands with Discord.
+ * @returns {Promise<void>}
+ */
 async function registerCommands() {
   const allCommands = [
     {
@@ -934,8 +1035,12 @@ async function registerCommands() {
 }
 
 // --- Event Handlers ---
+
+/**
+ * @event Client#ready
+ */
 client.once('ready', async () => {
-  console.log(`Bot ist online als ${client.user.tag}`);
+  console.log(`[Discord] Bot online as ${client.user.tag}`);
   await registerCommands();
 
   welcomeMessages.initialize(client);
@@ -950,24 +1055,55 @@ client.once('ready', async () => {
   reportBot.initialize(client);
 });
 
+/**
+ * @event Client#guildMemberAdd
+ */
 client.on('guildMemberAdd', async (member) => {
-  welcomeMessages.handleMemberJoin(member);
-  verificationSystem.handleMemberJoin(member);
-  verificationLevels.checkMember(member);
+  try {
+    welcomeMessages.handleMemberJoin(member);
+    verificationSystem.handleMemberJoin(member);
+    verificationLevels.checkMember(member);
+  } catch (error) {
+    console.error('[Discord] Error in guildMemberAdd handler:', error);
+  }
 });
 
+/**
+ * @event Client#guildMemberRemove
+ */
 client.on('guildMemberRemove', async (member) => {
-  tempVoiceChannels.handleMemberLeave(member);
+  try {
+    tempVoiceChannels.handleMemberLeave(member);
+  } catch (error) {
+    console.error('[Discord] Error in guildMemberRemove handler:', error);
+  }
 });
 
+/**
+ * @event Client#messageDelete
+ */
 client.on('messageDelete', async (message) => {
-  messageLogger.handleMessageDelete(message);
+  try {
+    messageLogger.handleMessageDelete(message);
+  } catch (error) {
+    console.error('[Discord] Error in messageDelete handler:', error);
+  }
 });
 
+/**
+ * @event Client#messageUpdate
+ */
 client.on('messageUpdate', async (oldMessage, newMessage) => {
-  messageFilter.handleMessageUpdate(oldMessage, newMessage);
+  try {
+    messageFilter.handleMessageUpdate(oldMessage, newMessage);
+  } catch (error) {
+    console.error('[Discord] Error in messageUpdate handler:', error);
+  }
 });
 
+/**
+ * @event Client#interactionCreate
+ */
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isCommand()) {
     if (interaction.channelId === SERVER_CREATION_CHANNEL_ID && interaction.commandName === 'server') {
@@ -1097,91 +1233,136 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+/**
+ * @event Client#messageReactionAdd
+ */
 client.on('messageReactionAdd', async (reaction, user) => {
-  roleManager.handleReaction(reaction, user, true);
-  pollCreator.handleReaction(reaction, user, true);
+  try {
+    roleManager.handleReaction(reaction, user, true);
+    pollCreator.handleReaction(reaction, user, true);
+  } catch (error) {
+    console.error('[Discord] Error in messageReactionAdd handler:', error);
+  }
 });
 
+/**
+ * @event Client#messageReactionRemove
+ */
 client.on('messageReactionRemove', async (reaction, user) => {
-  roleManager.handleReaction(reaction, user, false);
-  pollCreator.handleReaction(reaction, user, false);
+  try {
+    roleManager.handleReaction(reaction, user, false);
+    pollCreator.handleReaction(reaction, user, false);
+  } catch (error) {
+    console.error('[Discord] Error in messageReactionRemove handler:', error);
+  }
 });
 
+/**
+ * @event Client#voiceStateUpdate
+ */
 client.on('voiceStateUpdate', async (oldState, newState) => {
-  tempVoiceChannels.handleVoiceStateUpdate(oldState, newState);
-  activityTracker.handleVoiceStateUpdate(oldState, newState);
+  try {
+    tempVoiceChannels.handleVoiceStateUpdate(oldState, newState);
+    activityTracker.handleVoiceStateUpdate(oldState, newState);
+  } catch (error) {
+    console.error('[Discord] Error in voiceStateUpdate handler:', error);
+  }
 });
 
+/**
+ * @event Client#messageCreate
+ */
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  messageFilter.checkMessage(message);
-  activityTracker.trackMessage(message);
-  messageLogger.trackMessage(message);
-  verificationSystem.handleMessage(message);
+  try {
+    messageFilter.checkMessage(message);
+    activityTracker.trackMessage(message);
+    messageLogger.trackMessage(message);
+    verificationSystem.handleMessage(message);
 
-  const userState = userRegistrationState.get(message.author.id);
-  if (userState) {
-    if (message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
+    const userState = userRegistrationState.get(message.author.id);
+    if (userState) {
+      if (message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
 
-    try {
-      await message.delete();
-    } catch (error) {
-      console.error('Fehler beim Löschen der Nachricht:', error);
+      try {
+        await message.delete();
+      } catch (error) {
+        console.error('[Discord] Error deleting message:', error);
+      }
+
+      switch (userState.step) {
+        case 'email':
+          if (await handleEmailInput(message, userState) === false) return;
+          break;
+        case 'username':
+          if (await handleUsernameInput(message, userState) === false) return;
+          break;
+        case 'password': {
+          const result = await handlePasswordInput(message, userState);
+          if (result === false) return;
+          await processServerCreation(message, userState, result.processingMsg);
+          break;
+        }
+      }
+      return;
     }
 
-    switch (userState.step) {
-      case 'email':
-        if (await handleEmailInput(message, userState) === false) return;
-        break;
-      case 'username':
-        if (await handleUsernameInput(message, userState) === false) return;
-        break;
-      case 'password':
-        const { processingMsg } = await handlePasswordInput(message, userState);
-        await processServerCreation(message, userState, processingMsg);
-        break;
-    }
-    return;
+    customCommands.handleMessage(message);
+  } catch (error) {
+    console.error('[Discord] Error in messageCreate handler:', error);
   }
-
-  customCommands.handleMessage(message);
 });
 
 // --- Webhook Server for Code Review ---
+
 const http = require('http');
-const WEBHOOK_PORT = parseInt(process.env.CODE_REVIEW_WEBHOOK_PORT) || 3000;
+/** @constant {number} */
+const WEBHOOK_PORT = parseInt(process.env.CODE_REVIEW_WEBHOOK_PORT, 10) || 3000;
+
+/**
+ * Create the webhook HTTP server for code review and health checks.
+ * @type {import('http').Server}
+ */
 const webhookServer = http.createServer(async (req, res) => {
-  if (req.method === 'GET' && req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      service: 'discord-service',
-      discord: DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN ? 'disabled' : 'enabled'
-    }));
-  } else if (req.method === 'POST' && req.url === '/webhook/github') {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', async () => {
-      try {
-        const parsed = JSON.parse(body);
-        req.body = parsed;
-        await codeReviewBot.handleWebhook(req, res);
-      } catch (e) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid JSON' }));
-      }
-    });
-  } else {
-    res.writeHead(404);
+  try {
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'ok',
+        service: 'discord-service',
+        discord: DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN ? 'disabled' : 'enabled'
+      }));
+    } else if (req.method === 'POST' && req.url === '/webhook/github') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', async () => {
+        try {
+          const parsed = JSON.parse(body);
+          req.body = parsed;
+          await codeReviewBot.handleWebhook(req, res);
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  } catch (error) {
+    console.error('[Webhook] Server error:', error);
+    res.writeHead(500);
     res.end();
   }
 });
+
 webhookServer.listen(WEBHOOK_PORT, () => {
   console.log(`[Webhook] GitHub webhook server listening on port ${WEBHOOK_PORT}`);
 });
 
 // --- Discord Bot Login ---
+
 if (DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN || DISCORD_TOKEN === 'your_discord_bot_token_here') {
   console.log('[Discord] Bot login disabled; webhook and health endpoints remain available.');
 } else {

@@ -1,3 +1,5 @@
+import json
+
 import typer
 from ...client import ApiClient
 from ...config import load_config
@@ -82,7 +84,6 @@ def run(
         None (output is printed via print_output).
     """
     client = _get_client(ctx)
-    import json
     parsed = json.loads(params)
     result = client.soar_run(playbook_id, parsed)
     print_output(result, ctx.obj.get("output", "table"))
@@ -104,7 +105,6 @@ def create(
         None (output is printed via print_output).
     """
     client = _get_client(ctx)
-    import json
     parsed_steps = json.loads(steps)
     result = client.soar_create(name, parsed_steps, trigger)
     print_output(result, ctx.obj.get("output", "table"))

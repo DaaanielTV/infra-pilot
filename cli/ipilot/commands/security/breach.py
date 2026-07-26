@@ -1,3 +1,5 @@
+import json
+
 import typer
 from ...client import ApiClient
 from ...config import load_config
@@ -45,7 +47,6 @@ def report(
         None (output is printed via print_output).
     """
     client = _get_client(ctx)
-    import json
     parsed = json.loads(details)
     result = client.breach_report(breach_id, parsed)
     print_output(result, ctx.obj.get("output", "table"))

@@ -222,7 +222,7 @@ from .compliance_v2.evidence_collection import app as evidence_collection_app
 from .compliance_v2.compliance_as_code import app as compliance_as_code_app
 from .compliance_v2.attestation_reports import app as attestation_reports_app
 from .compliance_v2.vcom import app as vcom_app
-from .compliance_v2.regintel import app as regintel_app
+from .compliance_v2.regulatory_intelligence import app as regulatory_intelligence_app
 from .compliance_v2.audit_management import app as audit_management_app
 from .compliance_v2.data_residency import app as data_residency_app
 from .compliance_v2.train import app as train_app
@@ -233,7 +233,7 @@ register("evidence", "Evidence")(evidence_collection_app)
 register("cac", "Compliance as code")(compliance_as_code_app)
 register("attest", "Attestation")(attestation_reports_app)
 register("vcom", "Vendor compliance")(vcom_app)
-register("regintel", "Regulatory intel")(regintel_app)
+register("regintel", "Regulatory intel")(regulatory_intelligence_app)
 register("audit-mgmt", "Audit management")(audit_management_app)
 register("dres", "Data residency")(data_residency_app)
 register("train", "Compliance training")(train_app)
@@ -308,7 +308,7 @@ __all__: list[str] = [
     "templatereg_app", "techdebt_app", "environments_app", "apicatalog_app",
     "docgen_app", "pulse_app",
     "continuous_compliance_app", "evidence_collection_app", "compliance_as_code_app", "attestation_reports_app", "vcom_app",
-    "regintel_app", "audit_management_app", "data_residency_app", "train_app", "auditor_portal_app",
+    "regulatory_intelligence_app", "audit_management_app", "data_residency_app", "train_app", "auditor_portal_app",
     "blockchain_app", "storage_app", "quantum_app", "contracts_app",
     "web3id_app", "confidential_app", "federated_app", "zkp_app", "dcn_app",
     "dr_app", "active_active_app", "backup_sla_app", "chaos_exp_app",

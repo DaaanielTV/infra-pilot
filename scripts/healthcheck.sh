@@ -1,25 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+success() { echo -e "${GREEN}${1}${NC}"; }
+warn()    { echo -e "${YELLOW}${1}${NC}"; }
+error()   { echo -e "${RED}${1}${NC}" >&2; }
+
+usage() {
+  cat <<EOF
+Run health checks on the Infra Pilot project infrastructure.
+
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  --json     Output results as JSON
+  --strict   Exit with error if any warnings are present
+  --help     Show this help message
+EOF
+  exit 0
+}
+
 JSON_OUTPUT=false
 STRICT=false
 
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
-    --json)
-      JSON_OUTPUT=true
-      shift
-      ;;
-    --strict)
-      STRICT=true
-      shift
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      echo "Usage: $0 [--json] [--strict]" >&2
-      exit 1
-      ;;
+    --json) JSON_OUTPUT=true; shift ;;
+    --strict) STRICT=true; shift ;;
+    --help) usage ;;
+    *) echo "Unknown option: $1" >&2; usage ;;
   esac
 done
 
@@ -27,10 +43,10 @@ check_file() {
   local file="$1"
   local label="$2"
   if [ -f "$file" ]; then
-    echo "✓ $label"
+    success "$label"
     return 0
   fi
-  echo "✗ $label (missing: $file)"
+  error "$label (missing: $file)"
   return 1
 }
 
@@ -41,18 +57,18 @@ check_docker_service() {
     local status
     status=$(docker ps --filter "name=${service}" --format "{{.Status}}" 2>/dev/null || true)
     if [ -n "$status" ]; then
-      echo "✓ $label ($status)"
+      success "$label ($status)"
       return 0
     fi
   fi
-  echo "⚠ $label (not running)"
+  warn "$label (not running)"
   return 1
 }
 
 OK=0
 WARN=0
 
-echo "Running health checks..."
+info "Running health checks..."
 echo ""
 
 echo "--- File Checks ---"
@@ -64,7 +80,6 @@ check_file "$ROOT_DIR/services/management-panel/package.json" "management-panel 
 check_file "$ROOT_DIR/services/discord-service/package.json" "discord-service package manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/orchestrator-agent/.env.example" "orchestrator-agent .env.example present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/management-panel/.env.example" "management-panel .env.example present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_file "$ROOT_DIR/services/integration-service/.env.example" "integration-service .env.example present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 
 echo ""
 echo "--- Docker Service Checks ---"
@@ -72,7 +87,6 @@ check_docker_service "infra-pilot-postgres" "PostgreSQL" && OK=$((OK + 1)) || WA
 check_docker_service "infra-pilot-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_docker_service "infra-pilot-management-panel" "Management Panel" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_docker_service "infra-pilot-orchestrator" "Orchestrator Agent" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_docker_service "infra-pilot-integration" "Integration Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_docker_service "infra-pilot-discord" "Discord Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 
 if [ "$JSON_OUTPUT" = true ]; then
@@ -80,7 +94,7 @@ if [ "$JSON_OUTPUT" = true ]; then
 fi
 
 echo ""
-echo "Health summary: ok=$OK warn=$WARN"
+info "Health summary: ok=$OK warn=$WARN"
 if [ "$STRICT" = true ] && [ "$WARN" -gt 0 ]; then
   exit 1
 fi

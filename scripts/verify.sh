@@ -1,30 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+info()    { echo -e "${BLUE}${1}${NC}"; }
+success() { echo -e "${GREEN}${1}${NC}"; }
+error()   { echo -e "${RED}${1}${NC}" >&2; }
+
+usage() {
+  cat <<EOF
+Run verification stages across the Infra Pilot project.
+
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  --offline           Skip network-dependent checks
+  --json              Output results as JSON
+  --stages STAGES     Comma-separated list of stages (default: health,setup,test,lint,integration)
+  --help              Show this help message
+EOF
+  exit 0
+}
+
 OFFLINE=false
 JSON_OUTPUT=false
 STAGES="health,setup,test,lint,integration"
 
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
-    --offline)
-      OFFLINE=true
-      shift
-      ;;
-    --json)
-      JSON_OUTPUT=true
-      shift
-      ;;
-    --stages)
-      STAGES="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      echo "Usage: $0 [--offline] [--json] [--stages health,setup,test,lint,integration]" >&2
-      exit 1
-      ;;
+    --offline) OFFLINE=true; shift ;;
+    --json) JSON_OUTPUT=true; shift ;;
+    --stages) STAGES="$2"; shift 2 ;;
+    --help) usage ;;
+    *) echo "Unknown option: $1" >&2; usage ;;
   esac
 done
 
@@ -33,14 +47,12 @@ IFS=',' read -r -a stage_list <<< "$STAGES"
 run_stage() {
   local name="$1"
   shift
-
-  echo "==> Stage: $name"
+  info "Stage: $name"
   if "$@"; then
-    echo "✓ Stage succeeded: $name"
+    success "Stage succeeded: $name"
     return 0
   fi
-
-  echo "✗ Stage failed: $name"
+  error "Stage failed: $name"
   return 1
 }
 
@@ -50,32 +62,25 @@ STAGE_JSON=""
 for stage in "${stage_list[@]}"; do
   case "$stage" in
     health)
-      cmd=("bash" "$ROOT_DIR/scripts/healthcheck.sh")
-      ;;
+      cmd=("bash" "$ROOT_DIR/scripts/healthcheck.sh") ;;
     setup)
       cmd=("bash" "$ROOT_DIR/scripts/setup.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline")
-      ;;
+      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
     test)
       cmd=("bash" "$ROOT_DIR/scripts/test.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline")
-      ;;
+      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
     lint)
       cmd=("bash" "$ROOT_DIR/tools/lint-all.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline")
-      ;;
+      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
     integration)
       cmd=("bash" "$ROOT_DIR/tools/run-all-tests.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline")
-      ;;
+      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
     "")
-      continue
-      ;;
+      continue ;;
     *)
       echo "Unknown stage '$stage'" >&2
       FAILED=$((FAILED + 1))
-      continue
-      ;;
+      continue ;;
   esac
 
   if run_stage "$stage" "${cmd[@]}"; then
@@ -86,9 +91,7 @@ for stage in "${stage_list[@]}"; do
   fi
 
   if [ "$JSON_OUTPUT" = true ]; then
-    if [ -n "$STAGE_JSON" ]; then
-      STAGE_JSON+=" ,"
-    fi
+    [ -n "$STAGE_JSON" ] && STAGE_JSON+=" ,"
     STAGE_JSON+="{\"stage\":\"$stage\",\"status\":\"$status\"}"
   fi
 done

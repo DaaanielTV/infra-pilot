@@ -133,7 +133,7 @@ from .aiops.chatbot import app as chatbot_app
 from .aiops.v6.alert_correlation import app as alert_correlation_app
 from .aiops.v6.rca_v6 import app as rca_v6_app
 from .aiops.v6.capacity_planning import app as capacity_planning_app
-from .aiops.v6.change_risk import app as change_risk_app
+from .aiops.v6.change_risk_analysis import app as change_risk_analysis_app
 from .aiops.v6.convo import app as convo_app
 from .aiops.v6.dex import app as dex_app
 from .aiops.v6.health_f import app as health_f_app
@@ -153,7 +153,7 @@ register("chatbot", "Chatbot")(chatbot_app)
 register("alert-corr", "Alert correlation")(alert_correlation_app)
 register("rca-v6", "Root cause v6")(rca_v6_app)
 register("capacity-v6", "Capacity v6")(capacity_planning_app)
-register("change-risk", "Change risk v6")(change_risk_app)
+register("change-risk", "Change risk v6")(change_risk_analysis_app)
 register("convo", "Conversational")(convo_app)
 register("dex", "Digital exp v6")(dex_app)
 register("health-v6", "Health v6")(health_f_app)
@@ -297,7 +297,7 @@ __all__: list[str] = [
     "remediate_app", "maintenance_app", "runbook_app", "chaos_app", "heal_app",
     "root_cause_analysis_app", "digital_experience_monitoring_app", "alert_app", "scaling_app", "health_forecast_app",
     "assistant_app", "change_app", "capacity_app", "chatbot_app",
-    "alert_correlation_app", "rca_v6_app", "capacity_planning_app", "change_risk_app",
+    "alert_correlation_app", "rca_v6_app", "capacity_planning_app", "change_risk_analysis_app",
     "convo_app", "dex_app", "health_f_app", "incident_app", "ops_app",
     "scaling_v6_app",
     "finops_app", "cx_app",

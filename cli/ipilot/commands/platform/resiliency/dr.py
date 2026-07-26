@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Disaster recovery")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List plans"""
+def list(ctx: typer.Context) -> None:
+    """List plans
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Plan name"),
     config: str = typer.Argument(help="Plan config"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,8 +42,15 @@ def create(
 def status(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -37,14 +58,28 @@ def status(
 def failover(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Failover"""
+) -> None:
+    """Failover
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def readiness(ctx: typer.Context):
-    """Readiness"""
+def readiness(ctx: typer.Context) -> None:
+    """Readiness
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -52,8 +87,15 @@ def readiness(ctx: typer.Context):
 def delete(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Delete"""
+) -> None:
+    """Delete
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -61,8 +103,15 @@ def delete(
 def scenarios(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Scenarios"""
+) -> None:
+    """Scenarios
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -70,8 +119,15 @@ def scenarios(
 def versions(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Versions"""
+) -> None:
+    """Versions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -79,8 +135,15 @@ def versions(
 def notifications(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Notifications"""
+) -> None:
+    """Notifications
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -88,6 +151,13 @@ def notifications(
 def compliance(
     ctx: typer.Context,
     plan_id: str = typer.Argument(help="Plan ID"),
-):
-    """Compliance"""
+) -> None:
+    """Compliance
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

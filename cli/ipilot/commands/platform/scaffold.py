@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List scaffolds"""
+def list(ctx: typer.Context) -> None:
+    """List scaffolds
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scaffold_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def generate(
     ctx: typer.Context,
     template: str = typer.Argument(help="Template name"),
     name: str = typer.Argument(help="Project name"),
-):
-    """Generate"""
+) -> None:
+    """Generate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scaffold_generate(template, name)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def generate(
 def status(
     ctx: typer.Context,
     scaffold_id: str = typer.Argument(help="Scaffold ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scaffold_status(scaffold_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -48,8 +69,15 @@ def step_command(
     ctx: typer.Context,
     scaffold_id: str = typer.Argument(help="Scaffold ID"),
     step_name: str = typer.Argument(help="Step name"),
-):
-    """Step"""
+) -> None:
+    """Step
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scaffold_step(scaffold_id, step_name)
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List scorecards"""
+def list(ctx: typer.Context) -> None:
+    """List scorecards
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scorecards_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Scorecard name"),
     criteria: str = typer.Argument(help="Scorecard criteria"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scorecards_create(name, criteria)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def get(
     ctx: typer.Context,
     scorecard_id: str = typer.Argument(help="Scorecard ID"),
-):
-    """Get scorecard"""
+) -> None:
+    """Get scorecard
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scorecards_get(scorecard_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -48,16 +69,30 @@ def update(
     ctx: typer.Context,
     scorecard_id: str = typer.Argument(help="Scorecard ID"),
     criteria: str = typer.Argument(help="New criteria"),
-):
-    """Update"""
+) -> None:
+    """Update
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scorecards_update(scorecard_id, criteria)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.scorecards_summary()
     print_output(result, ctx.obj.get("output", "table"))

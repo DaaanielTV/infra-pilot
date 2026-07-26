@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Resiliency pipeline")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List pipelines"""
+def list(ctx: typer.Context) -> None:
+    """List pipelines
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Pipeline name"),
     config: str = typer.Argument(help="Pipeline config"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,8 +42,15 @@ def create(
 def trigger(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
-):
-    """Trigger"""
+) -> None:
+    """Trigger
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -37,8 +58,15 @@ def trigger(
 def steps(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
-):
-    """Steps"""
+) -> None:
+    """Steps
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -46,8 +74,15 @@ def steps(
 def webhooks(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
-):
-    """Webhooks"""
+) -> None:
+    """Webhooks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -55,8 +90,15 @@ def webhooks(
 def triggers(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
-):
-    """Triggers"""
+) -> None:
+    """Triggers
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -64,6 +106,13 @@ def triggers(
 def analytics(
     ctx: typer.Context,
     pipeline_id: str = typer.Argument(help="Pipeline ID"),
-):
-    """Analytics"""
+) -> None:
+    """Analytics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

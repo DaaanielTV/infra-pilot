@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Chaos experiments")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List experiments"""
+def list(ctx: typer.Context) -> None:
+    """List experiments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Experiment name"),
     config: str = typer.Argument(help="Experiment config"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,8 +42,15 @@ def create(
 def run(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Run"""
+) -> None:
+    """Run
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -37,8 +58,15 @@ def run(
 def approve(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Approve"""
+) -> None:
+    """Approve
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -46,8 +74,15 @@ def approve(
 def results(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Results"""
+) -> None:
+    """Results
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -55,8 +90,15 @@ def results(
 def blast_radius(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Blast radius"""
+) -> None:
+    """Blast radius
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -64,8 +106,15 @@ def blast_radius(
 def metrics(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Metrics"""
+) -> None:
+    """Metrics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -73,6 +122,13 @@ def metrics(
 def notifications(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(help="Experiment ID"),
-):
-    """Notifications"""
+) -> None:
+    """Notifications
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

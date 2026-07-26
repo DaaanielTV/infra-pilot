@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List templates"""
+def list(ctx: typer.Context) -> None:
+    """List templates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.templatereg_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Template name"),
     content: str = typer.Argument(help="Template content"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.templatereg_create(name, content)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def get(
     ctx: typer.Context,
     template_id: str = typer.Argument(help="Template ID"),
-):
-    """Get template"""
+) -> None:
+    """Get template
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.templatereg_get(template_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -48,16 +69,30 @@ def use_template(
     ctx: typer.Context,
     template_id: str = typer.Argument(help="Template ID"),
     params: str = typer.Argument(help="Template params"),
-):
-    """Use"""
+) -> None:
+    """Use
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.templatereg_use(template_id, params)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.templatereg_summary()
     print_output(result, ctx.obj.get("output", "table"))

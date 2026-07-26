@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Backup SLA")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List SLAs"""
+def list(ctx: typer.Context) -> None:
+    """List SLAs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -20,8 +27,15 @@ def create(
     name: str = typer.Argument(help="SLA name"),
     rto: str = typer.Argument(help="Recovery time objective"),
     rpo: str = typer.Argument(help="Recovery point objective"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -29,8 +43,15 @@ def create(
 def verify(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Verify"""
+) -> None:
+    """Verify
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -38,8 +59,15 @@ def verify(
 def report(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Report"""
+) -> None:
+    """Report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -47,8 +75,15 @@ def report(
 def policy(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Policy"""
+) -> None:
+    """Policy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -56,6 +91,13 @@ def policy(
 def storage(
     ctx: typer.Context,
     sla_id: str = typer.Argument(help="SLA ID"),
-):
-    """Storage"""
+) -> None:
+    """Storage
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

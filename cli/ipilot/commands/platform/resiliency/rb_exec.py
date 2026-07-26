@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Runbook execution")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List runbooks"""
+def list(ctx: typer.Context) -> None:
+    """List runbooks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Runbook name"),
     steps: str = typer.Argument(help="Runbook steps (JSON)"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,14 +42,28 @@ def create(
 def execute(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
-):
-    """Execute"""
+) -> None:
+    """Execute
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def templates(ctx: typer.Context):
-    """Templates"""
+def templates(ctx: typer.Context) -> None:
+    """Templates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -43,8 +71,15 @@ def templates(ctx: typer.Context):
 def audit(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
-):
-    """Audit"""
+) -> None:
+    """Audit
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -52,8 +87,15 @@ def audit(
 def versions(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
-):
-    """Versions"""
+) -> None:
+    """Versions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -61,6 +103,13 @@ def versions(
 def approve(
     ctx: typer.Context,
     runbook_id: str = typer.Argument(help="Runbook ID"),
-):
-    """Approve"""
+) -> None:
+    """Approve
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

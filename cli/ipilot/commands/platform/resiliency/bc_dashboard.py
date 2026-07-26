@@ -4,25 +4,46 @@ from ....output.formatters import print_output
 app = typer.Typer(help="BC dashboard")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def show(ctx: typer.Context):
-    """Show dashboard"""
+def show(ctx: typer.Context) -> None:
+    """Show dashboard
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def report(ctx: typer.Context):
-    """Report"""
+def report(ctx: typer.Context) -> None:
+    """Report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def scenarios(ctx: typer.Context):
-    """Scenarios"""
+def scenarios(ctx: typer.Context) -> None:
+    """Scenarios
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -30,8 +51,15 @@ def scenarios(ctx: typer.Context):
 def subscribe(
     ctx: typer.Context,
     email: str = typer.Argument(help="Subscription email"),
-):
-    """Subscribe"""
+) -> None:
+    """Subscribe
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -39,6 +67,13 @@ def subscribe(
 def simulate(
     ctx: typer.Context,
     scenario: str = typer.Argument(help="Scenario name"),
-):
-    """Simulate"""
+) -> None:
+    """Simulate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

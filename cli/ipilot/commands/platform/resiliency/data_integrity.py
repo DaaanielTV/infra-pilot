@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Data integrity")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List checks"""
+def list(ctx: typer.Context) -> None:
+    """List checks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Check name"),
     target: str = typer.Argument(help="Check target"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,8 +42,15 @@ def create(
 def run(
     ctx: typer.Context,
     check_id: str = typer.Argument(help="Check ID"),
-):
-    """Run"""
+) -> None:
+    """Run
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -38,8 +59,15 @@ def schedule(
     ctx: typer.Context,
     check_id: str = typer.Argument(help="Check ID"),
     cron: str = typer.Argument(help="Cron expression"),
-):
-    """Schedule"""
+) -> None:
+    """Schedule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -47,14 +75,28 @@ def schedule(
 def alerts(
     ctx: typer.Context,
     check_id: str = typer.Argument(help="Check ID"),
-):
-    """Alerts"""
+) -> None:
+    """Alerts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def health(ctx: typer.Context):
-    """Health"""
+def health(ctx: typer.Context) -> None:
+    """Health
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -62,6 +104,13 @@ def health(ctx: typer.Context):
 def audit(
     ctx: typer.Context,
     check_id: str = typer.Argument(help="Check ID"),
-):
-    """Audit"""
+) -> None:
+    """Audit
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

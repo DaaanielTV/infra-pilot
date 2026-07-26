@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List items"""
+def list(ctx: typer.Context) -> None:
+    """List items
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.techdebt_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -21,8 +28,15 @@ def list(ctx: typer.Context):
 
 
 @app.command()
-def report(ctx: typer.Context):
-    """Report"""
+def report(ctx: typer.Context) -> None:
+    """Report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.techdebt_report()
     print_output(result, ctx.obj.get("output", "table"))
@@ -32,8 +46,15 @@ def report(ctx: typer.Context):
 def get(
     ctx: typer.Context,
     debt_id: str = typer.Argument(help="Debt ID"),
-):
-    """Get item"""
+) -> None:
+    """Get item
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.techdebt_get(debt_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -43,16 +64,30 @@ def get(
 def fix_debt(
     ctx: typer.Context,
     debt_id: str = typer.Argument(help="Debt ID"),
-):
-    """Fix"""
+) -> None:
+    """Fix
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.techdebt_fix(debt_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.techdebt_summary()
     print_output(result, ctx.obj.get("output", "table"))

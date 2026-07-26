@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List envs"""
+def list(ctx: typer.Context) -> None:
+    """List envs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Environment name"),
     env_type: str = typer.Argument(help="Environment type"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_create(name, env_type)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def get(
     ctx: typer.Context,
     env_id: str = typer.Argument(help="Environment ID"),
-):
-    """Get env"""
+) -> None:
+    """Get env
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_get(env_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def get(
 def delete(
     ctx: typer.Context,
     env_id: str = typer.Argument(help="Environment ID"),
-):
-    """Delete"""
+) -> None:
+    """Delete
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_delete(env_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -59,16 +87,30 @@ def extend(
     ctx: typer.Context,
     env_id: str = typer.Argument(help="Environment ID"),
     extensions: str = typer.Argument(help="Extensions (JSON)"),
-):
-    """Extend"""
+) -> None:
+    """Extend
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_extend(env_id, extensions)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.environments_summary()
     print_output(result, ctx.obj.get("output", "table"))

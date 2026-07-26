@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List items"""
+def list(ctx: typer.Context) -> None:
+    """List items
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.catalog_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def register(
     ctx: typer.Context,
     name: str = typer.Argument(help="Service name"),
     version: str = typer.Argument(help="Service version"),
-):
-    """Register"""
+) -> None:
+    """Register
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.catalog_register(name, version)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def register(
 def get(
     ctx: typer.Context,
     item_id: str = typer.Argument(help="Item ID"),
-):
-    """Get item"""
+) -> None:
+    """Get item
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.catalog_get(item_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,16 +68,30 @@ def get(
 def score(
     ctx: typer.Context,
     item_id: str = typer.Argument(help="Item ID"),
-):
-    """Score"""
+) -> None:
+    """Score
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.catalog_score(item_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.catalog_summary()
     print_output(result, ctx.obj.get("output", "table"))

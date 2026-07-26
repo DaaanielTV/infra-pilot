@@ -4,13 +4,20 @@ from ....output.formatters import print_output
 app = typer.Typer(help="Active-active")
 
 
-def _get_client(ctx: typer.Context):
+def _get_client(ctx: typer.Context) -> ApiClient:
     return None
 
 
 @app.command()
-def regions(ctx: typer.Context):
-    """Regions"""
+def regions(ctx: typer.Context) -> None:
+    """Regions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -19,8 +26,15 @@ def register(
     ctx: typer.Context,
     name: str = typer.Argument(help="Region name"),
     endpoint: str = typer.Argument(help="Region endpoint"),
-):
-    """Register"""
+) -> None:
+    """Register
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -28,14 +42,28 @@ def register(
 def status(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def health(ctx: typer.Context):
-    """Health"""
+def health(ctx: typer.Context) -> None:
+    """Health
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -44,8 +72,15 @@ def weight(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
     weight: int = typer.Argument(help="Traffic weight"),
-):
-    """Set weight"""
+) -> None:
+    """Set weight
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -53,8 +88,15 @@ def weight(
 def replication(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
-):
-    """Replication"""
+) -> None:
+    """Replication
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
@@ -62,12 +104,26 @@ def replication(
 def capacity(
     ctx: typer.Context,
     region_id: str = typer.Argument(help="Region ID"),
-):
-    """Capacity"""
+) -> None:
+    """Capacity
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def availability(ctx: typer.Context):
-    """Availability"""
+def availability(ctx: typer.Context) -> None:
+    """Availability
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     print_output({"status": "not implemented"}, ctx.obj.get("output", "table"))

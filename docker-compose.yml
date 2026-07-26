@@ -21,6 +21,16 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: postgres
+      app.kubernetes.io/part-of: infra-pilot
 
   redis:
     image: redis:7-alpine
@@ -39,6 +49,16 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: redis
+      app.kubernetes.io/part-of: infra-pilot
 
   management-panel:
     build:
@@ -73,6 +93,16 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: management-panel
+      app.kubernetes.io/part-of: infra-pilot
 
   orchestrator-agent:
     build:
@@ -102,6 +132,16 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: orchestrator-agent
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - discord
 
@@ -140,6 +180,16 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: discord-service
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - discord
 
@@ -151,9 +201,25 @@ services:
       - prometheus_data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "http://localhost:9090/-/healthy", "-O", "/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: prometheus
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - monitoring
 
@@ -169,12 +235,28 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_INSTALL_PLUGINS: ""
+    healthcheck:
+      test: ["CMD", "wget", "-q", "http://localhost:3000/api/health", "-O", "/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     depends_on:
       prometheus:
-        condition: service_started
+        condition: service_healthy
     networks:
       - infra-pilot-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: grafana
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - monitoring
 

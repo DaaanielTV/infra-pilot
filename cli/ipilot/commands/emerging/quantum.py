@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List resources"""
+def list(ctx: typer.Context) -> None:
+    """List resources
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quantum_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def list(ctx: typer.Context):
 def generate(
     ctx: typer.Context,
     key_type: str = typer.Argument(help="Key type"),
-):
-    """Generate keys"""
+) -> None:
+    """Generate keys
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quantum_generate(key_type)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,8 +49,15 @@ def generate(
 def cert(
     ctx: typer.Context,
     name: str = typer.Argument(help="Certificate name"),
-):
-    """Certificate"""
+) -> None:
+    """Certificate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quantum_cert(name)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def encrypt(
     ctx: typer.Context,
     data: str = typer.Argument(help="Data to encrypt"),
     key_id: str = typer.Argument(help="Key ID"),
-):
-    """Encrypt"""
+) -> None:
+    """Encrypt
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quantum_encrypt(data, key_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -59,8 +87,15 @@ def decrypt(
     ctx: typer.Context,
     data: str = typer.Argument(help="Data to decrypt"),
     key_id: str = typer.Argument(help="Key ID"),
-):
-    """Decrypt"""
+) -> None:
+    """Decrypt
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.quantum_decrypt(data, key_id)
     print_output(result, ctx.obj.get("output", "table"))

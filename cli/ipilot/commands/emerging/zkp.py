@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List proofs"""
+def list(ctx: typer.Context) -> None:
+    """List proofs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.zkp_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def generate(
     ctx: typer.Context,
     circuit_id: str = typer.Argument(help="Circuit ID"),
     inputs: str = typer.Argument(help="Inputs (JSON)"),
-):
-    """Generate proof"""
+) -> None:
+    """Generate proof
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.zkp_generate(circuit_id, inputs)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,16 +50,30 @@ def generate(
 def verify(
     ctx: typer.Context,
     proof_id: str = typer.Argument(help="Proof ID"),
-):
-    """Verify proof"""
+) -> None:
+    """Verify proof
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.zkp_verify(proof_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def circuits(ctx: typer.Context):
-    """Circuits"""
+def circuits(ctx: typer.Context) -> None:
+    """Circuits
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.zkp_circuits()
     data = result if isinstance(result, list) else result.get("key", result)

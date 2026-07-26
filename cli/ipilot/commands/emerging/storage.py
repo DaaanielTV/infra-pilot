@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List providers"""
+def list(ctx: typer.Context) -> None:
+    """List providers
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.storage_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Storage name"),
     provider: str = typer.Argument(help="Provider type"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.storage_create(name, provider)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def pin(
     ctx: typer.Context,
     cid: str = typer.Argument(help="Content ID"),
-):
-    """Pin"""
+) -> None:
+    """Pin
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.storage_pin(cid)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def pin(
 def status(
     ctx: typer.Context,
     storage_id: str = typer.Argument(help="Storage ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.storage_status(storage_id)
     print_output(result, ctx.obj.get("output", "table"))

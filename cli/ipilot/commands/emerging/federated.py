@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List jobs"""
+def list(ctx: typer.Context) -> None:
+    """List jobs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.federated_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Job name"),
     config: str = typer.Argument(help="Job config (JSON)"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.federated_create(name, config)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def status(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.federated_status(job_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def status(
 def rounds(
     ctx: typer.Context,
     job_id: str = typer.Argument(help="Job ID"),
-):
-    """Rounds"""
+) -> None:
+    """Rounds
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.federated_rounds(job_id)
     data = result if isinstance(result, list) else result.get("key", result)

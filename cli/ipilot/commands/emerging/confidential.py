@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List enclaves"""
+def list(ctx: typer.Context) -> None:
+    """List enclaves
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.confidential_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Enclave name"),
     image: str = typer.Argument(help="Enclave image"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.confidential_create(name, image)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def attest(
     ctx: typer.Context,
     enclave_id: str = typer.Argument(help="Enclave ID"),
-):
-    """Attest"""
+) -> None:
+    """Attest
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.confidential_attest(enclave_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def attest(
 def secrets(
     ctx: typer.Context,
     enclave_id: str = typer.Argument(help="Enclave ID"),
-):
-    """Secrets"""
+) -> None:
+    """Secrets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.confidential_secrets(enclave_id)
     data = result if isinstance(result, list) else result.get("key", result)

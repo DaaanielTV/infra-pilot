@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List contracts"""
+def list(ctx: typer.Context) -> None:
+    """List contracts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.contracts_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def deploy(
     ctx: typer.Context,
     name: str = typer.Argument(help="Contract name"),
     source: str = typer.Argument(help="Contract source"),
-):
-    """Deploy"""
+) -> None:
+    """Deploy
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.contracts_deploy(name, source)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def deploy(
 def get(
     ctx: typer.Context,
     contract_id: str = typer.Argument(help="Contract ID"),
-):
-    """Get contract"""
+) -> None:
+    """Get contract
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.contracts_get(contract_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def get(
 def events(
     ctx: typer.Context,
     contract_id: str = typer.Argument(help="Contract ID"),
-):
-    """Events"""
+) -> None:
+    """Events
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.contracts_events(contract_id)
     data = result if isinstance(result, list) else result.get("key", result)

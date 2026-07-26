@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List networks"""
+def list(ctx: typer.Context) -> None:
+    """List networks
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.blockchain_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Network name"),
     consensus: str = typer.Argument(help="Consensus mechanism"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.blockchain_create(name, consensus)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def status(
     ctx: typer.Context,
     network_id: str = typer.Argument(help="Network ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.blockchain_status(network_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def status(
 def validators(
     ctx: typer.Context,
     network_id: str = typer.Argument(help="Network ID"),
-):
-    """Validators"""
+) -> None:
+    """Validators
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.blockchain_validators(network_id)
     data = result if isinstance(result, list) else result.get("key", result)

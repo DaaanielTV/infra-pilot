@@ -136,7 +136,7 @@ from .aiops.v6.capacity_planning import app as capacity_planning_app
 from .aiops.v6.change_risk_analysis import app as change_risk_analysis_app
 from .aiops.v6.conversational_ops import app as conversational_ops_app
 from .aiops.v6.digital_experience import app as digital_experience_app
-from .aiops.v6.health_f import app as health_f_app
+from .aiops.v6.health_forecasting import app as health_forecasting_app
 from .aiops.v6.incident import app as incident_app
 from .aiops.v6.ops import app as ops_app
 from .aiops.v6.scaling_v6 import app as scaling_v6_app
@@ -156,7 +156,7 @@ register("capacity-v6", "Capacity v6")(capacity_planning_app)
 register("change-risk", "Change risk v6")(change_risk_analysis_app)
 register("convo", "Conversational")(conversational_ops_app)
 register("dex", "Digital exp v6")(digital_experience_app)
-register("health-v6", "Health v6")(health_f_app)
+register("health-v6", "Health v6")(health_forecasting_app)
 register("incident", "Incidents")(incident_app)
 register("ops", "Ops bot")(ops_app)
 register("scaling-v6", "Scaling v6")(scaling_v6_app)
@@ -298,7 +298,7 @@ __all__: list[str] = [
     "root_cause_analysis_app", "digital_experience_monitoring_app", "alert_app", "scaling_app", "health_forecast_app",
     "assistant_app", "change_app", "capacity_app", "chatbot_app",
     "alert_correlation_app", "rca_v6_app", "capacity_planning_app", "change_risk_analysis_app",
-    "conversational_ops_app", "digital_experience_app", "health_f_app", "incident_app", "ops_app",
+    "conversational_ops_app", "digital_experience_app", "health_forecasting_app", "incident_app", "ops_app",
     "scaling_v6_app",
     "finops_app", "cx_app",
     "trade_app", "appmarket_app", "ppu_app", "reseller_app", "whitelabel_app",

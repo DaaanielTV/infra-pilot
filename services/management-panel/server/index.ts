@@ -11,6 +11,13 @@ import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
 
+/**
+ * Run a command as a child process and capture stdout/stderr.
+ * @param command - The command to execute
+ * @param args - Array of arguments for the command
+ * @returns Promise resolving with stdout and stderr on success
+ * @throws Error if the command exits with a non-zero code
+ */
 function runCommand(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { shell: false });
@@ -54,6 +61,13 @@ const port = process.env.PORT || 3001;
 
 const execAsync = promisify(exec);
 
+/**
+ * Execute a Docker action (start/stop/restart) on a container by app ID.
+ * @param appId - The ID of the Docker app
+ * @param action - Docker action to perform
+ * @returns Result with success flag and command output
+ * @throws Error if the app or container is not found
+ */
 async function dockerAction(appId: string, action: 'start' | 'stop' | 'restart'): Promise<{success: boolean; output: string}> {
   const { data: app, error } = await supabase
     .from('docker_apps')
@@ -201,7 +215,12 @@ const APP_HEALTH = {
   metrics,
 };
 
-// Auth middleware: Verify JWT token from Authorization header
+/**
+ * Auth middleware: Verify JWT token from Authorization header and attach user to request.
+ * @param req - Express request
+ * @param res - Express response
+ * @param next - Next middleware function
+ */
 const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) {
@@ -217,6 +236,16 @@ const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
+/**
+ * Log an audit event to the database.
+ * @param userId - ID of the user performing the action
+ * @param action - Action description (e.g. 'app:create')
+ * @param entityType - Type of entity being acted upon
+ * @param entityId - ID of the entity
+ * @param oldValue - Previous value (for updates)
+ * @param newValue - New value
+ * @param ipAddress - IP address of the requester
+ */
 async function logAudit(userId: string, action: string, entityType: string, entityId?: string, oldValue?: any, newValue?: any, ipAddress?: string) {
   try {
     await supabase
@@ -3103,6 +3132,12 @@ wss.on('connection', (ws, req) => {
       }
     } catch {}
   });
+});
+
+// Global error handling middleware
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[Server] Unhandled error:', err.message || err);
+  res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
 });
 
 if (process.env.NODE_ENV !== 'test') {

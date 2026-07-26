@@ -121,7 +121,7 @@ register("runbook", "Runbooks")(runbook_app)
 register("chaos", "Chaos testing")(chaos_app)
 register("heal", "Self heal")(heal_app)
 
-from .aiops.rca import app as rca_app
+from .aiops.root_cause_analysis import app as root_cause_analysis_app
 from .aiops.digital_experience_monitoring import app as digital_experience_monitoring_app
 from .aiops.alert import app as alert_app
 from .aiops.scaling import app as scaling_app
@@ -141,7 +141,7 @@ from .aiops.v6.incident import app as incident_app
 from .aiops.v6.ops import app as ops_app
 from .aiops.v6.scaling_v6 import app as scaling_v6_app
 
-register("rca", "Root cause analysis")(rca_app)
+register("rca", "Root cause analysis")(root_cause_analysis_app)
 register("dem", "Digital experience")(digital_experience_monitoring_app)
 register("alert", "Alerts")(alert_app)
 register("scaling", "Scaling")(scaling_app)
@@ -295,7 +295,7 @@ __all__: list[str] = [
     "vendor_app", "soc_app",
     "workflow_app", "infra_pipeline_app", "drift_app", "quota_app",
     "remediate_app", "maintenance_app", "runbook_app", "chaos_app", "heal_app",
-    "rca_app", "digital_experience_monitoring_app", "alert_app", "scaling_app", "health_forecast_app",
+    "root_cause_analysis_app", "digital_experience_monitoring_app", "alert_app", "scaling_app", "health_forecast_app",
     "assistant_app", "change_app", "capacity_app", "chatbot_app",
     "alert_corr_app", "rca_v6_app", "capacity_v6_app", "change_risk_app",
     "convo_app", "dex_app", "health_f_app", "incident_app", "ops_app",

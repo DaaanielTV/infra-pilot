@@ -12,7 +12,7 @@ register("backup", "Backup management")(backup_app)
 register("deploy", "Deployment")(deploy_app)
 register("logs", "Logs")(logs_app)
 
-from .edge_computing.edge import app as edge_app
+from .edge_computing.edge_computing import app as edge_computing_app
 from .edge_computing.functions import app as fn_app
 from .edge_computing.ml import app as ml_app
 from .edge_computing.iot import app as iot_app
@@ -21,7 +21,7 @@ from .edge_computing.mesh import app as mesh_app
 from .edge_computing.lorawan import app as gw_app
 from .edge_computing.pipeline import app as pipeline_app
 
-register("edge", "Edge devices")(edge_app)
+register("edge", "Edge devices")(edge_computing_app)
 register("fn", "Edge functions")(fn_app)
 register("ml", "Machine learning")(ml_app)
 register("iot", "IoT tools")(iot_app)
@@ -284,7 +284,7 @@ register("bc-dashboard", "Business continuity")(bc_dashboard_app)
 
 __all__: list[str] = [
     "server_app", "backup_app", "deploy_app", "logs_app",
-    "edge_app", "fn_app", "ml_app", "iot_app", "content_delivery_network_app", "mesh_app",
+    "edge_computing_app", "fn_app", "ml_app", "iot_app", "content_delivery_network_app", "mesh_app",
     "gw_app", "pipeline_app",
     "energy_app", "carbon_app", "green_app", "reclaim_app", "shutdown_app",
     "hardware_app", "pue_app", "provider_app", "offset_app", "efficiency_app",

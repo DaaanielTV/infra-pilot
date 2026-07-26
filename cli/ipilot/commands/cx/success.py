@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def plays(ctx: typer.Context):
-    """List success plays"""
+def plays(ctx: typer.Context) -> None:
+    """List success plays
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_plays()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(help="Play name"),
     trigger: str = typer.Argument(help="Trigger condition"),
     actions: str = typer.Argument(help="Actions (JSON)"),
-):
-    """Create a play"""
+) -> None:
+    """Create a play
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_create(name, trigger, actions)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def status(
     ctx: typer.Context,
     play_id: str = typer.Argument(help="Play ID"),
-):
-    """Play status"""
+) -> None:
+    """Play status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_status(play_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -44,8 +65,15 @@ def trigger(
     ctx: typer.Context,
     play_id: str = typer.Argument(help="Play ID"),
     customer_id: str = typer.Argument(help="Customer ID"),
-):
-    """Trigger a play"""
+) -> None:
+    """Trigger a play
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_trigger(play_id, customer_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -54,16 +82,30 @@ def trigger(
 def executions(
     ctx: typer.Context,
     play_id: str = typer.Argument(help="Play ID"),
-):
-    """List executions"""
+) -> None:
+    """List executions
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_executions(play_id)
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Success play stats"""
+def stats(ctx: typer.Context) -> None:
+    """Success play stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_success_stats()
     print_output(result, ctx.obj.get("output", "table"))

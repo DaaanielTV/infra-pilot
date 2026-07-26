@@ -13,8 +13,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     category: str = typer.Option(None, "--category", help="Filter category"),
-):
-    """List articles"""
+) -> None:
+    """List articles
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_list(category)
     data = result if isinstance(result, list) else result.get("key", result)
@@ -26,8 +33,15 @@ def create(
     title: str = typer.Argument(help="Article title"),
     content: str = typer.Argument(help="Article content"),
     category: str = typer.Argument(help="Article category"),
-):
-    """Create an article"""
+) -> None:
+    """Create an article
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_create(title, content, category)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def create(
 def get(
     ctx: typer.Context,
     article_id: str = typer.Argument(help="Article ID"),
-):
-    """Get an article"""
+) -> None:
+    """Get an article
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_get(article_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def update(
     ctx: typer.Context,
     article_id: str = typer.Argument(help="Article ID"),
     content: str = typer.Argument(help="New content"),
-):
-    """Update an article"""
+) -> None:
+    """Update an article
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_update(article_id, content)
     print_output(result, ctx.obj.get("output", "table"))
@@ -57,16 +85,30 @@ def update(
 def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
-):
-    """Search KB"""
+) -> None:
+    """Search KB
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_search(query)
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def categories(ctx: typer.Context):
-    """List categories"""
+def categories(ctx: typer.Context) -> None:
+    """List categories
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_categories()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -77,8 +119,15 @@ def feedback(
     ctx: typer.Context,
     article_id: str = typer.Argument(help="Article ID"),
     helpful: bool = typer.Argument(help="Was helpful?"),
-):
-    """Article feedback"""
+) -> None:
+    """Article feedback
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_kb_feedback(article_id, helpful)
     print_output(result, ctx.obj.get("output", "table"))

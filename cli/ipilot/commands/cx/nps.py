@@ -14,15 +14,29 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Survey name"),
     targets: str = typer.Argument(help="Target list (JSON)"),
-):
-    """Create a survey"""
+) -> None:
+    """Create a survey
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_create(name, targets)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List surveys"""
+def list(ctx: typer.Context) -> None:
+    """List surveys
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -32,8 +46,15 @@ def list(ctx: typer.Context):
 def get(
     ctx: typer.Context,
     survey_id: str = typer.Argument(help="Survey ID"),
-):
-    """Get a survey"""
+) -> None:
+    """Get a survey
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_get(survey_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -42,8 +63,15 @@ def get(
 def send(
     ctx: typer.Context,
     survey_id: str = typer.Argument(help="Survey ID"),
-):
-    """Send a survey"""
+) -> None:
+    """Send a survey
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_send(survey_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -54,8 +82,15 @@ def respond(
     survey_id: str = typer.Argument(help="Survey ID"),
     score: int = typer.Argument(help="NPS score"),
     comment: str = typer.Option("", "--comment", help="Optional comment"),
-):
-    """Respond to survey"""
+) -> None:
+    """Respond to survey
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_respond(survey_id, score, comment)
     print_output(result, ctx.obj.get("output", "table"))
@@ -64,8 +99,15 @@ def respond(
 def score(
     ctx: typer.Context,
     survey_id: str = typer.Argument(help="Survey ID"),
-):
-    """Get NPS score"""
+) -> None:
+    """Get NPS score
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_score(survey_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -74,8 +116,15 @@ def score(
 def trend(
     ctx: typer.Context,
     survey_id: str = typer.Argument(help="Survey ID"),
-):
-    """NPS trend"""
+) -> None:
+    """NPS trend
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_trend(survey_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -84,16 +133,30 @@ def trend(
 def detractors(
     ctx: typer.Context,
     survey_id: str = typer.Argument(help="Survey ID"),
-):
-    """List detractors"""
+) -> None:
+    """List detractors
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_detractors(survey_id)
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def stats(ctx: typer.Context):
-    """NPS statistics"""
+def stats(ctx: typer.Context) -> None:
+    """NPS statistics
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_nps_stats()
     print_output(result, ctx.obj.get("output", "table"))

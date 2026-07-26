@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def posts(ctx: typer.Context):
-    """List posts"""
+def posts(ctx: typer.Context) -> None:
+    """List posts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_posts()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -23,8 +30,15 @@ def create(
     title: str = typer.Argument(help="Post title"),
     content: str = typer.Argument(help="Post content"),
     category: str = typer.Argument(help="Post category"),
-):
-    """Create a post"""
+) -> None:
+    """Create a post
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_create(title, content, category)
     print_output(result, ctx.obj.get("output", "table"))
@@ -33,8 +47,15 @@ def create(
 def get(
     ctx: typer.Context,
     post_id: str = typer.Argument(help="Post ID"),
-):
-    """Get a post"""
+) -> None:
+    """Get a post
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_get(post_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -44,8 +65,15 @@ def vote(
     ctx: typer.Context,
     post_id: str = typer.Argument(help="Post ID"),
     vote: int = typer.Argument(help="Vote value"),
-):
-    """Vote on a post"""
+) -> None:
+    """Vote on a post
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_vote(post_id, vote)
     print_output(result, ctx.obj.get("output", "table"))
@@ -55,8 +83,15 @@ def comment(
     ctx: typer.Context,
     post_id: str = typer.Argument(help="Post ID"),
     content: str = typer.Argument(help="Comment content"),
-):
-    """Comment on a post"""
+) -> None:
+    """Comment on a post
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_comment(post_id, content)
     print_output(result, ctx.obj.get("output", "table"))
@@ -65,40 +100,75 @@ def comment(
 def comments(
     ctx: typer.Context,
     post_id: str = typer.Argument(help="Post ID"),
-):
-    """List comments"""
+) -> None:
+    """List comments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_comments(post_id)
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def requests(ctx: typer.Context):
-    """Feature requests"""
+def requests(ctx: typer.Context) -> None:
+    """Feature requests
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_requests()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def categories(ctx: typer.Context):
-    """List categories"""
+def categories(ctx: typer.Context) -> None:
+    """List categories
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_categories()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def leaderboard(ctx: typer.Context):
-    """Leaderboard"""
+def leaderboard(ctx: typer.Context) -> None:
+    """Leaderboard
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_leaderboard()
     data = result if isinstance(result, list) else result.get("key", result)
     print_output(data, ctx.obj.get("output", "table"))
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Community stats"""
+def stats(ctx: typer.Context) -> None:
+    """Community stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_community_stats()
     print_output(result, ctx.obj.get("output", "table"))

@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List canned responses"""
+def list(ctx: typer.Context) -> None:
+    """List canned responses
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_canned_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -23,8 +30,15 @@ def create(
     title: str = typer.Argument(help="Response title"),
     content: str = typer.Argument(help="Response content"),
     category: str = typer.Argument(help="Response category"),
-):
-    """Create a response"""
+) -> None:
+    """Create a response
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_canned_create(title, content, category)
     print_output(result, ctx.obj.get("output", "table"))

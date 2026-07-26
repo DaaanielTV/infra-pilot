@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List SLAs"""
+def list(ctx: typer.Context) -> None:
+    """List SLAs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_sla_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -23,8 +30,15 @@ def create(
     name: str = typer.Argument(help="SLA name"),
     response_time: int = typer.Argument(help="Response time (min)"),
     resolution_time: int = typer.Argument(help="Resolution time (min)"),
-):
-    """Create an SLA"""
+) -> None:
+    """Create an SLA
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_sla_create(name, response_time, resolution_time)
     print_output(result, ctx.obj.get("output", "table"))

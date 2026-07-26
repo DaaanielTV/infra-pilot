@@ -15,15 +15,29 @@ def send(
     customer_id: str = typer.Argument(help="Customer ID"),
     template: str = typer.Argument(help="Template name"),
     channel: str = typer.Argument(help="Email/sms/push"),
-):
-    """Send a communication"""
+) -> None:
+    """Send a communication
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_send(customer_id, template, channel)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def batches(ctx: typer.Context):
-    """List communication batches"""
+def batches(ctx: typer.Context) -> None:
+    """List communication batches
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_batches()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -33,8 +47,15 @@ def batches(ctx: typer.Context):
 def batch(
     ctx: typer.Context,
     batch_id: str = typer.Argument(help="Batch ID"),
-):
-    """Get a batch"""
+) -> None:
+    """Get a batch
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_batch(batch_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -45,15 +66,29 @@ def maintenance_schedule(
     customer_id: str = typer.Argument(help="Customer ID"),
     message: str = typer.Argument(help="Maintenance message"),
     scheduled_at: str = typer.Argument(help="Scheduled time"),
-):
-    """Schedule maintenance"""
+) -> None:
+    """Schedule maintenance
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_maintenance_schedule(customer_id, message, scheduled_at)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command(name="maintenance-list")
-def maintenance_list(ctx: typer.Context):
-    """List maintenance"""
+def maintenance_list(ctx: typer.Context) -> None:
+    """List maintenance
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_maintenance_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -63,15 +98,29 @@ def maintenance_list(ctx: typer.Context):
 def maintenance_complete(
     ctx: typer.Context,
     maintenance_id: str = typer.Argument(help="Maintenance ID"),
-):
-    """Complete maintenance"""
+) -> None:
+    """Complete maintenance
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_maintenance_complete(maintenance_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def templates(ctx: typer.Context):
-    """List templates"""
+def templates(ctx: typer.Context) -> None:
+    """List templates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_templates()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -83,8 +132,15 @@ def template_create(
     name: str = typer.Argument(help="Template name"),
     subject: str = typer.Argument(help="Template subject"),
     body: str = typer.Argument(help="Template body"),
-):
-    """Create a template"""
+) -> None:
+    """Create a template
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_comm_template_create(name, subject, body)
     print_output(result, ctx.obj.get("output", "table"))

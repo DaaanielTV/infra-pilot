@@ -10,8 +10,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
 
 @app.command()
-def list(ctx: typer.Context):
-    """List tickets"""
+def list(ctx: typer.Context) -> None:
+    """List tickets
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def create(
     subject: str = typer.Argument(help="Ticket subject"),
     description: str = typer.Argument(help="Ticket description"),
     priority: str = typer.Option("medium", "--priority", help="Priority level"),
-):
-    """Create a ticket"""
+) -> None:
+    """Create a ticket
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_create(customer_id, subject, description, priority)
     print_output(result, ctx.obj.get("output", "table"))
@@ -34,8 +48,15 @@ def create(
 def get(
     ctx: typer.Context,
     ticket_id: str = typer.Argument(help="Ticket ID"),
-):
-    """Get a ticket"""
+) -> None:
+    """Get a ticket
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_get(ticket_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -45,8 +66,15 @@ def status(
     ctx: typer.Context,
     ticket_id: str = typer.Argument(help="Ticket ID"),
     status: str = typer.Argument(help="New status"),
-):
-    """Update status"""
+) -> None:
+    """Update status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_status(ticket_id, status)
     print_output(result, ctx.obj.get("output", "table"))
@@ -56,8 +84,15 @@ def comment(
     ctx: typer.Context,
     ticket_id: str = typer.Argument(help="Ticket ID"),
     comment: str = typer.Argument(help="Comment text"),
-):
-    """Add comment"""
+) -> None:
+    """Add comment
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_comment(ticket_id, comment)
     print_output(result, ctx.obj.get("output", "table"))
@@ -67,15 +102,29 @@ def assign(
     ctx: typer.Context,
     ticket_id: str = typer.Argument(help="Ticket ID"),
     assignee: str = typer.Argument(help="Assignee name"),
-):
-    """Assign ticket"""
+) -> None:
+    """Assign ticket
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_assign(ticket_id, assignee)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Ticket stats"""
+def stats(ctx: typer.Context) -> None:
+    """Ticket stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_ticket_stats()
     print_output(result, ctx.obj.get("output", "table"))

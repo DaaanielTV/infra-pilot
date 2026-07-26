@@ -14,8 +14,15 @@ def start(
     ctx: typer.Context,
     customer_id: str = typer.Argument(help="Customer ID"),
     plan: str = typer.Argument(help="Onboarding plan"),
-):
-    """Start onboarding"""
+) -> None:
+    """Start onboarding
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_onboarding_start(customer_id, plan)
     print_output(result, ctx.obj.get("output", "table"))
@@ -24,8 +31,15 @@ def start(
 def get(
     ctx: typer.Context,
     customer_id: str = typer.Argument(help="Customer ID"),
-):
-    """Onboarding status"""
+) -> None:
+    """Onboarding status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_onboarding_get(customer_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,15 +49,29 @@ def step(
     ctx: typer.Context,
     customer_id: str = typer.Argument(help="Customer ID"),
     step: str = typer.Argument(help="Step name"),
-):
-    """Complete a step"""
+) -> None:
+    """Complete a step
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_onboarding_step(customer_id, step)
     print_output(result, ctx.obj.get("output", "table"))
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Onboarding stats"""
+def stats(ctx: typer.Context) -> None:
+    """Onboarding stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cx_onboarding_stats()
     print_output(result, ctx.obj.get("output", "table"))

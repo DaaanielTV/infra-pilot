@@ -1,15 +1,15 @@
 """Tests für das Health Check Modul"""
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ipilot.commands.health import get_health_status, format_health_output
+from ipilot.commands.operations.health import get_health_status, format_health_output
 from ipilot.client import ApiClient
 
 
 class TestHealthStatus:
     """Test Health Status Funktionen"""
     
-    @patch('ipilot.commands.health.ApiClient')
-    @patch('ipilot.commands.health.load_config')
+    @patch('ipilot.commands.operations.health.ApiClient')
+    @patch('ipilot.commands.operations.health.load_config')
     def test_get_health_status_success(self, mock_load_config, mock_api_client_class):
         """Test erfolgreiches Health Check"""
         # Setup
@@ -38,8 +38,8 @@ class TestHealthStatus:
         assert result['database'] == 'up'
         mock_client.health_check.assert_called_once()
     
-    @patch('ipilot.commands.health.ApiClient')
-    @patch('ipilot.commands.health.load_config')
+    @patch('ipilot.commands.operations.health.ApiClient')
+    @patch('ipilot.commands.operations.health.load_config')
     def test_get_health_status_error(self, mock_load_config, mock_api_client_class):
         """Test Health Check mit Fehler"""
         # Setup
@@ -60,7 +60,7 @@ class TestHealthStatus:
         assert 'Connection refused' in result['message']
         assert result['component'] == 'api'
     
-    @patch('ipilot.commands.health.load_config')
+    @patch('ipilot.commands.operations.health.load_config')
     def test_get_health_status_config_error(self, mock_load_config):
         """Test Health Check wenn Config laden fehlschlägt"""
         # Setup

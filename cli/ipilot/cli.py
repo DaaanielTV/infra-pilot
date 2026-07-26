@@ -6,7 +6,7 @@ from . import __version__
 from .config import load_config, save_config, set_key, get
 from .client import ApiClient
 from .output import print_output
-from .commands.health import get_health_status, format_health_output
+from .commands.operations.health import get_health_status, format_health_output
 
 def health(): # file is located in cli/ipilot/commands/health.py
     # api endpoint aufrufen, um Status zu prüfen

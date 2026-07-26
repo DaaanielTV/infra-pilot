@@ -1,24 +1,49 @@
+/**
+ * @file Minecraft server statistics commands for the Discord bot.
+ */
+
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+/** @constant {number} */
+const LEADERBOARD_LIMIT = 10;
+/** @constant {Array<string>} */
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
+
 class StatsCommands {
+    /**
+     * @param {import('discord.js').Client} client - Discord client
+     */
     constructor(client) {
         this.client = client;
+        /** @type {import('mysql2/promise').Connection|null} */
         this.db = null;
         this.initializeDatabase();
     }
 
+    /**
+     * Initialize the MySQL database connection.
+     * @returns {Promise<void>}
+     */
     async initializeDatabase() {
-        this.db = await mysql.createConnection({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME
-        });
+        try {
+            this.db = await mysql.createConnection({
+                host: process.env.DB_HOST,
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                database: process.env.DB_NAME
+            });
+        } catch (error) {
+            console.error('[StatsCommands] Database connection failed:', error.message);
+        }
     }
 
+    /**
+     * Build slash command definitions.
+     * @returns {Array<Object>}
+     */
     registerCommands() {
         return [
             new SlashCommandBuilder()
@@ -44,11 +69,16 @@ class StatsCommands {
         ];
     }
 
+    /**
+     * Handle the /serverstats command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleServerStats(interaction) {
         await interaction.deferReply();
-        
+
         const targetUser = interaction.options.getUser('player');
-        const isStaff = interaction.member.roles.cache.some(role => 
+        const isStaff = interaction.member.roles.cache.some(role =>
             role.name.toLowerCase().includes('staff') || role.name.toLowerCase().includes('admin')
         );
 
@@ -62,6 +92,10 @@ class StatsCommands {
         const userId = targetUser ? targetUser.id : interaction.user.id;
 
         try {
+            if (!this.db) {
+                return interaction.editReply({ content: '❌ Database not available.', ephemeral: true });
+            }
+
             const [rows] = await this.db.execute(
                 'SELECT * FROM player_statistics WHERE uuid = ?',
                 [userId]
@@ -69,7 +103,7 @@ class StatsCommands {
 
             if (rows.length === 0) {
                 return interaction.editReply({
-                    content: targetUser ? 
+                    content: targetUser ?
                         `❌ No server statistics found for ${targetUser.username}` :
                         '❌ You don\'t have any server statistics yet.',
                     ephemeral: true
@@ -82,7 +116,6 @@ class StatsCommands {
                 .setColor('#00ff00')
                 .setTimestamp();
 
-            // Format statistics for display
             embed.addFields([
                 {
                     name: '📊 Current Status',
@@ -107,9 +140,8 @@ class StatsCommands {
             ]);
 
             await interaction.editReply({ embeds: [embed] });
-
         } catch (error) {
-            console.error('Error fetching server statistics:', error);
+            console.error('[StatsCommands] Error fetching server statistics:', error);
             await interaction.editReply({
                 content: '❌ An error occurred while fetching server statistics.',
                 ephemeral: true
@@ -117,37 +149,39 @@ class StatsCommands {
         }
     }
 
+    /**
+     * Handle the /leaderboard command.
+     * @param {import('discord.js').CommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
     async handleLeaderboard(interaction) {
         await interaction.deferReply();
 
         const category = interaction.options.getString('category');
-        let query = '';
-        let title = '';
+        const queries = {
+            players: { query: 'SELECT uuid, peak_players FROM player_statistics ORDER BY peak_players DESC LIMIT ?', title: '👥 Top Servers by Peak Players' },
+            uptime: { query: 'SELECT uuid, uptime_percentage FROM player_statistics ORDER BY uptime_percentage DESC LIMIT ?', title: '⚡ Top Servers by Uptime' },
+            playtime: { query: 'SELECT uuid, total_playtime FROM player_statistics ORDER BY total_playtime DESC LIMIT ?', title: '⏰ Top Servers by Playtime' },
+        };
 
-        switch (category) {
-            case 'players':
-                query = 'SELECT uuid, peak_players FROM player_statistics ORDER BY peak_players DESC LIMIT 10';
-                title = '👥 Top Servers by Peak Players';
-                break;
-            case 'uptime':
-                query = 'SELECT uuid, uptime_percentage FROM player_statistics ORDER BY uptime_percentage DESC LIMIT 10';
-                title = '⚡ Top Servers by Uptime';
-                break;
-            case 'playtime':
-                query = 'SELECT uuid, total_playtime FROM player_statistics ORDER BY total_playtime DESC LIMIT 10';
-                title = '⏰ Top Servers by Playtime';
-                break;
+        const config = queries[category];
+        if (!config) {
+            return interaction.editReply({ content: '❌ Invalid category.', ephemeral: true });
         }
 
         try {
-            const [rows] = await this.db.execute(query);
-            
+            if (!this.db) {
+                return interaction.editReply({ content: '❌ Database not available.', ephemeral: true });
+            }
+
+            const [rows] = await this.db.execute(config.query, [LEADERBOARD_LIMIT]);
+
             if (rows.length === 0) {
                 return interaction.editReply('No statistics available for the leaderboard.');
             }
 
             const embed = new EmbedBuilder()
-                .setTitle(title)
+                .setTitle(config.title)
                 .setColor('#ffd700')
                 .setTimestamp();
 
@@ -155,7 +189,7 @@ class StatsCommands {
             for (let i = 0; i < rows.length; i++) {
                 const user = await this.client.users.fetch(rows[i].uuid).catch(() => null);
                 const username = user ? user.username : 'Unknown User';
-                
+
                 let value = '';
                 switch (category) {
                     case 'players':
@@ -174,9 +208,8 @@ class StatsCommands {
 
             embed.setDescription(description);
             await interaction.editReply({ embeds: [embed] });
-
         } catch (error) {
-            console.error('Error fetching leaderboard:', error);
+            console.error('[StatsCommands] Error fetching leaderboard:', error);
             await interaction.editReply({
                 content: '❌ An error occurred while fetching the leaderboard.',
                 ephemeral: true
@@ -184,17 +217,26 @@ class StatsCommands {
         }
     }
 
+    /**
+     * Format bytes into a human-readable string.
+     * @param {number} bytes
+     * @returns {string}
+     */
     formatBytes(bytes) {
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) return '0 B';
         const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
-        return `${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`;
+        return `${(bytes / (1024 ** i)).toFixed(1)} ${BYTE_UNITS[i]}`;
     }
 
+    /**
+     * Convert hours into a human-readable time string.
+     * @param {number} hours
+     * @returns {string}
+     */
     formatTime(hours) {
         const days = Math.floor(hours / 24);
         const remainingHours = hours % 24;
-        
+
         if (days > 0) {
             return `${days}d ${remainingHours}h`;
         }

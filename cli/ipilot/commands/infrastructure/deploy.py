@@ -16,8 +16,15 @@ def deploy(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
     branch: str = typer.Argument(..., help="Branch to deploy"),
-):
-    """Deploy a branch"""
+) -> None:
+    """Deploy a branch
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.deploy(server, branch)
     print_output(result, ctx.obj.get("output", "table"))

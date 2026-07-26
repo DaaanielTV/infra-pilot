@@ -17,8 +17,15 @@ def fetch(
     server: str = typer.Argument(..., help="Server ID or name"),
     lines: int = typer.Option(50, "--lines", "-n", help="Number of lines"),
     follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output"),
-):
-    """Fetch server logs"""
+) -> None:
+    """Fetch server logs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.get_logs(server, lines, follow)
     print_output(result, ctx.obj.get("output", "table"))

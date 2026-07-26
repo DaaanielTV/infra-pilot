@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
-):
-    """List all servers"""
+) -> None:
+    """List all servers
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_servers()
     data = result if isinstance(result, list) else result.get("servers", result)
@@ -29,8 +36,15 @@ def create(
     name: str = typer.Argument(..., help="Server name"),
     server_type: str = typer.Option(..., "--type", "-t", help="Server type"),
     memory: int = typer.Option(None, "--memory", "-m", help="Memory in MB"),
-):
-    """Create a new server"""
+) -> None:
+    """Create a new server
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.create_server(name, server_type, memory)
     print_output(result, ctx.obj.get("output", "table"))
@@ -40,8 +54,15 @@ def create(
 def delete(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
-):
-    """Delete a server"""
+) -> None:
+    """Delete a server
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.delete_server(server)
     print_output(result, ctx.obj.get("output", "table"))
@@ -51,8 +72,15 @@ def delete(
 def status(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
-):
-    """Get server status"""
+) -> None:
+    """Get server status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.server_status(server)
     print_output(result, ctx.obj.get("output", "table"))

@@ -15,8 +15,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def list(
     ctx: typer.Context,
     server: str = typer.Argument(None, help="Server ID (optional)"),
-):
-    """List backups"""
+) -> None:
+    """List backups
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.list_backups(server)
     data = result if isinstance(result, list) else result.get("backups", result)
@@ -27,8 +34,15 @@ def list(
 def create(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
-):
-    """Create a backup"""
+) -> None:
+    """Create a backup
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.create_backup(server)
     print_output(result, ctx.obj.get("output", "table"))

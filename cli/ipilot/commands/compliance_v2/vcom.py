@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List vendors"""
+def list(ctx: typer.Context) -> None:
+    """List vendors
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def register(
     ctx: typer.Context,
     name: str = typer.Argument(help="Vendor name"),
     tier: str = typer.Argument(help="Vendor tier"),
-):
-    """Register"""
+) -> None:
+    """Register
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_register(name, tier)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,8 +50,15 @@ def register(
 def assess(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(help="Vendor ID"),
-):
-    """Assess"""
+) -> None:
+    """Assess
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_assess(vendor_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -47,8 +68,15 @@ def assess(
 def risk(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(help="Vendor ID"),
-):
-    """Risk score"""
+) -> None:
+    """Risk score
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_risk(vendor_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -58,16 +86,30 @@ def risk(
 def scorecard(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(help="Vendor ID"),
-):
-    """Scorecard"""
+) -> None:
+    """Scorecard
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_scorecard(vendor_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def assessments(ctx: typer.Context):
-    """Assessments"""
+def assessments(ctx: typer.Context) -> None:
+    """Assessments
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_assessments()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -79,16 +121,30 @@ def migrate_tier(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(help="Vendor ID"),
     new_tier: str = typer.Argument(help="New tier"),
-):
-    """Migrate tier"""
+) -> None:
+    """Migrate tier
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_migrate_tier(vendor_id, new_tier)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def categories(ctx: typer.Context):
-    """Categories"""
+def categories(ctx: typer.Context) -> None:
+    """Categories
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_categories()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -96,8 +152,15 @@ def categories(ctx: typer.Context):
 
 
 @app.command()
-def discover(ctx: typer.Context):
-    """Discover"""
+def discover(ctx: typer.Context) -> None:
+    """Discover
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_discover()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -108,8 +171,15 @@ def discover(ctx: typer.Context):
 def remediation(
     ctx: typer.Context,
     vendor_id: str = typer.Argument(help="Vendor ID"),
-):
-    """Remediation"""
+) -> None:
+    """Remediation
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.vc_remediation(vendor_id)
     print_output(result, ctx.obj.get("output", "table"))

@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List controls"""
+def list(ctx: typer.Context) -> None:
+    """List controls
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,16 +31,30 @@ def list(ctx: typer.Context):
 def evaluate(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
-):
-    """Evaluate"""
+) -> None:
+    """Evaluate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_evaluate(control_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def templates(ctx: typer.Context):
-    """Templates"""
+def templates(ctx: typer.Context) -> None:
+    """Templates
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_templates()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -41,8 +62,15 @@ def templates(ctx: typer.Context):
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Stats"""
+def stats(ctx: typer.Context) -> None:
+    """Stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -53,8 +81,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Control name"),
     definition: str = typer.Argument(help="Control definition"),
-):
-    """Create"""
+) -> None:
+    """Create
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_create(name, definition)
     print_output(result, ctx.obj.get("output", "table"))
@@ -64,8 +99,15 @@ def create(
 def gap(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
-):
-    """Gap analysis"""
+) -> None:
+    """Gap analysis
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_gap(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -75,8 +117,15 @@ def gap(
 def test(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
-):
-    """Test"""
+) -> None:
+    """Test
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_test(control_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -86,8 +135,15 @@ def test(
 def dry_run(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
-):
-    """Dry run"""
+) -> None:
+    """Dry run
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_dry_run(control_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -97,8 +153,15 @@ def dry_run(
 def version(
     ctx: typer.Context,
     control_id: str = typer.Argument(help="Control ID"),
-):
-    """Version history"""
+) -> None:
+    """Version history
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cac_version(control_id)
     print_output(result, ctx.obj.get("output", "table"))

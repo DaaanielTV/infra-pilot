@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List configs"""
+def list(ctx: typer.Context) -> None:
+    """List configs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def register(
     ctx: typer.Context,
     name: str = typer.Argument(help="Configuration name"),
     region: str = typer.Argument(help="Region"),
-):
-    """Register"""
+) -> None:
+    """Register
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_register(name, region)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,16 +50,30 @@ def register(
 def check(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
-):
-    """Check compliance"""
+) -> None:
+    """Check compliance
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_check(config_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -55,8 +83,15 @@ def summary(ctx: typer.Context):
 def flows(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
-):
-    """Data flows"""
+) -> None:
+    """Data flows
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_flows(config_id)
     data = result if isinstance(result, list) else result.get("key", result)
@@ -68,8 +103,15 @@ def move(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
     target_region: str = typer.Argument(help="Target region"),
-):
-    """Move data"""
+) -> None:
+    """Move data
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_move(config_id, target_region)
     print_output(result, ctx.obj.get("output", "table"))
@@ -79,16 +121,30 @@ def move(
 def audit(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
-):
-    """Audit"""
+) -> None:
+    """Audit
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_audit(config_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def violations(ctx: typer.Context):
-    """Violations"""
+def violations(ctx: typer.Context) -> None:
+    """Violations
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_violations()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -99,8 +155,15 @@ def violations(ctx: typer.Context):
 def compliance_report(
     ctx: typer.Context,
     config_id: str = typer.Argument(help="Config ID"),
-):
-    """Compliance report"""
+) -> None:
+    """Compliance report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_compliance_report(config_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -110,8 +173,15 @@ def compliance_report(
 def asset_search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
-):
-    """Asset search"""
+) -> None:
+    """Asset search
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.dr_asset_search(query)
     data = result if isinstance(result, list) else result.get("key", result)

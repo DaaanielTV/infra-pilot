@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List attestations"""
+def list(ctx: typer.Context) -> None:
+    """List attestations
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,8 +31,15 @@ def list(ctx: typer.Context):
 def generate(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
-):
-    """Generate"""
+) -> None:
+    """Generate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_generate(framework)
     print_output(result, ctx.obj.get("output", "table"))
@@ -35,16 +49,30 @@ def generate(
 def sign(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
-):
-    """Sign"""
+) -> None:
+    """Sign
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_sign(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Stats"""
+def stats(ctx: typer.Context) -> None:
+    """Stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -54,8 +82,15 @@ def stats(ctx: typer.Context):
 def approve(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
-):
-    """Approve"""
+) -> None:
+    """Approve
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_approve(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -65,8 +100,15 @@ def approve(
 def verify(
     ctx: typer.Context,
     attestation_id: str = typer.Argument(help="Attestation ID"),
-):
-    """Verify"""
+) -> None:
+    """Verify
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_verify(attestation_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -77,8 +119,15 @@ def compare(
     ctx: typer.Context,
     attestation_id_a: str = typer.Argument(help="First attestation ID"),
     attestation_id_b: str = typer.Argument(help="Second attestation ID"),
-):
-    """Compare"""
+) -> None:
+    """Compare
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_compare(attestation_id_a, attestation_id_b)
     print_output(result, ctx.obj.get("output", "table"))
@@ -89,16 +138,30 @@ def schedule(
     ctx: typer.Context,
     cron: str = typer.Argument(help="Cron expression"),
     framework: str = typer.Argument(help="Framework name"),
-):
-    """Schedule"""
+) -> None:
+    """Schedule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_schedule(cron, framework)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def coverage(ctx: typer.Context):
-    """Coverage"""
+def coverage(ctx: typer.Context) -> None:
+    """Coverage
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ar_coverage()
     print_output(result, ctx.obj.get("output", "table"))

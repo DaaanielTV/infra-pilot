@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def list(ctx: typer.Context):
-    """List evidence"""
+def list(ctx: typer.Context) -> None:
+    """List evidence
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_list()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,16 +31,30 @@ def list(ctx: typer.Context):
 def collect(
     ctx: typer.Context,
     source: str = typer.Argument(help="Evidence source"),
-):
-    """Collect"""
+) -> None:
+    """Collect
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_collect(source)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def packages(ctx: typer.Context):
-    """Packages"""
+def packages(ctx: typer.Context) -> None:
+    """Packages
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_packages()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -41,16 +62,30 @@ def packages(ctx: typer.Context):
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Stats"""
+def stats(ctx: typer.Context) -> None:
+    """Stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_stats()
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command("auto-collect")
-def auto_collect(ctx: typer.Context):
-    """Auto collect"""
+def auto_collect(ctx: typer.Context) -> None:
+    """Auto collect
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_auto_collect()
     print_output(result, ctx.obj.get("output", "table"))
@@ -60,8 +95,15 @@ def auto_collect(ctx: typer.Context):
 def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
-):
-    """Search"""
+) -> None:
+    """Search
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_search(query)
     data = result if isinstance(result, list) else result.get("key", result)
@@ -72,8 +114,15 @@ def search(
 def validate(
     ctx: typer.Context,
     evidence_id: str = typer.Argument(help="Evidence ID"),
-):
-    """Validate"""
+) -> None:
+    """Validate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_validate(evidence_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -84,16 +133,30 @@ def package_create(
     ctx: typer.Context,
     name: str = typer.Argument(help="Package name"),
     evidence_ids: str = typer.Argument(help="Evidence IDs (JSON)"),
-):
-    """Create package"""
+) -> None:
+    """Create package
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_package_create(name, evidence_ids)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def expired(ctx: typer.Context):
-    """Expired evidence"""
+def expired(ctx: typer.Context) -> None:
+    """Expired evidence
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_expired()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -104,8 +167,15 @@ def expired(ctx: typer.Context):
 def custody(
     ctx: typer.Context,
     evidence_id: str = typer.Argument(help="Evidence ID"),
-):
-    """Custody chain"""
+) -> None:
+    """Custody chain
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ec_custody(evidence_id)
     print_output(result, ctx.obj.get("output", "table"))

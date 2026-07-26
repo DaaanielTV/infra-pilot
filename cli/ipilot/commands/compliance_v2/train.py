@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def modules(ctx: typer.Context):
-    """Modules"""
+def modules(ctx: typer.Context) -> None:
+    """Modules
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_modules()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -25,8 +32,15 @@ def assign(
     ctx: typer.Context,
     user_id: str = typer.Argument(help="User ID"),
     module_id: str = typer.Argument(help="Module ID"),
-):
-    """Assign"""
+) -> None:
+    """Assign
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_assign(user_id, module_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -36,24 +50,45 @@ def assign(
 def status(
     ctx: typer.Context,
     user_id: str = typer.Argument(help="User ID"),
-):
-    """Status"""
+) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_status(user_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Stats"""
+def stats(ctx: typer.Context) -> None:
+    """Stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_stats()
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def certifications(ctx: typer.Context):
-    """Certifications"""
+def certifications(ctx: typer.Context) -> None:
+    """Certifications
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_certifications()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -61,8 +96,15 @@ def certifications(ctx: typer.Context):
 
 
 @app.command()
-def expiring(ctx: typer.Context):
-    """Expiring certs"""
+def expiring(ctx: typer.Context) -> None:
+    """Expiring certs
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_expiring()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -73,8 +115,15 @@ def expiring(ctx: typer.Context):
 def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
-):
-    """Search"""
+) -> None:
+    """Search
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_search(query)
     data = result if isinstance(result, list) else result.get("key", result)
@@ -85,8 +134,15 @@ def search(
 def report(
     ctx: typer.Context,
     module_id: str = typer.Argument(help="Module ID"),
-):
-    """Report"""
+) -> None:
+    """Report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_report(module_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -96,8 +152,15 @@ def report(
 def progress(
     ctx: typer.Context,
     user_id: str = typer.Argument(help="User ID"),
-):
-    """Progress"""
+) -> None:
+    """Progress
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_progress(user_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -108,8 +171,15 @@ def batch_assign(
     ctx: typer.Context,
     user_ids: str = typer.Argument(help="User IDs (JSON)"),
     module_id: str = typer.Argument(help="Module ID"),
-):
-    """Batch assign"""
+) -> None:
+    """Batch assign
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ct_batch_assign(user_ids, module_id)
     print_output(result, ctx.obj.get("output", "table"))

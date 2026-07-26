@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def changes(ctx: typer.Context):
-    """Changes"""
+def changes(ctx: typer.Context) -> None:
+    """Changes
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_changes()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -24,16 +31,30 @@ def changes(ctx: typer.Context):
 def detect(
     ctx: typer.Context,
     change_id: str = typer.Argument(help="Change ID"),
-):
-    """Detect impact"""
+) -> None:
+    """Detect impact
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_detect(change_id)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def sources(ctx: typer.Context):
-    """Sources"""
+def sources(ctx: typer.Context) -> None:
+    """Sources
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_sources()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -41,8 +62,15 @@ def sources(ctx: typer.Context):
 
 
 @app.command()
-def stats(ctx: typer.Context):
-    """Stats"""
+def stats(ctx: typer.Context) -> None:
+    """Stats
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_stats()
     print_output(result, ctx.obj.get("output", "table"))
@@ -52,8 +80,15 @@ def stats(ctx: typer.Context):
 def impact(
     ctx: typer.Context,
     change_id: str = typer.Argument(help="Change ID"),
-):
-    """Impact analysis"""
+) -> None:
+    """Impact analysis
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_impact(change_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -63,16 +98,30 @@ def impact(
 def matrix(
     ctx: typer.Context,
     framework: str = typer.Argument(help="Framework name"),
-):
-    """Regulatory matrix"""
+) -> None:
+    """Regulatory matrix
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_matrix(framework)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def calendar(ctx: typer.Context):
-    """Calendar"""
+def calendar(ctx: typer.Context) -> None:
+    """Calendar
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_calendar()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -84,16 +133,30 @@ def notify(
     ctx: typer.Context,
     change_id: str = typer.Argument(help="Change ID"),
     email: str = typer.Argument(help="Notification email"),
-):
-    """Notify"""
+) -> None:
+    """Notify
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_notify(change_id, email)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def pending(ctx: typer.Context):
-    """Pending items"""
+def pending(ctx: typer.Context) -> None:
+    """Pending items
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_pending()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -104,8 +167,15 @@ def pending(ctx: typer.Context):
 def search(
     ctx: typer.Context,
     query: str = typer.Argument(help="Search query"),
-):
-    """Search"""
+) -> None:
+    """Search
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.ri_search(query)
     data = result if isinstance(result, list) else result.get("key", result)

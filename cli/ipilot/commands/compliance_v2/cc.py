@@ -12,8 +12,15 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 
 
 @app.command()
-def status(ctx: typer.Context):
-    """Status"""
+def status(ctx: typer.Context) -> None:
+    """Status
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_status()
     print_output(result, ctx.obj.get("output", "table"))
@@ -23,16 +30,30 @@ def status(ctx: typer.Context):
 def scan(
     ctx: typer.Context,
     target: str = typer.Argument(help="Scan target"),
-):
-    """Scan"""
+) -> None:
+    """Scan
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_scan(target)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def alerts(ctx: typer.Context):
-    """Alerts"""
+def alerts(ctx: typer.Context) -> None:
+    """Alerts
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_alerts()
     data = result if isinstance(result, list) else result.get("key", result)
@@ -40,8 +61,15 @@ def alerts(ctx: typer.Context):
 
 
 @app.command()
-def summary(ctx: typer.Context):
-    """Summary"""
+def summary(ctx: typer.Context) -> None:
+    """Summary
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_summary()
     print_output(result, ctx.obj.get("output", "table"))
@@ -51,8 +79,15 @@ def summary(ctx: typer.Context):
 def remediate(
     ctx: typer.Context,
     finding_id: str = typer.Argument(help="Finding ID"),
-):
-    """Remediate"""
+) -> None:
+    """Remediate
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_remediate(finding_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -62,8 +97,15 @@ def remediate(
 def drift(
     ctx: typer.Context,
     baseline_id: str = typer.Argument(help="Baseline ID"),
-):
-    """Drift"""
+) -> None:
+    """Drift
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_drift(baseline_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -74,8 +116,15 @@ def compare(
     ctx: typer.Context,
     scan_id_a: str = typer.Argument(help="First scan ID"),
     scan_id_b: str = typer.Argument(help="Second scan ID"),
-):
-    """Compare"""
+) -> None:
+    """Compare
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_compare(scan_id_a, scan_id_b)
     print_output(result, ctx.obj.get("output", "table"))
@@ -85,8 +134,15 @@ def compare(
 def report(
     ctx: typer.Context,
     scan_id: str = typer.Argument(help="Scan ID"),
-):
-    """Report"""
+) -> None:
+    """Report
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_report(scan_id)
     print_output(result, ctx.obj.get("output", "table"))
@@ -97,16 +153,30 @@ def schedule(
     ctx: typer.Context,
     cron: str = typer.Argument(help="Cron expression"),
     target: str = typer.Argument(help="Scan target"),
-):
-    """Schedule"""
+) -> None:
+    """Schedule
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_schedule(cron, target)
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
-def weakest(ctx: typer.Context):
-    """Weakest areas"""
+def weakest(ctx: typer.Context) -> None:
+    """Weakest areas
+    
+    Args:
+        ctx: Typer context for accessing config and output format.
+    
+    Returns:
+        None (output is printed via print_output).
+    """
     client = _get_client(ctx)
     result = client.cc_weakest()
     data = result if isinstance(result, list) else result.get("key", result)

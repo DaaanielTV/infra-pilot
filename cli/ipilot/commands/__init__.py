@@ -1,10 +1,12 @@
 """All command modules get registered here."""
+
 from ..core.command_registry import register
 
 from .infrastructure.server import app as server_app
 from .infrastructure.backup import app as backup_app
 from .infrastructure.deploy import app as deploy_app
 from .infrastructure.logs import app as logs_app
+
 register("server", "Server management")(server_app)
 register("backup", "Backup management")(backup_app)
 register("deploy", "Deployment")(deploy_app)
@@ -18,6 +20,7 @@ from .edge_computing.cdn import app as cdn_app
 from .edge_computing.mesh import app as mesh_app
 from .edge_computing.lorawan import app as gw_app
 from .edge_computing.pipeline import app as pipeline_app
+
 register("edge", "Edge devices")(edge_app)
 register("fn", "Edge functions")(fn_app)
 register("ml", "Machine learning")(ml_app)
@@ -37,6 +40,7 @@ from .green.pue import app as pue_app
 from .green.provider import app as provider_app
 from .green.offset import app as offset_app
 from .green.efficiency import app as efficiency_app
+
 register("energy", "Energy use")(energy_app)
 register("carbon", "Carbon footprint")(carbon_app)
 register("green", "Green scheduling")(green_app)
@@ -59,6 +63,7 @@ from .networking.dnsfilter import app as dnsfilter_app
 from .networking.dhcp import app as dhcp_app
 from .networking.netcost import app as netcost_app
 from .networking.cell import app as cell_app
+
 register("sdwan", "SD-WAN")(sdwan_app)
 register("vpn", "VPN")(vpn_app)
 register("dns", "DNS")(dns_app)
@@ -83,6 +88,7 @@ from .security.audit import app as audit_app
 from .security.classify import app as classify_app
 from .security.vendor import app as vendor_app
 from .security.soc import app as soc_app
+
 register("oidc", "OIDC")(oidc_app)
 register("webauthn", "WebAuthn")(webauthn_app)
 register("session", "Sessions")(sessions_app)
@@ -104,6 +110,7 @@ from .operations.maintenance import app as maintenance_app
 from .operations.runbooks import app as runbook_app
 from .operations.chaos import app as chaos_app
 from .operations.healing import app as heal_app
+
 register("workflow", "Workflows")(workflow_app)
 register("infra-pipeline", "Pipelines")(infra_pipeline_app)
 register("drift", "Drift detection")(drift_app)
@@ -133,6 +140,7 @@ from .aiops.v6.health_f import app as health_f_app
 from .aiops.v6.incident import app as incident_app
 from .aiops.v6.ops import app as ops_app
 from .aiops.v6.scaling_v6 import app as scaling_v6_app
+
 register("rca", "Root cause analysis")(rca_app)
 register("dem", "Digital experience")(dem_app)
 register("alert", "Alerts")(alert_app)
@@ -154,9 +162,11 @@ register("ops", "Ops bot")(ops_app)
 register("scaling-v6", "Scaling v6")(scaling_v6_app)
 
 from .finops import app as finops_app
+
 register("finops", "FinOps")(finops_app)
 
 from .cx import app as cx_app
+
 register("cx", "Customer experience")(cx_app)
 
 from .marketplace.trade import app as trade_app
@@ -171,6 +181,7 @@ from .marketplace.plans import app as plans_app
 from .marketplace.reco import app as reco_app
 from .marketplace.tax import app as tax_app
 from .marketplace.loyalty import app as loyalty_app
+
 register("trade", "Trading")(trade_app)
 register("appmarket", "App marketplace")(appmarket_app)
 register("ppu", "Pay per use")(ppu_app)
@@ -194,6 +205,7 @@ from .platform.environments import app as environments_app
 from .platform.api_catalog import app as apicatalog_app
 from .platform.docgen import app as docgen_app
 from .platform.pulse import app as pulse_app
+
 register("devportal", "Developer portal")(devportal_app)
 register("scaffold", "Scaffolding")(scaffold_app)
 register("service-catalog", "Service catalog")(catalog_app)
@@ -215,6 +227,7 @@ from .compliance_v2.audit_mgmt import app as audit_mgmt_app
 from .compliance_v2.dres import app as dres_app
 from .compliance_v2.train import app as train_app
 from .compliance_v2.auditor import app as auditor_app
+
 register("cc", "Compliance")(cc_app)
 register("evidence", "Evidence")(evidence_app)
 register("cac", "Compliance as code")(cac_app)
@@ -235,6 +248,7 @@ from .emerging.confidential import app as confidential_app
 from .emerging.federated import app as federated_app
 from .emerging.zkp import app as zkp_app
 from .emerging.dcn import app as dcn_app
+
 register("blockchain", "Blockchain")(blockchain_app)
 register("storage", "Decentralized storage")(storage_app)
 register("quantum", "Quantum safe")(quantum_app)
@@ -255,6 +269,7 @@ from .platform.resiliency.rb_exec import app as rb_exec_app
 from .platform.resiliency.data_integrity import app as data_integrity_app
 from .platform.resiliency.res_pipeline import app as res_pipeline_app
 from .platform.resiliency.bc_dashboard import app as bc_dashboard_app
+
 register("dr", "Disaster recovery")(dr_app)
 register("active-active", "Active active")(active_active_app)
 register("backup-sla", "Backup SLA")(backup_sla_app)
@@ -265,3 +280,38 @@ register("rb-exec", "Runbook exec")(rb_exec_app)
 register("data-integrity", "Data integrity")(data_integrity_app)
 register("res-pipeline", "Resilience pipeline")(res_pipeline_app)
 register("bc-dashboard", "Business continuity")(bc_dashboard_app)
+
+
+__all__: list[str] = [
+    "server_app", "backup_app", "deploy_app", "logs_app",
+    "edge_app", "fn_app", "ml_app", "iot_app", "cdn_app", "mesh_app",
+    "gw_app", "pipeline_app",
+    "energy_app", "carbon_app", "green_app", "reclaim_app", "shutdown_app",
+    "hardware_app", "pue_app", "provider_app", "offset_app", "efficiency_app",
+    "sdwan_app", "vpn_app", "dns_app", "bgp_app", "proxy_app", "segment_app",
+    "capture_app", "dnsfilter_app", "dhcp_app", "netcost_app", "cell_app",
+    "identity_app", "oidc_app", "webauthn_app", "sessions_app", "pam_app",
+    "breach_app", "policy_app", "compliance_app", "audit_app", "classify_app",
+    "vendor_app", "soc_app",
+    "workflow_app", "infra_pipeline_app", "drift_app", "quota_app",
+    "remediate_app", "maintenance_app", "runbook_app", "chaos_app", "heal_app",
+    "rca_app", "dem_app", "alert_app", "scaling_app", "health_forecast_app",
+    "assistant_app", "change_app", "capacity_app", "chatbot_app",
+    "alert_corr_app", "rca_v6_app", "capacity_v6_app", "change_risk_app",
+    "convo_app", "dex_app", "health_f_app", "incident_app", "ops_app",
+    "scaling_v6_app",
+    "finops_app", "cx_app",
+    "trade_app", "appmarket_app", "ppu_app", "reseller_app", "whitelabel_app",
+    "mkt_sla_app", "credit_app", "crypto_app", "plans_app", "reco_app",
+    "tax_app", "loyalty_app",
+    "devportal_app", "scaffold_app", "catalog_app", "scorecards_app",
+    "templatereg_app", "techdebt_app", "environments_app", "apicatalog_app",
+    "docgen_app", "pulse_app",
+    "cc_app", "evidence_app", "cac_app", "attest_app", "vcom_app",
+    "regintel_app", "audit_mgmt_app", "dres_app", "train_app", "auditor_app",
+    "blockchain_app", "storage_app", "quantum_app", "contracts_app",
+    "web3id_app", "confidential_app", "federated_app", "zkp_app", "dcn_app",
+    "dr_app", "active_active_app", "backup_sla_app", "chaos_exp_app",
+    "res_score_app", "dep_sim_app", "rb_exec_app", "data_integrity_app",
+    "res_pipeline_app", "bc_dashboard_app",
+]

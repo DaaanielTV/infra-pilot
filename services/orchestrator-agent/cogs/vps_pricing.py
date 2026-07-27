@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timedelta
 
 from db import get_sync_connection
+from vps_manager import VPSConfig
 
 class VPSPricing(commands.Cog):
     def __init__(self, bot):
@@ -192,14 +193,14 @@ class VPSPricing(commands.Cog):
             return
 
         # Create VPS instance
-        vps_config = {
-            'cpu_limit': cpu,
-            'memory_limit': memory,
-            'storage_limit': storage,
-            'image': 'ubuntu:latest',
-            'ports': {},
-            'env_vars': {}
-        }
+        vps_config = VPSConfig(
+            cpu_limit=cpu,
+            memory_limit=memory,
+            storage_limit=storage,
+            image='ubuntu:latest',
+            ports={},
+            env_vars={},
+        )
 
         try:
             vps_manager = self.bot.get_cog('VPSCommands').vps_manager

@@ -1,11 +1,13 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import mysql.connector
+import psycopg2
 from typing import Dict, Optional
 import json
 import os
 from datetime import datetime, timedelta
+
+from db import get_sync_connection
 
 class VPSPricing(commands.Cog):
     def __init__(self, bot):
@@ -20,12 +22,7 @@ class VPSPricing(commands.Cog):
         self.billing_interval = timedelta(days=30)  # Bill every 30 days
 
     def initialize_database(self):
-        return mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
-        )
+        return get_sync_connection()
 
     def calculate_vps_cost(self, cpu: float, memory: int, storage: int) -> float:
         """Calculate the monthly cost for a VPS configuration"""

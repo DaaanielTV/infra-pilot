@@ -5,8 +5,8 @@ colorama==0.4.6
 psutil==7.2.2
 matplotlib==3.11.0
 aiohttp==3.14.1
-aiomysql==0.3.2
-aiosqlite==0.22.1
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
 cryptography==49.0.0
 pillow==12.2.0
 typing-extensions==4.15.0

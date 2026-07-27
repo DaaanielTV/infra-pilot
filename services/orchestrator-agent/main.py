@@ -60,7 +60,7 @@ async def on_ready():
     """Handle the bot ready event - initialise DB and sync commands."""
     logger.info("Bot ready. Logged in as %s", bot.user)
     try:
-        init_database_tables()
+        await init_database_tables()
         logger.info("Database tables initialised")
     except Exception as exc:
         logger.warning("Database initialisation skipped: %s", exc)

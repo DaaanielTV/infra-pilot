@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands, tasks
-import mysql.connector
+import psycopg2
 from datetime import datetime, timedelta
 import os
 import logging
 from typing import Dict, List
+
+from db import get_sync_connection
 
 class VPSBilling(commands.Cog):
     def __init__(self, bot):
@@ -15,12 +17,7 @@ class VPSBilling(commands.Cog):
         self.grace_period = timedelta(days=3)  # Grace period for late payments
 
     def initialize_database(self):
-        return mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
-        )
+        return get_sync_connection()
 
     def cog_unload(self):
         self.check_billing_loop.cancel()

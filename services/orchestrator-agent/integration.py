@@ -1,17 +1,18 @@
-"""Integration layer: database schema, MySQL helpers, and notification proxying."""
+"""Integration layer: database schema, PostgreSQL helpers, and notification proxying."""
 
 import logging
 from typing import Any, Dict, Optional
 
-import mysql.connector
+import asyncpg
 import requests
+import psycopg2
 
 from config import config
+from db import get_pool, get_sync_connection
 
 logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 5
-DEFAULT_PORT = 3306
 
 
 def _send_request(
@@ -55,39 +56,36 @@ def _send_request(
 
 
 def get_db_connection():
-    """Create and return a new MySQL database connection.
+    """Create and return a new PostgreSQL database connection.
 
     Returns:
-        A ``mysql.connector.connection`` instance.
+        A ``psycopg2.connection`` instance.
     """
-    return mysql.connector.connect(
-        host=config.DB_HOST,
-        user=config.DB_USER,
-        password=config.DB_PASSWORD,
-        database=config.DB_NAME,
-        port=getattr(config, "DB_PORT", DEFAULT_PORT),
-    )
+    return get_sync_connection()
 
 
-def init_database_tables():
-    """Create all required database tables if they don't already exist."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+async def init_database_tables():
+    """Create all required database tables if they don't already exist.
+
+    Uses the shared asyncpg pool to run CREATE TABLE IF NOT EXISTS
+    statements for every table in the schema.
+    """
+    pool = await get_pool()
 
     tables = [
         """
         CREATE TABLE IF NOT EXISTS player_economy (
             uuid VARCHAR(255) PRIMARY KEY,
-            balance DOUBLE DEFAULT 0,
+            balance DOUBLE PRECISION DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS economy_transactions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             uuid VARCHAR(255) NOT NULL,
-            amount DOUBLE NOT NULL,
+            amount DOUBLE PRECISION NOT NULL,
             type VARCHAR(50) NOT NULL,
             description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -95,28 +93,28 @@ def init_database_tables():
         """,
         """
         CREATE TABLE IF NOT EXISTS vps_statistics (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             container_id VARCHAR(255) NOT NULL,
-            cpu_usage DOUBLE,
-            memory_usage DOUBLE,
+            cpu_usage DOUBLE PRECISION,
+            memory_usage DOUBLE PRECISION,
             memory_used BIGINT,
             memory_total BIGINT,
             network_rx BIGINT,
             network_tx BIGINT,
-            disk_usage DOUBLE,
+            disk_usage DOUBLE PRECISION,
             status VARCHAR(50),
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_container_id (container_id),
-            INDEX idx_timestamp (timestamp)
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_vps_stats_container ON vps_statistics(container_id);",
+        "CREATE INDEX IF NOT EXISTS idx_vps_stats_ts ON vps_statistics(timestamp);",
         """
         CREATE TABLE IF NOT EXISTS vps_peak_statistics (
             container_id VARCHAR(255) PRIMARY KEY,
-            peak_cpu DOUBLE DEFAULT 0,
-            peak_memory DOUBLE DEFAULT 0,
+            peak_cpu DOUBLE PRECISION DEFAULT 0,
+            peak_memory DOUBLE PRECISION DEFAULT 0,
             peak_network BIGINT DEFAULT 0,
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
@@ -125,163 +123,161 @@ def init_database_tables():
             user_id VARCHAR(255) NOT NULL,
             container_name VARCHAR(255),
             ssh_command TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_user_id (user_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_vps_user ON vps_containers(user_id);",
         """
         CREATE TABLE IF NOT EXISTS health_checks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             container_id VARCHAR(255) NOT NULL,
             check_type VARCHAR(50) NOT NULL,
             target VARCHAR(255),
             interval_seconds INT DEFAULT 60,
             last_check TIMESTAMP,
             last_status VARCHAR(50),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_container (container_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_hc_container ON health_checks(container_id);",
         """
         CREATE TABLE IF NOT EXISTS health_check_results (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             check_id INT NOT NULL,
             status VARCHAR(50) NOT NULL,
             response_time_ms INT,
             error_message TEXT,
-            checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_check_id (check_id)
+            checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_hcr_check ON health_check_results(check_id);",
         """
         CREATE TABLE IF NOT EXISTS backup_rotation (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             container_id VARCHAR(255) NOT NULL,
             image_id VARCHAR(255),
             name VARCHAR(255),
             retention_type VARCHAR(20),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_container (container_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_backup_container ON backup_rotation(container_id);",
         """
         CREATE TABLE IF NOT EXISTS snapshots (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             container_id VARCHAR(255) NOT NULL,
             name VARCHAR(255),
             image_id VARCHAR(255),
             snapshot_type VARCHAR(20) DEFAULT 'manual',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_container (container_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_snap_container ON snapshots(container_id);",
         """
         CREATE TABLE IF NOT EXISTS dns_records (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             type VARCHAR(10) DEFAULT 'A',
             value VARCHAR(255) NOT NULL,
             ttl INT DEFAULT 300,
             zone VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_name (name)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_dns_name ON dns_records(name);",
         """
         CREATE TABLE IF NOT EXISTS ssl_certificates (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             domain VARCHAR(255) NOT NULL,
             status VARCHAR(50) DEFAULT 'pending',
             expires_at TIMESTAMP,
             issued_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_domain (domain)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_ssl_domain ON ssl_certificates(domain);",
         """
         CREATE TABLE IF NOT EXISTS scaling_rules (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             container_id VARCHAR(255) NOT NULL,
             metric VARCHAR(50) NOT NULL,
-            threshold DOUBLE NOT NULL,
+            threshold DOUBLE PRECISION NOT NULL,
             duration_minutes INT DEFAULT 5,
             action VARCHAR(50) NOT NULL,
             cooldown_until TIMESTAMP,
-            enabled TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_container (container_id)
+            enabled BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_scaling_container ON scaling_rules(container_id);",
         """
         CREATE TABLE IF NOT EXISTS resource_quotas (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,
             resource_type VARCHAR(50) NOT NULL,
             soft_limit BIGINT,
             hard_limit BIGINT,
             usage BIGINT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_user_resource (user_id, resource_type)
+            UNIQUE (user_id, resource_type)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS load_balancer_pools (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
             algorithm VARCHAR(50) DEFAULT 'round_robin',
             health_check_type VARCHAR(50) DEFAULT 'tcp',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_name (name)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS lb_pool_members (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            pool_id INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            pool_id INT NOT NULL REFERENCES load_balancer_pools(id) ON DELETE CASCADE,
             container_id VARCHAR(255) NOT NULL,
             host VARCHAR(255),
             port INT,
             weight INT DEFAULT 1,
-            enabled TINYINT(1) DEFAULT 1,
-            UNIQUE KEY uk_pool_member (pool_id, container_id)
+            enabled BOOLEAN DEFAULT TRUE,
+            UNIQUE (pool_id, container_id)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS recovery_playbooks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            steps JSON,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_name (name)
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            steps JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS recovery_executions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            playbook_id INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            playbook_id INT NOT NULL REFERENCES recovery_playbooks(id) ON DELETE CASCADE,
             container_id VARCHAR(255) NOT NULL,
             status VARCHAR(50) DEFAULT 'pending',
             current_step INT DEFAULT 0,
             error_message TEXT,
             started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP,
-            INDEX idx_container (container_id)
+            completed_at TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_recovery_container ON recovery_executions(container_id);",
         """
         CREATE TABLE IF NOT EXISTS templates (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             version INT DEFAULT 1,
-            config JSON,
+            config JSONB,
             created_by VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_name_version (name, version)
+            UNIQUE (name, version)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS scheduled_tasks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             description TEXT,
             task_type VARCHAR(50) NOT NULL,
@@ -291,152 +287,148 @@ def init_database_tables():
             command TEXT,
             enabled BOOLEAN DEFAULT TRUE,
             created_by VARCHAR(255),
-            last_run_at TIMESTAMP NULL,
+            last_run_at TIMESTAMP,
             last_run_status VARCHAR(50),
-            next_run_at TIMESTAMP NULL,
+            next_run_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS dr_plans (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
             plan_type VARCHAR(50) NOT NULL,
             status VARCHAR(50) DEFAULT 'ready',
-            config JSON,
+            config JSONB,
             rto_actual_seconds INT,
             rpo_actual_seconds INT,
-            last_drill TIMESTAMP NULL,
+            last_drill TIMESTAMP,
             last_drill_status VARCHAR(50),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_name (name)
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS dr_drills (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            plan_id INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            plan_id INT NOT NULL REFERENCES dr_plans(id) ON DELETE CASCADE,
             status VARCHAR(50) DEFAULT 'pending',
-            steps JSON,
+            steps JSONB,
             current_step INT DEFAULT 0,
             rto_achieved INT,
             rpo_achieved INT,
             error_message TEXT,
             started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP NULL,
-            INDEX idx_plan_id (plan_id)
+            completed_at TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_drill_plan ON dr_drills(plan_id);",
         """
         CREATE TABLE IF NOT EXISTS runbooks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
             description TEXT,
-            steps JSON,
-            gates JSON,
-            rollback JSON,
+            steps JSONB,
+            gates JSONB,
+            rollback JSONB,
             trigger_type VARCHAR(50) DEFAULT 'manual',
-            trigger_config JSON,
-            enabled TINYINT(1) DEFAULT 1,
+            trigger_config JSONB,
+            enabled BOOLEAN DEFAULT TRUE,
             created_by VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_name (name)
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS runbook_executions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            runbook_id INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            runbook_id INT NOT NULL REFERENCES runbooks(id) ON DELETE CASCADE,
             status VARCHAR(50) DEFAULT 'pending',
             current_step INT DEFAULT 0,
-            step_results JSON,
+            step_results JSONB,
             triggered_by VARCHAR(255),
             error_message TEXT,
             started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP NULL,
-            INDEX idx_runbook_id (runbook_id)
+            completed_at TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_runbook_exec ON runbook_executions(runbook_id);",
         """
         CREATE TABLE IF NOT EXISTS synthetic_checks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             check_type VARCHAR(20) NOT NULL,
             target VARCHAR(500) NOT NULL,
             interval_minutes INT DEFAULT 5,
             probe_location VARCHAR(100),
-            config JSON,
-            enabled TINYINT(1) DEFAULT 1,
+            config JSONB,
+            enabled BOOLEAN DEFAULT TRUE,
             last_status VARCHAR(50),
-            last_checked_at TIMESTAMP NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_type (check_type),
-            INDEX idx_enabled (enabled)
+            last_checked_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_sc_type ON synthetic_checks(check_type);",
+        "CREATE INDEX IF NOT EXISTS idx_sc_enabled ON synthetic_checks(enabled);",
         """
         CREATE TABLE IF NOT EXISTS synthetic_check_results (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            check_id INT NOT NULL,
+            id BIGSERIAL PRIMARY KEY,
+            check_id INT NOT NULL REFERENCES synthetic_checks(id) ON DELETE CASCADE,
             probe_location VARCHAR(100),
             status VARCHAR(50) NOT NULL,
             response_time_ms INT,
             status_code INT,
             error_message TEXT,
-            checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_check_id (check_id),
-            INDEX idx_checked_at (checked_at)
+            checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_scr_check ON synthetic_check_results(check_id);",
+        "CREATE INDEX IF NOT EXISTS idx_scr_ts ON synthetic_check_results(checked_at);",
         """
         CREATE TABLE IF NOT EXISTS scan_results (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             image_name VARCHAR(500) NOT NULL,
             scanner VARCHAR(50) DEFAULT 'trivy',
             status VARCHAR(50) DEFAULT 'pending',
-            summary JSON,
-            vulnerabilities JSON,
+            summary JSONB,
+            vulnerabilities JSONB,
             auto_remediation_pr VARCHAR(500),
             started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP NULL,
-            INDEX idx_image (image_name),
-            INDEX idx_status (status)
+            completed_at TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_scan_image ON scan_results(image_name);",
+        "CREATE INDEX IF NOT EXISTS idx_scan_status ON scan_results(status);",
         """
         CREATE TABLE IF NOT EXISTS scan_policies (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            severity VARCHAR(50) NOT NULL,
+            id SERIAL PRIMARY KEY,
+            severity VARCHAR(50) NOT NULL UNIQUE,
             action VARCHAR(50) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_severity (severity)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS scan_allowlist (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            cve_id VARCHAR(50) NOT NULL,
+            id SERIAL PRIMARY KEY,
+            cve_id VARCHAR(50) NOT NULL UNIQUE,
             reason TEXT,
             added_by VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_cve (cve_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS alerts (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,
             container_id VARCHAR(255),
             alert_type VARCHAR(50) NOT NULL,
-            threshold DOUBLE,
+            threshold DOUBLE PRECISION,
             channel VARCHAR(50) DEFAULT 'dm',
-            enabled TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_user (user_id)
+            enabled BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_alert_user ON alerts(user_id);",
         """
         CREATE TABLE IF NOT EXISTS k8s_clusters (
             name VARCHAR(255) PRIMARY KEY,
@@ -444,7 +436,7 @@ def init_database_tables():
             node_count INT DEFAULT 1,
             type VARCHAR(50) DEFAULT 'k3s',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
@@ -452,7 +444,7 @@ def init_database_tables():
             name VARCHAR(255) PRIMARY KEY,
             location VARCHAR(255) NOT NULL,
             status VARCHAR(50) DEFAULT 'registered',
-            last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
@@ -462,65 +454,65 @@ def init_database_tables():
             repo VARCHAR(512) NOT NULL,
             status VARCHAR(50) DEFAULT 'active',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS cloud_pricing_cache (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             provider VARCHAR(50) NOT NULL,
             instance_type VARCHAR(100) NOT NULL,
             price_monthly DECIMAL(10,2) NOT NULL,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_provider_instance (provider, instance_type)
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (provider, instance_type)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS optimization_recommendations (
             id VARCHAR(50) PRIMARY KEY,
             vps_id VARCHAR(255) NOT NULL,
-            analysis JSON,
+            analysis JSONB,
             status VARCHAR(20) DEFAULT 'pending',
             applied_by VARCHAR(255),
-            applied_at TIMESTAMP NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_vps_id (vps_id),
-            INDEX idx_status (status)
+            applied_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_opt_vps ON optimization_recommendations(vps_id);",
+        "CREATE INDEX IF NOT EXISTS idx_opt_status ON optimization_recommendations(status);",
         """
         CREATE TABLE IF NOT EXISTS threat_incidents (
             id VARCHAR(50) PRIMARY KEY,
             vps_id VARCHAR(255) NOT NULL,
-            anomaly_score DOUBLE DEFAULT 0,
-            alerts JSON,
-            stats JSON,
+            anomaly_score DOUBLE PRECISION DEFAULT 0,
+            alerts JSONB,
+            stats JSONB,
             status VARCHAR(20) DEFAULT 'open',
-            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_vps_id (vps_id),
-            INDEX idx_status (status)
+            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_threat_vps ON threat_incidents(vps_id);",
+        "CREATE INDEX IF NOT EXISTS idx_threat_status ON threat_incidents(status);",
         """
         CREATE TABLE IF NOT EXISTS capacity_forecasts (
             id VARCHAR(50) PRIMARY KEY,
             vps_id VARCHAR(255) NOT NULL,
-            forecast JSON,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_vps_id (vps_id)
+            forecast JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_forecast_vps ON capacity_forecasts(vps_id);",
         """
         CREATE TABLE IF NOT EXISTS gitops_sync_state (
             id VARCHAR(50) PRIMARY KEY,
             vps_id VARCHAR(255) NOT NULL,
-            config_snapshot JSON,
+            config_snapshot JSONB,
             version_id VARCHAR(50),
             sync_type VARCHAR(20) DEFAULT 'sync',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_vps_id (vps_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_gitops_vps ON gitops_sync_state(vps_id);",
     ]
 
     # RBAC tables (multi-tenant organizations, projects, teams, roles)
@@ -530,67 +522,63 @@ def init_database_tables():
             id VARCHAR(36) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             owner_user_id VARCHAR(255) NOT NULL,
-            settings JSON,
-            is_active TINYINT(1) DEFAULT 1,
+            settings JSONB,
+            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_owner (owner_user_id)
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_org_owner ON organizations(owner_user_id);",
         """
         CREATE TABLE IF NOT EXISTS projects (
             id VARCHAR(36) PRIMARY KEY,
-            org_id VARCHAR(36) NOT NULL,
+            org_id VARCHAR(36) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
             name VARCHAR(255) NOT NULL,
             description TEXT,
-            labels JSON,
-            is_active TINYINT(1) DEFAULT 1,
+            labels JSONB,
+            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_org (org_id),
-            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_project_org ON projects(org_id);",
         """
         CREATE TABLE IF NOT EXISTS teams (
             id VARCHAR(36) PRIMARY KEY,
-            org_id VARCHAR(36) NOT NULL,
+            org_id VARCHAR(36) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
             project_id VARCHAR(36) NOT NULL,
             name VARCHAR(255) NOT NULL,
             role_name VARCHAR(50) DEFAULT 'viewer',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_project (project_id),
-            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_team_project ON teams(project_id);",
         """
         CREATE TABLE IF NOT EXISTS team_members (
-            team_id VARCHAR(36) NOT NULL,
+            team_id VARCHAR(36) NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
             user_id VARCHAR(255) NOT NULL,
-            PRIMARY KEY (team_id, user_id),
-            FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+            PRIMARY KEY (team_id, user_id)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS role_assignments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,
-            org_id VARCHAR(36) NOT NULL,
+            org_id VARCHAR(36) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
             project_id VARCHAR(36),
             role_name VARCHAR(50) NOT NULL,
             granted_by VARCHAR(255),
-            expires_at TIMESTAMP NULL,
-            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_user (user_id),
-            INDEX idx_org (org_id),
-            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+            expires_at TIMESTAMP,
+            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_role_user ON role_assignments(user_id);",
+        "CREATE INDEX IF NOT EXISTS idx_role_org ON role_assignments(org_id);",
         """
         CREATE TABLE IF NOT EXISTS roles (
             name VARCHAR(50) PRIMARY KEY,
-            permissions JSON NOT NULL,
-            is_builtin TINYINT(1) DEFAULT 0,
+            permissions JSONB NOT NULL,
+            is_builtin BOOLEAN DEFAULT FALSE,
             description TEXT
         )
         """,
@@ -599,7 +587,7 @@ def init_database_tables():
     billing_tables = [
         """
         CREATE TABLE IF NOT EXISTS usage_records (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             org_id VARCHAR(36) NOT NULL,
             project_id VARCHAR(36),
             instance_id VARCHAR(255) NOT NULL,
@@ -610,11 +598,11 @@ def init_database_tables():
             storage_gb INT DEFAULT 0,
             network_rx_bytes BIGINT DEFAULT 0,
             network_tx_bytes BIGINT DEFAULT 0,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_org (org_id),
-            INDEX idx_collected (collected_at)
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_records(org_id);",
+        "CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage_records(collected_at);",
         """
         CREATE TABLE IF NOT EXISTS invoices (
             id VARCHAR(36) PRIMARY KEY,
@@ -629,32 +617,31 @@ def init_database_tables():
             total DECIMAL(12,2) DEFAULT 0,
             currency VARCHAR(3) DEFAULT 'USD',
             status VARCHAR(20) DEFAULT 'draft',
-            paid_at TIMESTAMP NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_org_status (org_id, status)
+            paid_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "CREATE INDEX IF NOT EXISTS idx_invoice_org ON invoices(org_id, status);",
         """
         CREATE TABLE IF NOT EXISTS invoice_line_items (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            invoice_id VARCHAR(36) NOT NULL,
+            id BIGSERIAL PRIMARY KEY,
+            invoice_id VARCHAR(36) NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
             description VARCHAR(255) NOT NULL,
             quantity DECIMAL(14,4) DEFAULT 0,
             unit VARCHAR(50) DEFAULT '',
             unit_price DECIMAL(12,6) DEFAULT 0,
             total DECIMAL(12,2) DEFAULT 0,
-            metric VARCHAR(50) DEFAULT '',
-            FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+            metric VARCHAR(50) DEFAULT ''
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS pricing_tiers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             org_id VARCHAR(36),
             metric VARCHAR(50) NOT NULL,
             unit_price DECIMAL(12,6) NOT NULL,
             effective_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_org_metric (org_id, metric)
+            UNIQUE (org_id, metric)
         )
         """,
     ]
@@ -666,7 +653,7 @@ def init_database_tables():
             name VARCHAR(255) NOT NULL,
             display_name VARCHAR(255),
             status VARCHAR(20) DEFAULT 'active',
-            labels JSON,
+            labels JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
@@ -674,7 +661,7 @@ def init_database_tables():
         CREATE TABLE IF NOT EXISTS datacenters (
             id VARCHAR(36) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
-            region_id VARCHAR(36) NOT NULL,
+            region_id VARCHAR(36) NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
             location VARCHAR(255),
             provider VARCHAR(50) DEFAULT 'docker',
             status VARCHAR(20) DEFAULT 'active',
@@ -684,9 +671,8 @@ def init_database_tables():
             used_cpu_cores DECIMAL(8,2) DEFAULT 0,
             used_memory_mb BIGINT DEFAULT 0,
             used_storage_gb BIGINT DEFAULT 0,
-            labels JSON,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE CASCADE
+            labels JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
@@ -697,25 +683,26 @@ def init_database_tables():
             api_token VARCHAR(512),
             status VARCHAR(20) DEFAULT 'unknown',
             version VARCHAR(50),
-            labels JSON,
-            last_seen TIMESTAMP NULL,
+            labels JSONB,
+            last_seen TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
     ]
-    tables.extend(rbac_tables)
-    tables.extend(billing_tables)
-    tables.extend(region_tables)
+    all_tables = []
+    all_tables.extend(tables)
+    all_tables.extend(rbac_tables)
+    all_tables.extend(billing_tables)
+    all_tables.extend(region_tables)
 
-    for table in tables:
-        try:
-            cursor.execute(table)
-        except Exception as exc:
-            logger.error("Error creating table: %s", exc)
+    async with pool._pool.acquire() as conn:
+        for stmt in all_tables:
+            try:
+                await conn.execute(stmt)
+            except Exception as exc:
+                logger.error("Error executing DDL: %s — %s", stmt[:80], exc)
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+    logger.info("Database tables initialised (%d statements)", len(all_tables))
 
 
 async def notify_integration(event_type: str, data: Dict[str, Any]) -> bool:

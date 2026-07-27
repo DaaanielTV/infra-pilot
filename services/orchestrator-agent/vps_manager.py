@@ -105,9 +105,10 @@ class VPSManager:
                 conn = self._get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT IGNORE INTO vps_containers "
+                    "INSERT INTO vps_containers "
                     "(container_id, user_id, container_name, ssh_command) "
-                    "VALUES (%s, %s, %s, %s)",
+                    "VALUES (%s, %s, %s, %s) "
+                    "ON CONFLICT (container_id) DO NOTHING",
                     (container_id, user_id, container_id[:12], ssh_command),
                 )
                 conn.commit()
@@ -218,19 +219,14 @@ class VPSManager:
             return None
 
     def _get_db_connection(self):
-        """Create a MySQL database connection using config settings.
+        """Create a PostgreSQL database connection using config settings.
 
         Returns:
-            A ``mysql.connector.connection`` instance.
+            A ``psycopg2.connection`` instance.
         """
-        import mysql.connector
+        from db import get_sync_connection
 
-        return mysql.connector.connect(
-            host=config.DB_HOST,
-            user=config.DB_USER,
-            password=config.DB_PASSWORD,
-            database=config.DB_NAME,
-        )
+        return get_sync_connection()
 
     async def create_vps(
         self, user_id: str, cfg: VPSConfig
@@ -1030,12 +1026,12 @@ class VPSManager:
         try:
             conn = self._get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT * FROM vps_statistics WHERE container_id = %s "
-                "AND timestamp > DATE_SUB(NOW(), INTERVAL %s HOUR) "
-                "ORDER BY timestamp ASC",
-                (container_id, hours),
-            )
+                cursor.execute(
+                    "SELECT * FROM vps_statistics WHERE container_id = %s "
+                    "AND timestamp > NOW() - INTERVAL '1 HOUR' * %s "
+                    "ORDER BY timestamp ASC",
+                    (container_id, hours),
+                )
             results = cursor.fetchall()
             cursor.close()
             conn.close()
@@ -1058,17 +1054,17 @@ class VPSManager:
         try:
             conn = self._get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT AVG(network_rx) as avg_rx, "
-                "AVG(network_tx) as avg_tx, "
-                "MAX(network_rx) as peak_rx, "
-                "MAX(network_tx) as peak_tx, "
-                "SUM(network_rx + network_tx) as total_traffic "
-                "FROM vps_statistics "
-                "WHERE container_id = %s "
-                "AND timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR)",
-                (container_id,),
-            )
+                cursor.execute(
+                    "SELECT AVG(network_rx) as avg_rx, "
+                    "AVG(network_tx) as avg_tx, "
+                    "MAX(network_rx) as peak_rx, "
+                    "MAX(network_tx) as peak_tx, "
+                    "SUM(network_rx + network_tx) as total_traffic "
+                    "FROM vps_statistics "
+                    "WHERE container_id = %s "
+                    "AND timestamp > NOW() - INTERVAL '24 HOURS'",
+                    (container_id,),
+                )
             result = cursor.fetchone()
             cursor.close()
             conn.close()

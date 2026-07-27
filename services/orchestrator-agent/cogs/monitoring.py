@@ -3,7 +3,6 @@ from discord.ext import commands, tasks
 from discord import app_commands
 import psutil
 import docker
-import mysql.connector
 from datetime import datetime, timedelta
 import asyncio
 from typing import Dict, List, Optional
@@ -15,6 +14,7 @@ import io
 import os
 
 from config import config
+from db import get_sync_connection
 from vps_manager import VPSManager
 
 
@@ -33,12 +33,7 @@ class Monitoring(commands.Cog):
         self.update_status.cancel()
 
     def get_db(self):
-        return mysql.connector.connect(
-            host=config.DB_HOST,
-            user=config.DB_USER,
-            password=config.DB_PASSWORD,
-            database=config.DB_NAME,
-        )
+        return get_sync_connection()
 
     @tasks.loop(minutes=1)
     async def monitoring_loop(self):

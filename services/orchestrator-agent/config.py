@@ -25,12 +25,12 @@ class Config:
         "INTEGRATION_SERVICE_URL", "http://localhost:9000"
     )
 
-    # Database
+    # Database (PostgreSQL — matches docker-compose.yml)
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
-    DB_USER: str = os.getenv("DB_USER", "root")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+    DB_USER: str = os.getenv("DB_USER", "infra_pilot")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "infra_pilot_dev_password")
     DB_NAME: str = os.getenv("DB_NAME", "infra_pilot")
-    DB_PORT: int = int(os.getenv("DB_PORT", "3306"))
+    DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
 
     # VPS
     VPS_INSTANCES_FILE: str = os.getenv(

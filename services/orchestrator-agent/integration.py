@@ -523,6 +523,80 @@ def init_database_tables():
         """,
     ]
 
+    # RBAC tables (multi-tenant organizations, projects, teams, roles)
+    rbac_tables = [
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            owner_user_id VARCHAR(255) NOT NULL,
+            settings JSON,
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_owner (owner_user_id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS projects (
+            id VARCHAR(36) PRIMARY KEY,
+            org_id VARCHAR(36) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            labels JSON,
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_org (org_id),
+            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS teams (
+            id VARCHAR(36) PRIMARY KEY,
+            org_id VARCHAR(36) NOT NULL,
+            project_id VARCHAR(36) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            role_name VARCHAR(50) DEFAULT 'viewer',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_project (project_id),
+            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS team_members (
+            team_id VARCHAR(36) NOT NULL,
+            user_id VARCHAR(255) NOT NULL,
+            PRIMARY KEY (team_id, user_id),
+            FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS role_assignments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            org_id VARCHAR(36) NOT NULL,
+            project_id VARCHAR(36),
+            role_name VARCHAR(50) NOT NULL,
+            granted_by VARCHAR(255),
+            expires_at TIMESTAMP NULL,
+            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id),
+            INDEX idx_org (org_id),
+            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS roles (
+            name VARCHAR(50) PRIMARY KEY,
+            permissions JSON NOT NULL,
+            is_builtin TINYINT(1) DEFAULT 0,
+            description TEXT
+        )
+        """,
+    ]
+    tables.extend(rbac_tables)
+
     for table in tables:
         try:
             cursor.execute(table)

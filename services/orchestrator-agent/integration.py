@@ -126,6 +126,8 @@ async def init_database_tables():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
+        "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;",
+        "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'running';",
         "CREATE INDEX IF NOT EXISTS idx_vps_user ON vps_containers(user_id);",
         """
         CREATE TABLE IF NOT EXISTS health_checks (

@@ -53,23 +53,83 @@ class VPSManager:
         self._load_instances()
 
     def _load_instances(self):
-        """Load VPS instance metadata from disk."""
+        """Load VPS instance metadata from PostgreSQL (primary) or JSON file (fallback)."""
+        loaded = False
         try:
-            if os.path.exists(config.VPS_INSTANCES_FILE):
-                with open(config.VPS_INSTANCES_FILE, "r") as f:
-                    self.vps_instances = json.load(f)
+            conn = self._get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT container_id, user_id, container_name, ssh_command, "
+                    "       status, metadata, created_at "
+                    "FROM vps_containers"
+                )
+                rows = cursor.fetchall()
+                cursor.close()
+                conn.close()
+                for row in rows:
+                    cid = row[0]
+                    self.vps_instances[cid] = {
+                        "container_id": cid,
+                        "user_id": row[1],
+                        "container_name": row[2],
+                        "ssh_command": row[3],
+                        "status": row[4] or "running",
+                        "created_at": row[6].isoformat() if row[6] else None,
+                        "config": {},
+                    }
+                    metadata = row[5] or {}
+                    if isinstance(metadata, dict):
+                        self.vps_instances[cid].update(metadata)
+                loaded = True
         except Exception as exc:
-            logger.error("Error loading VPS instances: %s", exc)
-            self.vps_instances = {}
+            logger.warning("DB load failed, trying JSON fallback: %s", exc)
+        if not loaded:
+            try:
+                if os.path.exists(config.VPS_INSTANCES_FILE):
+                    with open(config.VPS_INSTANCES_FILE, "r") as f:
+                        self.vps_instances = json.load(f)
+            except Exception as exc:
+                logger.error("Error loading VPS instances from JSON: %s", exc)
+                self.vps_instances = {}
 
     async def save_instances(self):
-        """Persist VPS instance metadata to disk asynchronously."""
+        """Persist VPS instance metadata to PostgreSQL (primary) and JSON file (fallback)."""
+        try:
+            from db import get_pool
+            pool = await get_pool()
+            async with pool.acquire() as conn:
+                for cid, info in self.vps_instances.items():
+                    metadata = {k: v for k, v in info.items()
+                                if k not in ("container_id", "user_id",
+                                             "container_name", "ssh_command",
+                                             "status", "created_at")}
+                    await conn.execute(
+                        "INSERT INTO vps_containers "
+                        "(container_id, user_id, container_name, ssh_command, status, metadata) "
+                        "VALUES ($1, $2, $3, $4, $5, $6::jsonb) "
+                        "ON CONFLICT (container_id) DO UPDATE SET "
+                        "  user_id = EXCLUDED.user_id, "
+                        "  container_name = EXCLUDED.container_name, "
+                        "  ssh_command = EXCLUDED.ssh_command, "
+                        "  status = EXCLUDED.status, "
+                        "  metadata = COALESCE(vps_containers.metadata, '{}'::jsonb) || EXCLUDED.metadata",
+                        cid,
+                        info.get("user_id", ""),
+                        info.get("container_name", cid[:12]),
+                        info.get("ssh_command", ""),
+                        info.get("status", "running"),
+                        json.dumps(metadata),
+                    )
+        except Exception as exc:
+            logger.warning("DB save failed, falling back to JSON: %s", exc)
+        # Always write JSON fallback as well
         try:
             content = json.dumps(self.vps_instances, indent=2)
             async with aiofiles.open(config.VPS_INSTANCES_FILE, "w") as f:
                 await f.write(content)
         except Exception as exc:
-            logger.error("Error saving VPS instances: %s", exc)
+            logger.error("Error saving VPS instances to JSON: %s", exc)
 
     def is_safe_name(self, name: str) -> bool:
         """Check if a container name is safe (matches allowed pattern).

@@ -1,29 +1,52 @@
 import importlib
 
 
-def test_core_orchestrator_modules_import():
+def test_vps_manager_imports():
     module = importlib.import_module("vps_manager")
     assert hasattr(module, "VPSManager")
     assert hasattr(module, "VPSConfig")
 
 
-def test_disaster_recovery_cog_imports():
-    module = importlib.import_module("cogs.disaster_recovery")
-    assert hasattr(module, "DisasterRecovery")
-    assert hasattr(module, "DR_PLAN_TYPES")
+def test_config_imports():
+    module = importlib.import_module("config")
+    assert hasattr(module, "Config")
+    assert hasattr(module, "config")
 
 
-def test_runbook_automation_cog_imports():
-    module = importlib.import_module("cogs.runbook_automation")
-    assert hasattr(module, "RunbookAutomation")
+def test_db_module_imports():
+    module = importlib.import_module("db")
+    assert hasattr(module, "DatabasePool")
+    assert hasattr(module, "get_pool")
+    assert hasattr(module, "get_sync_connection")
 
 
-def test_synthetic_monitoring_cog_imports():
-    module = importlib.import_module("cogs.synthetic_monitoring")
-    assert hasattr(module, "SyntheticMonitoring")
-    assert hasattr(module, "CHECK_TYPES")
+def test_compute_base_imports():
+    module = importlib.import_module("compute.base")
+    assert hasattr(module, "ComputeProvider")
+    assert hasattr(module, "InstanceSpec")
 
 
-def test_container_scanner_cog_imports():
-    module = importlib.import_module("cogs.container_scanner")
-    assert hasattr(module, "ContainerScanner")
+def test_manifest_schema_imports():
+    module = importlib.import_module("manifest.schema")
+    assert hasattr(module, "InfraFile")
+
+
+def test_rbac_engine_imports():
+    module = importlib.import_module("rbac.engine")
+    assert hasattr(module, "RBACEngine")
+
+
+def test_billing_engine_imports():
+    module = importlib.import_module("billing.billing_engine")
+    assert hasattr(module, "BillingEngine")
+
+
+def test_healing_engine_imports():
+    module = importlib.import_module("healing.engine")
+    assert hasattr(module, "HealingEngine")
+
+
+def test_region_imports():
+    module = importlib.import_module("region.region")
+    assert hasattr(module, "Region")
+    assert hasattr(module, "Datacenter")

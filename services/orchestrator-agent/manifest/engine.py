@@ -10,11 +10,12 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import docker
 import yaml
 
 from compute.base import ComputeProvider, InstanceInfo, InstanceSpec, ProviderError
 from compute.registry import ProviderRegistry
-from manifest.schema import InfraFile, InfraInstance
+from manifest.schema import InfraFile, InfraInstance, InfraNetwork, InfraStorage
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class ManifestEngine:
 
     def __init__(self, dry_run: bool = False):
         self.dry_run = dry_run
+        self._docker = docker.from_env()
 
     # ------------------------------------------------------------------
     # Loading
@@ -154,6 +156,51 @@ class ManifestEngine:
                         severity=DriftSeverity.WARNING,
                     )
                 )
+
+        # Check networks
+        existing_networks = {n.name for n in self._docker.networks.list()}
+        for net in desired.spec.networks:
+            if net.name not in existing_networks:
+                entries.append(
+                    DriftEntry(
+                        instance_name=net.name,
+                        field="network_exists",
+                        expected=True,
+                        actual=False,
+                        severity=DriftSeverity.ERROR,
+                        message=f"Network '{net.name}' is defined but does not exist",
+                    )
+                )
+
+        # Check storage volumes
+        existing_volumes = {v.name for v in self._docker.volumes.list()}
+        for vol in desired.spec.storage:
+            if vol.name not in existing_volumes:
+                entries.append(
+                    DriftEntry(
+                        instance_name=vol.name,
+                        field="volume_exists",
+                        expected=True,
+                        actual=False,
+                        severity=DriftSeverity.ERROR,
+                        message=f"Volume '{vol.name}' is defined but does not exist",
+                    )
+                )
+            else:
+                # Check size
+                vol_info = self._docker.volumes.get(vol.name)
+                labels = getattr(vol_info, "labels", {}) or {}
+                desired_size = labels.get("size_gb")
+                if desired_size and str(vol.size_gb) != desired_size:
+                    entries.append(
+                        DriftEntry(
+                            instance_name=vol.name,
+                            field="volume_size_gb",
+                            expected=vol.size_gb,
+                            actual=int(desired_size),
+                            severity=DriftSeverity.WARNING,
+                        )
+                    )
 
         # Instances that exist but are not in the manifest
         for name in current_names - desired_names:
@@ -248,6 +295,51 @@ class ManifestEngine:
                         result.instances_unchanged += 1
             except Exception as exc:
                 msg = f"Failed to reconcile {inst.name}: {exc}"
+                result.errors.append(msg)
+                logger.error(msg)
+
+        # Reconcile networks
+        for net in desired.spec.networks:
+            try:
+                existing = self._docker.networks.list(names=[net.name])
+                if not existing:
+                    if not self.dry_run:
+                        ipam = docker.types.IPAMConfig(
+                            driver="default",
+                            config=[{"subnet": net.cidr}],
+                        ) if net.cidr else None
+                        self._docker.networks.create(
+                            net.name,
+                            driver="bridge",
+                            ipam=ipam,
+                            labels={"region": net.region, "manifest": desired.metadata.name},
+                        )
+                        logger.info("Created network: %s", net.name)
+                # else: network exists — could validate subnet but Docker doesn't easily expose IPAM config
+            except Exception as exc:
+                msg = f"Failed to reconcile network {net.name}: {exc}"
+                result.errors.append(msg)
+                logger.error(msg)
+
+        # Reconcile storage volumes
+        for vol in desired.spec.storage:
+            try:
+                existing = self._docker.volumes.list()
+                found = any(v.name == vol.name for v in existing)
+                if not found:
+                    if not self.dry_run:
+                        self._docker.volumes.create(
+                            vol.name,
+                            driver=vol.driver,
+                            labels={
+                                "size_gb": str(vol.size_gb),
+                                "region": vol.region,
+                                "manifest": desired.metadata.name,
+                            },
+                        )
+                        logger.info("Created volume: %s", vol.name)
+            except Exception as exc:
+                msg = f"Failed to reconcile volume {vol.name}: {exc}"
                 result.errors.append(msg)
                 logger.error(msg)
 

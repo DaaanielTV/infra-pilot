@@ -595,7 +595,71 @@ def init_database_tables():
         )
         """,
     ]
+    # Billing tables (usage metering and invoicing)
+    billing_tables = [
+        """
+        CREATE TABLE IF NOT EXISTS usage_records (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            org_id VARCHAR(36) NOT NULL,
+            project_id VARCHAR(36),
+            instance_id VARCHAR(255) NOT NULL,
+            instance_name VARCHAR(255),
+            provider VARCHAR(50) DEFAULT 'docker',
+            cpu_cores DECIMAL(6,2) DEFAULT 0,
+            memory_mb INT DEFAULT 0,
+            storage_gb INT DEFAULT 0,
+            network_rx_bytes BIGINT DEFAULT 0,
+            network_tx_bytes BIGINT DEFAULT 0,
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_org (org_id),
+            INDEX idx_collected (collected_at)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS invoices (
+            id VARCHAR(36) PRIMARY KEY,
+            org_id VARCHAR(36) NOT NULL,
+            org_name VARCHAR(255) NOT NULL,
+            period_start TIMESTAMP NOT NULL,
+            period_end TIMESTAMP NOT NULL,
+            subtotal DECIMAL(12,2) DEFAULT 0,
+            discount DECIMAL(12,2) DEFAULT 0,
+            tax_rate DECIMAL(5,4) DEFAULT 0,
+            tax_amount DECIMAL(12,2) DEFAULT 0,
+            total DECIMAL(12,2) DEFAULT 0,
+            currency VARCHAR(3) DEFAULT 'USD',
+            status VARCHAR(20) DEFAULT 'draft',
+            paid_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_org_status (org_id, status)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS invoice_line_items (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            invoice_id VARCHAR(36) NOT NULL,
+            description VARCHAR(255) NOT NULL,
+            quantity DECIMAL(14,4) DEFAULT 0,
+            unit VARCHAR(50) DEFAULT '',
+            unit_price DECIMAL(12,6) DEFAULT 0,
+            total DECIMAL(12,2) DEFAULT 0,
+            metric VARCHAR(50) DEFAULT '',
+            FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS pricing_tiers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            org_id VARCHAR(36),
+            metric VARCHAR(50) NOT NULL,
+            unit_price DECIMAL(12,6) NOT NULL,
+            effective_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_org_metric (org_id, metric)
+        )
+        """,
+    ]
     tables.extend(rbac_tables)
+    tables.extend(billing_tables)
 
     for table in tables:
         try:

@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 
 from compute.base import ComputeProvider, InstancePowerState
 from compute.registry import ProviderRegistry
@@ -75,6 +75,7 @@ class RemediationPolicy:
 
 
 REMEDIATION_HANDLER = Callable[[str, RemediationAction], bool]
+REMEDIATION_HANDLER_CORO = Callable[[str, RemediationAction], Awaitable[bool]]
 
 
 class HealingEngine:
@@ -91,6 +92,7 @@ class HealingEngine:
         self._handlers: Dict[RemediationAction, REMEDIATION_HANDLER] = {}
         self._running = False
         self._task: Optional[asyncio.Task] = None
+        self._pending_tasks: Set[asyncio.Task] = set()
 
         self._register_default_handlers()
 
@@ -195,7 +197,10 @@ class HealingEngine:
 
             start = datetime.now(timezone.utc)
             try:
-                success = handler(instance_id, action)
+                if asyncio.iscoroutinefunction(handler):
+                    success = await handler(instance_id, action)
+                else:
+                    success = handler(instance_id, action)
             except Exception as exc:
                 success = False
                 logger.error("Remediation handler failed for %s: %s", instance_id, exc)
@@ -220,7 +225,10 @@ class HealingEngine:
         """Escalate to a human operator."""
         handler = self._handlers.get(RemediationAction.ESCALATE)
         if handler:
-            handler(instance_id, RemediationAction.ESCALATE)
+            if asyncio.iscoroutinefunction(handler):
+                await handler(instance_id, RemediationAction.ESCALATE)
+            else:
+                handler(instance_id, RemediationAction.ESCALATE)
         return RemediationResult(
             instance_id=instance_id,
             action=RemediationAction.ESCALATE,
@@ -231,16 +239,16 @@ class HealingEngine:
     # ------------------------------------------------------------------
     # Default handlers (can be overridden)
     # ------------------------------------------------------------------
-    def _default_restart(self, instance_id: str, action: RemediationAction) -> bool:
+    async def _default_restart(self, instance_id: str, action: RemediationAction) -> bool:
         """Default: restart via Docker provider."""
         prov = ProviderRegistry.get("docker")
         if not prov:
             return False
         try:
-            import asyncio
-            asyncio.create_task(prov.restart(instance_id))
+            await prov.restart(instance_id)
             return True
-        except Exception:
+        except Exception as exc:
+            logger.error("Restart failed for %s: %s", instance_id, exc)
             return False
 
     def _default_notify(self, instance_id: str, action: RemediationAction) -> bool:

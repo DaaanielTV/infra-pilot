@@ -1,3 +1,9 @@
+"""Prepaid billing cog — pay-as-you-go balance, hourly deduction, top-ups.
+
+Manages user prepaid balances with hourly deduction for running VPS
+instances. Provides balance check, top-up, and cost estimation commands.
+"""
+
 import asyncio
 import logging
 import json

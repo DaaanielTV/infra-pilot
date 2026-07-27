@@ -1,3 +1,9 @@
+"""Cleanup cog — idle resource reclamation and stale container cleanup.
+
+Scans VPS instances for idle containers exceeding a configurable
+threshold and removes them to free resources.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

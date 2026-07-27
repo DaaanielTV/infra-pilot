@@ -1,3 +1,9 @@
+"""Backup manager cog — create, list, and restore Docker image backups.
+
+Integrates with VPSManager to commit containers as Docker images,
+list existing backups by retention type, and restore from a backup image.
+"""
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands

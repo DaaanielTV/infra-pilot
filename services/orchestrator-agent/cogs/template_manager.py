@@ -1,3 +1,9 @@
+"""Template manager cog — versioned instance configuration templates.
+
+Create, list, and apply named templates with CPU/memory/storage/image
+presets for rapid VPS provisioning.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

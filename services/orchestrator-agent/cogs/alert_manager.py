@@ -1,3 +1,9 @@
+"""Alert manager cog — user-defined alert rules with threshold evaluation.
+
+Users create alerts on CPU/memory/disk metrics. The monitoring loop
+evaluates them against live container stats and sends Discord DMs.
+"""
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands

@@ -1,3 +1,10 @@
+"""VPS pricing cog — cost calculation and one-time VPS purchase.
+
+Provides /vpscost to calculate monthly pricing for a given resource
+configuration and /purchasevps to deploy a VPS by paying from the
+player economy balance.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

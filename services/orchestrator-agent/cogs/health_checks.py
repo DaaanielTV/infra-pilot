@@ -1,3 +1,9 @@
+"""Health checks cog — manage per-container health check configurations.
+
+Supports ping, port, process, and API health checks with configurable
+intervals, timeouts, and retry counts.
+"""
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands

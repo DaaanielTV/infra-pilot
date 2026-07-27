@@ -1,3 +1,9 @@
+"""Update manager cog — container image updates and rebuilds.
+
+Pulls latest Docker images for running containers and orchestrates
+rolling rebuilds with minimal downtime.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

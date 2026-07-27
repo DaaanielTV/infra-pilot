@@ -1,3 +1,9 @@
+"""Modpack installer cog — one-click Minecraft modpack deployment.
+
+Downloads and installs modpacks (CurseForge, FTB, etc.) into VPS
+containers using automated setup scripts.
+"""
+
 import asyncio
 import logging
 import json

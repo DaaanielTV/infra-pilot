@@ -1,3 +1,10 @@
+"""Monitoring cog — container resource stats, charts, and threshold alerts.
+
+Collects live CPU/memory/network stats from Docker containers, caches
+them for dashboard commands, generates matplotlib charts, and alerts
+users when metrics cross configurable thresholds.
+"""
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands

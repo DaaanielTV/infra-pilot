@@ -1,3 +1,9 @@
+"""VPS billing cog — automatic billing loop against player economy.
+
+Charges users monthly for VPS instances based on their resource usage,
+with a grace period for late payments and automatic suspension.
+"""
+
 import discord
 from discord.ext import commands, tasks
 import psycopg2

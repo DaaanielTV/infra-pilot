@@ -1,3 +1,9 @@
+"""Task scheduler cog — cron-based execution of container commands and tasks.
+
+Manages scheduled tasks with cron expressions, supports one-off and
+recurring executions, tracks run history and status.
+"""
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands

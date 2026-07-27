@@ -1,3 +1,9 @@
+"""VPS commands cog — primary VPS lifecycle slash commands.
+
+Create, start, stop, restart, delete, and manage VPS instances.
+This is the main interface between Discord users and VPSManager.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

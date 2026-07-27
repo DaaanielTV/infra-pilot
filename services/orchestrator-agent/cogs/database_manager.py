@@ -1,3 +1,9 @@
+"""Database manager cog — provisions and manages MySQL/MariaDB containers.
+
+Creates isolated database containers on demand with auto-generated
+passwords, lists user databases, and handles deletion.
+"""
+
 import asyncio
 import logging
 import os

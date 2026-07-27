@@ -1,3 +1,9 @@
+"""Resource manager cog — CPU/memory resource pools with oversubscription.
+
+Groups containers into resource pools with configurable oversubscription
+ratios and tracks pool capacity utilization.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

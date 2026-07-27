@@ -1,3 +1,9 @@
+"""Legacy text-based Discord commands for VPS management.
+
+Provides prefix-based commands (!servers, !create, !start, etc.)
+alongside slash equivalents. Used as a compatibility layer.
+"""
+
 import discord
 from discord.ext import commands
 from discord import app_commands

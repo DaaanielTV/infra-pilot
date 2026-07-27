@@ -84,6 +84,11 @@ async def on_ready():
             asc = bot.get_cog("AutoScaler")
             if asc:
                 asc.engine = engine
+            # Connect to healing engine if available
+            healing = bot.get_cog("HealingCog")
+            if healing and hasattr(healing, "engine"):
+                healing.engine.set_scaling_engine(engine)
+                logger.info("Scaling engine connected to healing engine")
             asyncio.create_task(engine.start())
             logger.info("Auto-scaling engine started")
 

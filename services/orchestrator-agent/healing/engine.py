@@ -93,6 +93,7 @@ class HealingEngine:
         self._running = False
         self._task: Optional[asyncio.Task] = None
         self._pending_tasks: Set[asyncio.Task] = set()
+        self._scaling_engine: Optional[Any] = None
 
         self._register_default_handlers()
 
@@ -101,6 +102,12 @@ class HealingEngine:
         self._handlers[RemediationAction.RESTART] = self._default_restart
         self._handlers[RemediationAction.NOTIFY] = self._default_notify
         self._handlers[RemediationAction.ESCALATE] = self._default_escalate
+        # SCALE_UP is handled by the ScalingEngine when registered externally
+
+    def set_scaling_engine(self, engine) -> None:
+        """Connect a ScalingEngine to handle SCALE_UP actions."""
+        self._scaling_engine = engine
+        self._handlers[RemediationAction.SCALE_UP] = self._default_scale_up
 
     def register_handler(
         self, action: RemediationAction, handler: REMEDIATION_HANDLER
@@ -249,6 +256,22 @@ class HealingEngine:
             return True
         except Exception as exc:
             logger.error("Restart failed for %s: %s", instance_id, exc)
+            return False
+
+    def _default_scale_up(self, instance_id: str, action: RemediationAction) -> bool:
+        """Delegate SCALE_UP to the connected ScalingEngine."""
+        if not self._scaling_engine:
+            logger.warning("No scaling engine connected for SCALE_UP on %s", instance_id)
+            return False
+        try:
+            # Trigger an immediate evaluate for all rules on this instance
+            import asyncio
+            task = asyncio.ensure_future(self._scaling_engine.evaluate_all())
+            self._pending_tasks.add(task)
+            task.add_done_callback(self._pending_tasks.discard)
+            return True
+        except Exception as exc:
+            logger.error("SCALE_UP delegation failed for %s: %s", instance_id, exc)
             return False
 
     def _default_notify(self, instance_id: str, action: RemediationAction) -> bool:

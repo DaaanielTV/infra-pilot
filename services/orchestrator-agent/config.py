@@ -96,10 +96,16 @@ class Config:
     GITOPS_MAX_VERSIONS_PER_VPS: int = 50
     GITOPS_WEBHOOK_PORT: int = 8500
 
-    # Auto-scale
-    AUTO_SCALE_COOLDOWN_MINUTES: int = 5
-    AUTO_SCALE_CPU_THRESHOLD: float = 80.0
-    AUTO_SCALE_MEMORY_THRESHOLD: float = 80.0
+    # Auto-scale (overridable via environment variables)
+    AUTO_SCALE_COOLDOWN_MINUTES: int = int(
+        os.getenv("AUTO_SCALE_COOLDOWN_MINUTES", "5")
+    )
+    AUTO_SCALE_CPU_THRESHOLD: float = float(
+        os.getenv("AUTO_SCALE_CPU_THRESHOLD", "80.0")
+    )
+    AUTO_SCALE_MEMORY_THRESHOLD: float = float(
+        os.getenv("AUTO_SCALE_MEMORY_THRESHOLD", "80.0")
+    )
 
     # Oversubscription
     OVERSUBSCRIPTION_RATIOS: Dict[str, float] = {

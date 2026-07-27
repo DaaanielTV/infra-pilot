@@ -19,7 +19,7 @@ from .edge_computing.internet_of_things import app as internet_of_things_app
 from .edge_computing.content_delivery_network import app as content_delivery_network_app
 from .edge_computing.mesh_networking import app as mesh_networking_app
 from .edge_computing.lora_wan import app as lora_wan_app
-from .edge_computing.pipeline import app as pipeline_app
+from .edge_computing.data_pipeline import app as data_pipeline_app
 
 register("edge", "Edge devices")(edge_computing_app)
 register("fn", "Edge functions")(edge_functions_app)
@@ -28,7 +28,7 @@ register("iot", "IoT tools")(internet_of_things_app)
 register("cdn", "CDN")(content_delivery_network_app)
 register("mesh", "Mesh networks")(mesh_networking_app)
 register("gw", "LoRaWAN gateways")(lora_wan_app)
-register("pipeline", "Data pipelines")(pipeline_app)
+register("pipeline", "Data pipelines")(data_pipeline_app)
 
 from .green.energy import app as energy_app
 from .green.carbon import app as carbon_app

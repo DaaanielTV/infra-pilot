@@ -14,8 +14,39 @@ dotenv.config();
 
 // --- Constants and Configuration ---
 
-/** @constant {string} Path to server limits JSON file */
+/** @constant {string} Path to server limits JSON file (fallback) */
 const SERVER_LIMITS_FILE = path.join(__dirname, 'server_limits.json');
+
+// MySQL connection pool for server limits (replaces flat file as primary store)
+let _dbPool = null;
+async function _getDbPool() {
+  if (!_dbPool) {
+    const mysql = require('mysql2/promise');
+    _dbPool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'infra_pilot',
+      waitForConnections: true,
+      connectionLimit: 5,
+    });
+    try {
+      const conn = await _dbPool.getConnection();
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS server_limits (
+          user_id VARCHAR(255) NOT NULL,
+          server_identifier VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (user_id, server_identifier)
+        )
+      `);
+      conn.release();
+    } catch (err) {
+      console.error('[DB] server_limits table setup failed:', err.message);
+    }
+  }
+  return _dbPool;
+}
 
 /** @constant {string|undefined} */
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -87,31 +118,63 @@ const ReportBot = require('./modules/reportBot');
 // --- Utility Functions ---
 
 /**
- * Load server limits from the JSON file.
+ * Load server limits from MySQL (primary) or JSON file (fallback).
  * @returns {Object} Server limits map keyed by Discord user ID
  */
-function loadServerLimits() {
+async function loadServerLimits() {
+  try {
+    const pool = await _getDbPool();
+    const [rows] = await pool.execute(
+      'SELECT user_id, server_identifier FROM server_limits'
+    );
+    const limits = {};
+    for (const row of rows) {
+      if (!limits[row.user_id]) limits[row.user_id] = [];
+      limits[row.user_id].push(row.server_identifier);
+    }
+    return limits;
+  } catch (error) {
+    console.error('[ServerLimits] DB load failed, trying JSON fallback:', error.message);
+  }
+  // Fallback to JSON file
   try {
     if (!fs.existsSync(SERVER_LIMITS_FILE)) {
       fs.writeFileSync(SERVER_LIMITS_FILE, JSON.stringify({}));
     }
     return JSON.parse(fs.readFileSync(SERVER_LIMITS_FILE, 'utf8'));
   } catch (error) {
-    console.error('[ServerLimits] Error loading server limits:', error);
+    console.error('[ServerLimits] JSON fallback also failed:', error);
     return {};
   }
 }
 
 /**
- * Save server limits to the JSON file.
- * @param {Object} limits - Server limits map
- * @returns {void}
+ * Save a server limit entry to MySQL (primary) and JSON file (fallback).
+ * @param {string} userId - Discord user ID
+ * @param {string} serverIdentifier - Pterodactyl server identifier
+ * @returns {Promise<void>}
  */
-function saveServerLimits(limits) {
+async function saveServerLimits(userId, serverIdentifier) {
   try {
-    fs.writeFileSync(SERVER_LIMITS_FILE, JSON.stringify(limits, null, 2));
+    const pool = await _getDbPool();
+    await pool.execute(
+      'INSERT IGNORE INTO server_limits (user_id, server_identifier) VALUES (?, ?)',
+      [userId, serverIdentifier]
+    );
   } catch (error) {
-    console.error('[ServerLimits] Error saving server limits:', error);
+    console.error('[ServerLimits] DB save failed, using JSON fallback:', error.message);
+    // Fallback: update JSON file
+    try {
+      let limits = {};
+      if (fs.existsSync(SERVER_LIMITS_FILE)) {
+        limits = JSON.parse(fs.readFileSync(SERVER_LIMITS_FILE, 'utf8'));
+      }
+      if (!limits[userId]) limits[userId] = [];
+      limits[userId].push(serverIdentifier);
+      fs.writeFileSync(SERVER_LIMITS_FILE, JSON.stringify(limits, null, 2));
+    } catch (fsError) {
+      console.error('[ServerLimits] JSON fallback save failed:', fsError.message);
+    }
   }
 }
 
@@ -402,11 +465,7 @@ async function processServerCreation(message, userState, processingMsg) {
 
     const serverResponse = await createPterodactylServer(serverData);
 
-    const serverLimits = loadServerLimits();
-    const userServers = serverLimits[message.author.id] || [];
-    userServers.push(serverResponse.identifier);
-    serverLimits[message.author.id] = userServers;
-    saveServerLimits(serverLimits);
+    await saveServerLimits(message.author.id, serverResponse.identifier);
 
     try {
       const member = await message.guild.members.fetch(message.author.id);
@@ -1107,7 +1166,7 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isCommand()) {
     if (interaction.channelId === SERVER_CREATION_CHANNEL_ID && interaction.commandName === 'server') {
-      const serverLimits = loadServerLimits();
+      const serverLimits = await loadServerLimits();
       const userServers = serverLimits[interaction.user.id] || [];
 
       if (userServers.length >= MAX_SERVERS_PER_USER) {

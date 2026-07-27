@@ -84,7 +84,66 @@ async def start_webhook_server(bot_instance: commands.Bot):
             "service": "orchestrator-agent",
         })
 
+    async def metrics(request: web.Request) -> web.Response:
+        """Prometheus /metrics endpoint."""
+        import os
+        import sys
+        import psutil
+
+        pyver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        lines = [
+            "# HELP orchestrator_agent_info Static info about the agent",
+            "# TYPE orchestrator_agent_info gauge",
+            f'orchestrator_agent_info{{service="orchestrator-agent"}} 1',
+            "",
+            "# HELP python_info Python runtime info",
+            "# TYPE python_info gauge",
+            f'python_info{{version="{pyver}"}} 1',
+            "",
+        ]
+
+        # Process metrics
+        proc = psutil.Process()
+        with proc.oneshot():
+            mem = proc.memory_info()
+            lines.append("# HELP process_virtual_memory_bytes Virtual memory size in bytes")
+            lines.append("# TYPE process_virtual_memory_bytes gauge")
+            lines.append(f"process_virtual_memory_bytes {mem.vss}")
+            lines.append("# HELP process_resident_memory_bytes Resident memory size in bytes")
+            lines.append("# TYPE process_resident_memory_bytes gauge")
+            lines.append(f"process_resident_memory_bytes {mem.rss}")
+            cpu_percent = proc.cpu_percent(interval=0)
+            lines.append("# HELP process_cpu_percent CPU usage percentage")
+            lines.append("# TYPE process_cpu_percent gauge")
+            lines.append(f"process_cpu_percent {cpu_percent}")
+            lines.append("")
+
+        # VPS instance metrics (from bot if available)
+        vps_cog = bot_instance.get_cog("VPSCommands")
+        if vps_cog and hasattr(vps_cog, "vps_manager"):
+            vm = vps_cog.vps_manager
+            instances = getattr(vm, "vps_instances", {})
+            total = len(instances)
+            running = sum(1 for i in instances.values() if i.get("status") == "running")
+            stopped = sum(1 for i in instances.values() if i.get("status") == "stopped")
+            lines.append("# HELP orchestrator_vps_instances_total Total VPS instances")
+            lines.append("# TYPE orchestrator_vps_instances_total gauge")
+            lines.append(f"orchestrator_vps_instances_total {total}")
+            lines.append("# HELP orchestrator_vps_instances_running Running VPS instances")
+            lines.append("# TYPE orchestrator_vps_instances_running gauge")
+            lines.append(f"orchestrator_vps_instances_running {running}")
+            lines.append("# HELP orchestrator_vps_instances_stopped Stopped VPS instances")
+            lines.append("# TYPE orchestrator_vps_instances_stopped gauge")
+            lines.append(f"orchestrator_vps_instances_stopped {stopped}")
+            lines.append("")
+
+        return web.Response(
+            text="\n".join(lines),
+            content_type="text/plain; charset=utf-8",
+        )
+
     app.router.add_get("/health", health)
+    app.router.add_get("/metrics", metrics)
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:

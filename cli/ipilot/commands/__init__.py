@@ -4,7 +4,7 @@ from ..core.command_registry import register
 
 from .infrastructure.server import app as server_app
 from .infrastructure.backup import app as backup_app
-from .infrastructure.deploy import app as deploy_app
+from .infrastructure.deployment import app as deploy_app
 from .infrastructure.logs import app as logs_app
 
 register("server", "Server management")(server_app)
@@ -30,16 +30,16 @@ register("mesh", "Mesh networks")(mesh_networking_app)
 register("gw", "LoRaWAN gateways")(lora_wan_app)
 register("pipeline", "Data pipelines")(data_pipeline_app)
 
-from .green.energy import app as energy_app
-from .green.carbon import app as carbon_app
-from .green.scheduler import app as green_app
-from .green.reclaim import app as reclaim_app
-from .green.shutdown import app as shutdown_app
-from .green.hardware import app as hardware_app
-from .green.pue import app as pue_app
-from .green.provider import app as provider_app
-from .green.offset import app as offset_app
-from .green.efficiency import app as efficiency_app
+from .green.energy_management import app as energy_app
+from .green.carbon_footprint import app as carbon_app
+from .green.green_scheduler import app as green_app
+from .green.resource_reclamation import app as reclaim_app
+from .green.auto_shutdown import app as shutdown_app
+from .green.hardware_lifecycle import app as hardware_app
+from .green.power_usage_effectiveness import app as pue_app
+from .green.provider_ranking import app as provider_app
+from .green.carbon_offset import app as offset_app
+from .green.energy_efficiency import app as efficiency_app
 
 register("energy", "Energy use")(energy_app)
 register("carbon", "Carbon footprint")(carbon_app)
@@ -52,17 +52,17 @@ register("provider", "Provider rankings")(provider_app)
 register("offset", "CO2 offsets")(offset_app)
 register("efficiency", "Efficiency")(efficiency_app)
 
-from .networking.sdwan import app as sdwan_app
-from .networking.vpn import app as vpn_app
-from .networking.dns import app as dns_app
-from .networking.bgp import app as bgp_app
-from .networking.proxy import app as proxy_app
-from .networking.segmentation import app as segment_app
-from .networking.capture import app as capture_app
-from .networking.dnsfilter import app as dnsfilter_app
-from .networking.dhcp import app as dhcp_app
-from .networking.netcost import app as netcost_app
-from .networking.cell import app as cell_app
+from .networking.software_defined_wan import app as sdwan_app
+from .networking.virtual_private_network import app as vpn_app
+from .networking.domain_name_system import app as dns_app
+from .networking.border_gateway_protocol import app as bgp_app
+from .networking.proxy_management import app as proxy_app
+from .networking.network_segmentation import app as segment_app
+from .networking.packet_capture import app as capture_app
+from .networking.dns_filtering import app as dnsfilter_app
+from .networking.dynamic_host_configuration_protocol import app as dhcp_app
+from .networking.network_costs import app as netcost_app
+from .networking.cellular_networking import app as cell_app
 
 register("sdwan", "SD-WAN")(sdwan_app)
 register("vpn", "VPN")(vpn_app)
@@ -76,18 +76,18 @@ register("dhcp", "DHCP")(dhcp_app)
 register("netcost", "Network cost")(netcost_app)
 register("cell", "Cellular")(cell_app)
 
-from .security.identity import app as identity_app
-from .security.oidc import app as oidc_app
-from .security.webauthn import app as webauthn_app
-from .security.sessions import app as sessions_app
-from .security.pam import app as pam_app
-from .security.breach import app as breach_app
-from .security.policy import app as policy_app
+from .security.identity_management import app as identity_app
+from .security.open_id_connect import app as oidc_app
+from .security.web_authn import app as webauthn_app
+from .security.session_management import app as sessions_app
+from .security.privileged_access_management import app as pam_app
+from .security.breach_detection import app as breach_app
+from .security.security_policy import app as policy_app
 from .security.compliance import app as compliance_app
 from .security.audit import app as audit_app
-from .security.classify import app as classify_app
-from .security.vendor import app as vendor_app
-from .security.soc import app as soc_app
+from .security.data_classification import app as classify_app
+from .security.vendor_security import app as vendor_app
+from .security.security_operations_center import app as soc_app
 
 register("oidc", "OIDC")(oidc_app)
 register("webauthn", "WebAuthn")(webauthn_app)
@@ -101,15 +101,15 @@ register("classify", "Data classification")(classify_app)
 register("vendor", "Vendors")(vendor_app)
 register("soc", "Security")(soc_app)
 
-from .operations.workflow import app as workflow_app
-from .operations.pipelines import app as infra_pipeline_app
-from .operations.drift import app as drift_app
-from .operations.quotas import app as quota_app
-from .operations.remediation import app as remediate_app
+from .operations.workflow_orchestration import app as workflow_app
+from .operations.deployment_pipelines import app as infra_pipeline_app
+from .operations.drift_detection import app as drift_app
+from .operations.resource_quotas import app as quota_app
+from .operations.auto_remediation import app as remediate_app
 from .operations.maintenance import app as maintenance_app
-from .operations.runbooks import app as runbook_app
-from .operations.chaos import app as chaos_app
-from .operations.healing import app as heal_app
+from .operations.runbook_automation import app as runbook_app
+from .operations.chaos_engineering import app as chaos_app
+from .operations.self_healing import app as heal_app
 
 register("workflow", "Workflows")(workflow_app)
 register("infra-pipeline", "Pipelines")(infra_pipeline_app)
@@ -169,18 +169,18 @@ from .cx import app as cx_app
 
 register("cx", "Customer experience")(cx_app)
 
-from .marketplace.trade import app as trade_app
-from .marketplace.appmarket import app as appmarket_app
-from .marketplace.ppu import app as ppu_app
-from .marketplace.reseller import app as reseller_app
-from .marketplace.whitelabel import app as whitelabel_app
+from .marketplace.trading import app as trade_app
+from .marketplace.app_marketplace import app as appmarket_app
+from .marketplace.price_per_unit import app as ppu_app
+from .marketplace.reseller_management import app as reseller_app
+from .marketplace.white_label import app as whitelabel_app
 from .marketplace.sla import app as mkt_sla_app
-from .marketplace.credit import app as credit_app
-from .marketplace.crypto import app as crypto_app
+from .marketplace.credits import app as credit_app
+from .marketplace.cryptocurrency import app as crypto_app
 from .marketplace.plans import app as plans_app
-from .marketplace.reco import app as reco_app
-from .marketplace.tax import app as tax_app
-from .marketplace.loyalty import app as loyalty_app
+from .marketplace.recommendations import app as reco_app
+from .marketplace.tax_management import app as tax_app
+from .marketplace.loyalty_program import app as loyalty_app
 
 register("trade", "Trading")(trade_app)
 register("appmarket", "App marketplace")(appmarket_app)
@@ -195,16 +195,16 @@ register("reco", "Recommendations")(reco_app)
 register("tax", "Tax")(tax_app)
 register("loyalty", "Loyalty")(loyalty_app)
 
-from .platform.devportal import app as devportal_app
-from .platform.scaffold import app as scaffold_app
+from .platform.developer_portal import app as devportal_app
+from .platform.golden_path_scaffolder import app as scaffold_app
 from .platform.service_catalog import app as catalog_app
 from .platform.scorecards import app as scorecards_app
 from .platform.template_registry import app as templatereg_app
-from .platform.techdebt import app as techdebt_app
-from .platform.environments import app as environments_app
+from .platform.tech_debt_tracker import app as techdebt_app
+from .platform.environment_orchestrator import app as environments_app
 from .platform.api_catalog import app as apicatalog_app
-from .platform.docgen import app as docgen_app
-from .platform.pulse import app as pulse_app
+from .platform.document_generator import app as docgen_app
+from .platform.developer_pulse import app as pulse_app
 
 register("devportal", "Developer portal")(devportal_app)
 register("scaffold", "Scaffolding")(scaffold_app)
@@ -240,14 +240,14 @@ register("train", "Compliance training")(compliance_training_app)
 register("auditor", "Auditor portal")(auditor_portal_app)
 
 from .emerging.blockchain import app as blockchain_app
-from .emerging.storage import app as storage_app
-from .emerging.quantum import app as quantum_app
-from .emerging.contracts import app as contracts_app
-from .emerging.web3id import app as web3id_app
-from .emerging.confidential import app as confidential_app
-from .emerging.federated import app as federated_app
-from .emerging.zkp import app as zkp_app
-from .emerging.dcn import app as dcn_app
+from .emerging.decentralized_storage import app as storage_app
+from .emerging.quantum_cryptography import app as quantum_app
+from .emerging.smart_contracts import app as contracts_app
+from .emerging.web3_identity import app as web3id_app
+from .emerging.confidential_computing import app as confidential_app
+from .emerging.federated_learning import app as federated_app
+from .emerging.zero_knowledge_proofs import app as zkp_app
+from .emerging.decentralized_compute import app as dcn_app
 
 register("blockchain", "Blockchain")(blockchain_app)
 register("storage", "Decentralized storage")(storage_app)
@@ -259,16 +259,16 @@ register("federated", "Federated learning")(federated_app)
 register("zkp", "Zero knowledge proofs")(zkp_app)
 register("dcn", "Decentralized compute")(dcn_app)
 
-from .platform.resiliency.dr import app as dr_app
+from .platform.resiliency.disaster_recovery import app as dr_app
 from .platform.resiliency.active_active import app as active_active_app
-from .platform.resiliency.backup_sla import app as backup_sla_app
-from .platform.resiliency.chaos_exp import app as chaos_exp_app
-from .platform.resiliency.res_score import app as res_score_app
-from .platform.resiliency.dep_sim import app as dep_sim_app
-from .platform.resiliency.rb_exec import app as rb_exec_app
+from .platform.resiliency.backup_sla_manager import app as backup_sla_app
+from .platform.resiliency.chaos_experiments import app as chaos_exp_app
+from .platform.resiliency.resiliency_score import app as res_score_app
+from .platform.resiliency.dependency_simulator import app as dep_sim_app
+from .platform.resiliency.runbook_executor import app as rb_exec_app
 from .platform.resiliency.data_integrity import app as data_integrity_app
-from .platform.resiliency.res_pipeline import app as res_pipeline_app
-from .platform.resiliency.bc_dashboard import app as bc_dashboard_app
+from .platform.resiliency.resilience_pipeline import app as res_pipeline_app
+from .platform.resiliency.business_continuity_dashboard import app as bc_dashboard_app
 
 register("dr", "Disaster recovery")(dr_app)
 register("active-active", "Active active")(active_active_app)
@@ -285,7 +285,7 @@ register("bc-dashboard", "Business continuity")(bc_dashboard_app)
 __all__: list[str] = [
     "server_app", "backup_app", "deploy_app", "logs_app",
     "edge_computing_app", "edge_functions_app", "machine_learning_app", "internet_of_things_app", "content_delivery_network_app", "mesh_networking_app",
-    "lora_wan_app", "pipeline_app",
+    "lora_wan_app", "data_pipeline_app",
     "energy_app", "carbon_app", "green_app", "reclaim_app", "shutdown_app",
     "hardware_app", "pue_app", "provider_app", "offset_app", "efficiency_app",
     "sdwan_app", "vpn_app", "dns_app", "bgp_app", "proxy_app", "segment_app",

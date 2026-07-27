@@ -1,7 +1,7 @@
 """Infrastructure management commands."""
 
 from .backup import app as backup_app
-from .deploy import app as deploy_app
+from .deployment import app as deploy_app
 from .logs import app as logs_app
 from .server import app as server_app
 

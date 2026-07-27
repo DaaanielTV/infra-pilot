@@ -9,4 +9,4 @@ from .mesh_networking import app as mesh_networking_app
 from .machine_learning import app as machine_learning_app
 from .data_pipeline import app as data_pipeline_app
 
-__all__ = ["content_delivery_network_app", "edge_computing_app", "edge_functions_app", "internet_of_things_app", "lora_wan_app", "mesh_networking_app", "machine_learning_app", "pipeline_app"]
+__all__ = ["content_delivery_network_app", "edge_computing_app", "edge_functions_app", "internet_of_things_app", "lora_wan_app", "mesh_networking_app", "machine_learning_app", "data_pipeline_app"]

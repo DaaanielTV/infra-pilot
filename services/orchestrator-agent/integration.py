@@ -658,8 +658,54 @@ def init_database_tables():
         )
         """,
     ]
+    # Region / federation tables (multi-datacenter support)
+    region_tables = [
+        """
+        CREATE TABLE IF NOT EXISTS regions (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            display_name VARCHAR(255),
+            status VARCHAR(20) DEFAULT 'active',
+            labels JSON,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS datacenters (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            region_id VARCHAR(36) NOT NULL,
+            location VARCHAR(255),
+            provider VARCHAR(50) DEFAULT 'docker',
+            status VARCHAR(20) DEFAULT 'active',
+            total_cpu_cores DECIMAL(8,2) DEFAULT 0,
+            total_memory_mb BIGINT DEFAULT 0,
+            total_storage_gb BIGINT DEFAULT 0,
+            used_cpu_cores DECIMAL(8,2) DEFAULT 0,
+            used_memory_mb BIGINT DEFAULT 0,
+            used_storage_gb BIGINT DEFAULT 0,
+            labels JSON,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS federation_peers (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            api_url VARCHAR(512) NOT NULL,
+            api_token VARCHAR(512),
+            status VARCHAR(20) DEFAULT 'unknown',
+            version VARCHAR(50),
+            labels JSON,
+            last_seen TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+    ]
     tables.extend(rbac_tables)
     tables.extend(billing_tables)
+    tables.extend(region_tables)
 
     for table in tables:
         try:

@@ -15,6 +15,7 @@ from integration import init_database_tables
 logger = logging.getLogger(__name__)
 
 BOT_PREFIX = "/"
+FEDERATION_API_TOKEN: str = os.getenv("FEDERATION_API_TOKEN", "")
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -77,6 +78,33 @@ async def start_webhook_server(bot_instance: commands.Bot):
         bot_instance: The Discord bot instance to attach webhook routes from.
     """
     app = web.Application()
+
+    async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
+        """Check Bearer token on federation API routes.
+
+        Returns ``None`` if the token is valid (or auth is disabled),
+        otherwise a 401 response.
+        """
+        if not FEDERATION_API_TOKEN:
+            return None
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer ") and auth[7:] == FEDERATION_API_TOKEN:
+            return None
+        return web.json_response(
+            {"error": "unauthorized", "message": "Invalid or missing federation API token"},
+            status=401,
+        )
+
+    @web.middleware
+    async def federation_auth_middleware(request: web.Request, handler):
+        """Apply token verification to /api/ paths."""
+        if request.path.startswith("/api/"):
+            response = await verify_federation_token(request)
+            if response:
+                return response
+        return await handler(request)
+
+    app.middlewares.append(federation_auth_middleware)
 
     async def health(request: web.Request) -> web.Response:
         return web.json_response({
@@ -142,8 +170,18 @@ async def start_webhook_server(bot_instance: commands.Bot):
             content_type="text/plain; charset=utf-8",
         )
 
+    async def federation_status(request: web.Request) -> web.Response:
+        """Federation peer status endpoint (requires valid token)."""
+        return web.json_response({
+            "status": "ok",
+            "service": "orchestrator-agent",
+            "federation": {"enabled": bool(FEDERATION_API_TOKEN)},
+            "version": "1.0.0",
+        })
+
     app.router.add_get("/health", health)
     app.router.add_get("/metrics", metrics)
+    app.router.add_get("/api/v1/federation/status", federation_status)
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:

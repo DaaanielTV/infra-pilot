@@ -695,7 +695,7 @@ async def init_database_tables():
     all_tables.extend(billing_tables)
     all_tables.extend(region_tables)
 
-    async with pool._pool.acquire() as conn:
+    async with pool.acquire() as conn:
         for stmt in all_tables:
             try:
                 await conn.execute(stmt)

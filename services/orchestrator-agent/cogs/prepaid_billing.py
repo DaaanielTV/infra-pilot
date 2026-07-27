@@ -102,8 +102,60 @@ class PrepaidBilling(commands.Cog):
     
     @tasks.loop(hours=1)
     async def billing_loop(self):
+        """Charge users for running VPS instances every hour."""
         logger.info('Running hourly billing cycle...')
-        logger.info('Billing cycle completed.')
+        cog = self.bot.get_cog('VPSCommands')
+        vps_manager = getattr(cog, 'vps_manager', None) if cog else None
+        if not vps_manager:
+            logger.warning('VPSManager not available, skipping billing')
+            return
+
+        billed = 0
+        stopped = 0
+        errors = 0
+
+        for container_id, instance in list(vps_manager.vps_instances.items()):
+            try:
+                user_id = instance.get('user_id', '')
+                if not user_id:
+                    continue
+
+                cfg = instance.get('config', {})
+                resources = {
+                    'cpu_cores': cfg.get('cpu_limit', 1),
+                    'memory_mb': cfg.get('memory_limit', 1024),
+                    'storage_gb': cfg.get('storage_limit', 10),
+                }
+                hourly_cost = self.calculate_hourly_cost(resources)
+                if hourly_cost <= 0:
+                    continue
+
+                success = self.deduct_funds(
+                    user_id,
+                    hourly_cost,
+                    f'Hourly charge for {container_id[:12]}',
+                )
+                if success:
+                    billed += 1
+                else:
+                    logger.warning(
+                        'Insufficient funds for %s (balance=%.2f), stopping %s',
+                        user_id, self.get_balance(user_id), container_id[:12],
+                    )
+                    try:
+                        await vps_manager.stop_vps(container_id)
+                        stopped += 1
+                    except Exception as exc:
+                        logger.error('Failed to stop %s: %s', container_id[:12], exc)
+                        errors += 1
+            except Exception as exc:
+                logger.error('Billing error for %s: %s', container_id[:12], exc)
+                errors += 1
+
+        logger.info(
+            'Billing cycle done: %d billed, %d stopped, %d errors',
+            billed, stopped, errors,
+        )
     
     @billing_loop.before_loop
     async def before_billing(self):

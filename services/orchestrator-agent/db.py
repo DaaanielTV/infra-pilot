@@ -81,6 +81,18 @@ class DatabasePool:
         async with self._pool.acquire() as conn:
             await conn.executemany(query, args)
 
+    async def acquire(self):
+        """Get a raw asyncpg connection from the pool.
+
+        Use as an async context manager::
+
+            async with pool.acquire() as conn:
+                await conn.execute(...)
+        """
+        if not self._pool:
+            raise RuntimeError("Database pool not initialised")
+        return await self._pool.acquire()
+
     async def close(self) -> None:
         if self._pool:
             await self._pool.close()

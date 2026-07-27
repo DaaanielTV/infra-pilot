@@ -1,6 +1,11 @@
+"""Legacy argparse CLI. Deprecated in favor of the Typer-based CLI (ipilot --help).
+
+All commands available here are being migrated to the Typer system.
+"""
 import argparse
 import json
 import sys
+import warnings
 
 from . import __version__
 from .config import load_config, save_config, set_key, get
@@ -3858,6 +3863,10 @@ def cmd_training_assignments(args):
 
 
 def main_inner(args, parser=None):
+    warnings.warn(
+        "This argparse-based CLI is deprecated. Use the Typer-based CLI via `ipilot` instead.",
+        DeprecationWarning, stacklevel=2,
+    )
     if parser is None:
         parser = build_parser()
     cmd_map = {

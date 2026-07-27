@@ -1,18 +1,20 @@
-"""Bridges old CLI commands to the new system so nothing breaks."""
-# TODO: remove this bridge when everyone migrates to new cli
-# NOTE: this is a hack to keep backward compatability
+"""Bridges old CLI commands to the new system so nothing breaks.
+
+This module provides backward compatibility by wrapping the legacy argparse
+CLI (cli.py) so that callers can dispatch old-style commands programmatically.
+New code should use the Typer-based interface from ipilot.main instead.
+"""
 import argparse
 import sys
+import warnings
 
 from .. import __version__
-from ..config import load_config, save_config, set_key, get as config_get
+from ..config import load_config
 from ..client import ApiClient
-from ..output.formatters import print_output
 
 _legacy_module = None
 
 
-# HACK: lazy import cuz circular dependancy issues
 def _get_legacy():
     global _legacy_module
     if _legacy_module is None:
@@ -25,8 +27,11 @@ def build_legacy_parser():
     return leg.build_parser()
 
 
-# FIXME: this function doesnt handle all arg types properly
 def dispatch_legacy(cmd_name: str, subcmd_name: str = None, **kwargs):
+    warnings.warn(
+        "bridge.dispatch_legacy() is deprecated. Use the Typer CLI directly via `ipilot`.",
+        DeprecationWarning, stacklevel=2,
+    )
     leg = _get_legacy()
     parser = leg.build_parser()
     args_list = [cmd_name]
@@ -43,7 +48,7 @@ def dispatch_legacy(cmd_name: str, subcmd_name: str = None, **kwargs):
     leg.main_inner(args)
 
 
-# NOTE: duplicate of core.cli.get_client() - why does this exist???
 def get_client():
+    """Return an ApiClient using the shared config (bridge-friendly, no Typer context needed)."""
     config = load_config()
     return ApiClient(config.get('api_url', 'http://localhost:8080'), config.get('token'))

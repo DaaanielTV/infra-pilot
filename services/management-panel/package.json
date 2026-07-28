@@ -32,7 +32,7 @@
     "desktop:doctor": "zero-native doctor --manifest app.zon --strict"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.8",
+    "@supabase/supabase-js": "^2.110.9",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",
@@ -68,7 +68,7 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "playwright": "^1.62.0",
     "postcss": "~8",
     "prettier": "^3.9.6",

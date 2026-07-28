@@ -11,5 +11,5 @@ git clone https://github.com/drosemann/infra-pilot.git
 cd infra-pilot && cp .env.example .env
 docker compose up -d
 pip install ./cli
-ipilot login <your-api-key>
+ipilot login                      # Log in with your API key from http://localhost:3001/api/setup/status
 ```

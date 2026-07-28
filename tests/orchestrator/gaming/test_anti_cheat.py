@@ -1,4 +1,4 @@
-\"\"\"test_anti_cheat tests.\"\"\"
+"""test_anti_cheat tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

@@ -1,4 +1,4 @@
-\"\"\"test_voice_server tests.\"\"\"
+"""test_voice_server tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

@@ -1,4 +1,4 @@
-\"\"\"test_game_server_stats tests.\"\"\"
+"""test_game_server_stats tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

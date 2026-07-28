@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, Optional
 
-from ..client import ApiClient
-from ..config import load_config
+from ...client import ApiClient
+from ...config import load_config
 
 
 def get_health_status() -> Dict[str, Any]:

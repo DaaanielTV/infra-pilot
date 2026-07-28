@@ -1,6 +1,5 @@
 """Core CLI utilities."""
 
-from .cli import create_app, get_client, LegacyBridge, legacy_bridge
 from .command_registry import register, discover_commands, attach_to_app, get_registry
 from .exceptions import (
     CLIError,
@@ -11,6 +10,14 @@ from .exceptions import (
     ConnectionError,
     ValidationError,
 )
+
+
+def __getattr__(name):
+    if name in {"create_app", "get_client", "LegacyBridge", "legacy_bridge"}:
+        from . import cli
+
+        return getattr(cli, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "create_app",

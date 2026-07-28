@@ -1,4 +1,4 @@
-\"\"\"test_distributed_storage_cluster tests.\"\"\"
+"""test_distributed_storage_cluster tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

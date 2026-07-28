@@ -1,4 +1,4 @@
-\"\"\"test_crossplay_proxy tests.\"\"\"
+"""test_crossplay_proxy tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

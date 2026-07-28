@@ -1,4 +1,4 @@
-\"\"\"test_storage_tiering tests.\"\"\"
+"""test_storage_tiering tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

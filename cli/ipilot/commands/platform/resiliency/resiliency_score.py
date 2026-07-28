@@ -1,4 +1,5 @@
 import typer
+from ....client import ApiClient
 from ....output.formatters import print_output
 
 app = typer.Typer(help="Resiliency scoring")

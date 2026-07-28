@@ -98,6 +98,54 @@ def batch(
 
 
 @app.command()
+def doctor(
+    ctx: typer.Context,
+    fix: bool = typer.Option(False, "--fix", help="Auto-fix issues"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """Run system diagnostics (alias for 'ipilot doctor doctor')."""
+    from .commands.doctor import doctor as doctor_cmd
+    from typer.testing import CliRunner
+    runner = CliRunner()
+    args = ["--fix" if fix else "", "--verbose" if verbose else ""]
+    args = [a for a in args if a]
+    result = runner.invoke(doctor_cmd, args)
+    typer.echo(result.output)
+
+
+@app.command()
+def benchmark(
+    ctx: typer.Context,
+    server: str = typer.Option(None, "--server", "-s", help="Server to benchmark"),
+):
+    """Run performance benchmarks (alias for 'ipilot doctor benchmark')."""
+    from .commands.doctor import benchmark as benchmark_cmd
+    from typer.testing import CliRunner
+    runner = CliRunner()
+    args = []
+    if server: args.extend(["--server", server])
+    result = runner.invoke(benchmark_cmd, args)
+    typer.echo(result.output)
+
+
+@app.command()
+def diagnose(
+    ctx: typer.Context,
+    server: str = typer.Option(None, "--server", "-s", help="Server to diagnose"),
+    issue: str = typer.Option(None, "--issue", "-i", help="Issue type (connectivity, performance, disk)"),
+):
+    """Diagnose infrastructure issues (alias for 'ipilot doctor diagnose')."""
+    from .commands.doctor import diagnose as diagnose_cmd
+    from typer.testing import CliRunner
+    runner = CliRunner()
+    args = []
+    if server: args.extend(["--server", server])
+    if issue: args.extend(["--issue", issue])
+    result = runner.invoke(diagnose_cmd, args)
+    typer.echo(result.output)
+
+
+@app.command()
 def docs(
     output: str = typer.Option(
         "docs/cli-reference.md", "--output", "-o",

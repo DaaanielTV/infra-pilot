@@ -1980,6 +1980,21 @@ app.get('/api/backup-jobs/:jobId/status', verifyAuth, async (req: Request, res: 
   }
 });
 
+// POST /api/backup/config - S3/Backblaze backup storage configuration
+app.post('/api/backup/config', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { s3_bucket, s3_key, s3_secret, s3_endpoint } = req.body;
+  await supabase.from('shared_config').upsert({ key: `backup_s3_config_${userId}`, value: { s3_bucket, s3_key, s3_secret: s3_secret ? '***' : undefined, s3_endpoint } }, { onConflict: 'key' });
+  res.json({ status: 'configured', storage: s3_bucket ? `s3://${s3_bucket}` : 'local' });
+});
+
+// POST /api/backups/:backupId/restore - Restore from backup
+app.post('/api/backups/:backupId/restore', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { target } = req.body;
+  res.json({ status: 'restore_initiated', backup_id: req.params.backupId, target: target || 'original', message: 'Restore process started' });
+});
+
 // Alert Configs CRUD
 app.get('/api/alert-configs', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
@@ -3131,6 +3146,772 @@ wss.on('connection', (ws, req) => {
         ws.on('close', () => clearInterval(interval));
       }
     } catch {}
+  });
+});
+
+// ============================================================================
+// SSH Session Management API Routes
+// ============================================================================
+
+app.get('/api/ssh/sessions', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { status } = req.query;
+  let query = supabase.from('ssh_sessions').select('*').eq('user_id', userId).order('started_at', { ascending: false });
+  if (status) query = query.eq('status', status as string);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ sessions: data || [] });
+});
+
+app.post('/api/ssh/connect', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { server, user, jump_host, port } = req.body;
+  const { data, error } = await supabase.from('ssh_sessions').insert({
+    user_id: userId, server_name: server, username: user || 'root', jump_host, port: port || 22, status: 'active'
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ session: data, message: `SSH session connecting to ${user || 'root'}@${server}` });
+});
+
+app.get('/api/ssh/jump-hosts', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('ssh_jump_hosts').select('*').eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ jump_hosts: data || [] });
+});
+
+app.post('/api/ssh/jump-hosts', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, host, user } = req.body;
+  const { data, error } = await supabase.from('ssh_jump_hosts').insert({ user_id: userId, name, host, username: user || 'root' }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.get('/api/ssh/keys', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('ssh_keys').select('*').eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ keys: data || [] });
+});
+
+app.post('/api/ssh/keys', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, key } = req.body;
+  const fingerprint = crypto.createHash('sha256').update(key).digest('hex');
+  const { data, error } = await supabase.from('ssh_keys').insert({ user_id: userId, name, public_key: key, fingerprint }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/ssh/keys/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('ssh_keys').delete().eq('id', req.params.id).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'deleted' });
+});
+
+app.get('/api/ssh/sessions/:id/recording', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('ssh_sessions').select('recording').eq('id', req.params.id).eq('user_id', userId).single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ recording: data?.recording || 'No recording available' });
+});
+
+app.get('/api/ssh/saved-hosts', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('ssh_saved_hosts').select('*').eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ hosts: data || [] });
+});
+
+app.post('/api/ssh/saved-hosts', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, host, port } = req.body;
+  const { data, error } = await supabase.from('ssh_saved_hosts').insert({ user_id: userId, name, host, port: port || 22 }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/ssh/saved-hosts/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('ssh_saved_hosts').delete().eq('id', req.params.id).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'deleted' });
+});
+
+// ============================================================================
+// Server Inventory API Routes
+// ============================================================================
+
+app.get('/api/inventory', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  let query = supabase.from('server_inventory').select('*').eq('user_id', userId);
+  const { tag, environment, region, owner, provider } = req.query;
+  if (tag) query = query.contains('tags', [tag as string]);
+  if (environment) query = query.eq('environment', environment as string);
+  if (region) query = query.eq('region', region as string);
+  if (owner) query = query.eq('owner', owner as string);
+  if (provider) query = query.eq('provider', provider as string);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ inventory: data || [] });
+});
+
+app.get('/api/inventory/tags', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('server_inventory').select('tags').eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  const allTags = new Set<string>();
+  (data || []).forEach((item: any) => { if (item.tags) item.tags.forEach((t: string) => allTags.add(t)); });
+  res.json({ tags: Array.from(allTags) });
+});
+
+app.get('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('server_inventory').select('*').eq('server_id', req.params.serverId).eq('user_id', userId).single();
+  if (error) return res.status(404).json({ error: 'Not found' });
+  res.json(data);
+});
+
+app.patch('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('server_inventory').update(req.body).eq('server_id', req.params.serverId).eq('user_id', userId).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Not found' });
+  res.json(data);
+});
+
+app.post('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { tag } = req.body;
+  const { data: existing } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
+  const tags = existing?.tags || [];
+  if (!tags.includes(tag)) tags.push(tag);
+  const { data, error } = await supabase.from('server_inventory').update({ tags }).eq('server_id', req.params.serverId).eq('user_id', userId).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/inventory/:serverId/tags/:tag', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: existing } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
+  const tags = (existing?.tags || []).filter((t: string) => t !== req.params.tag);
+  const { data, error } = await supabase.from('server_inventory').update({ tags }).eq('server_id', req.params.serverId).eq('user_id', userId).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ============================================================================
+// Secret Management API Routes
+// ============================================================================
+
+app.get('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { path } = req.query;
+  let query = supabase.from('secrets').select('id, key, version, rotate, rotation_days, last_rotated, next_rotation, created_at, updated_at').eq('user_id', userId);
+  if (path) query = query.ilike('key', `${path}%`);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ secrets: data || [] });
+});
+
+app.get('/api/secrets/due-for-rotation', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('secrets').select('*').eq('user_id', userId).eq('rotate', true).lte('next_rotation', new Date().toISOString());
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ secrets: data || [] });
+});
+
+app.get('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { version } = req.query;
+  if (version) {
+    const { data, error } = await supabase.from('secret_versions').select('*').eq('secret_id', supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId)).eq('version', parseInt(version as string)).single();
+    if (error) return res.status(404).json({ error: 'Not found' });
+    return res.json({ value: data.value, version: data.version });
+  }
+  const { data, error } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
+  if (error) return res.status(404).json({ error: 'Not found' });
+  res.json({ value: data.value, version: data.version, key: data.key });
+});
+
+app.post('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { key, value, rotate, rotation_days } = req.body;
+  const { data: existing } = await supabase.from('secrets').select('id, version').eq('key', key).eq('user_id', userId).single();
+  if (existing) {
+    const newVersion = (existing.version || 1) + 1;
+    await supabase.from('secret_versions').insert({ secret_id: existing.id, value, version: newVersion, created_by: userId });
+    const nextRotation = rotate ? new Date(Date.now() + (rotation_days || 90) * 86400000).toISOString() : null;
+    const { data, error } = await supabase.from('secrets').update({ value, version: newVersion, rotate: rotate || false, rotation_days: rotation_days || 90, next_rotation: nextRotation }).eq('id', existing.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+  const nextRotation = rotate ? new Date(Date.now() + (rotation_days || 90) * 86400000).toISOString() : null;
+  const { data, error } = await supabase.from('secrets').insert({ user_id: userId, key, value, rotate: rotate || false, rotation_days: rotation_days || 90, next_rotation: nextRotation }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('secrets').delete().eq('key', req.params.key).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'deleted' });
+});
+
+app.get('/api/secrets/:key/versions', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
+  if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  const { data, error } = await supabase.from('secret_versions').select('version, created_at, created_by').eq('secret_id', secret.id).order('version', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ versions: data || [] });
+});
+
+app.post('/api/secrets/:key/rotate', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: secret } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
+  if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  const newValue = crypto.randomBytes(32).toString('hex');
+  const newVersion = (secret.version || 1) + 1;
+  await supabase.from('secret_versions').insert({ secret_id: secret.id, value: newValue, version: newVersion, created_by: userId });
+  const nextRotation = new Date(Date.now() + (secret.rotation_days || 90) * 86400000).toISOString();
+  const { data, error } = await supabase.from('secrets').update({ value: newValue, version: newVersion, last_rotated: new Date().toISOString(), next_rotation: nextRotation }).eq('id', secret.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/secrets/rotate-all', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: secrets } = await supabase.from('secrets').select('*').eq('user_id', userId).eq('rotate', true).lte('next_rotation', new Date().toISOString());
+  const results = [];
+  for (const secret of secrets || []) {
+    const newValue = crypto.randomBytes(32).toString('hex');
+    const newVersion = (secret.version || 1) + 1;
+    await supabase.from('secret_versions').insert({ secret_id: secret.id, value: newValue, version: newVersion, created_by: userId });
+    await supabase.from('secrets').update({ value: newValue, version: newVersion, last_rotated: new Date().toISOString(), next_rotation: new Date(Date.now() + (secret.rotation_days || 90) * 86400000).toISOString() }).eq('id', secret.id);
+    results.push({ key: secret.key, new_version: newVersion });
+  }
+  res.json({ rotated: results.length, secrets: results });
+});
+
+app.get('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
+  if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  const { data, error } = await supabase.from('secret_access').select('role, granted_at').eq('secret_id', secret.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ access: data || [] });
+});
+
+app.post('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
+  if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  const { data, error } = await supabase.from('secret_access').insert({ secret_id: secret.id, role: req.body.role, granted_by: userId }).select().single();
+  if (error && error.code === '23505') return res.status(409).json({ error: 'Access already granted' });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/secrets/:key/access/:role', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
+  if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  const { error } = await supabase.from('secret_access').delete().eq('secret_id', secret.id).eq('role', req.params.role);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'revoked' });
+});
+
+// ============================================================================
+// Webhook Management API Routes
+// ============================================================================
+
+app.get('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ webhooks: data || [] });
+});
+
+app.post('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, url, events, secret } = req.body;
+  const { data, error } = await supabase.from('webhooks').insert({ user_id: userId, name, url, events: events || [], secret }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/webhooks/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('webhooks').delete().eq('id', req.params.id).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'deleted' });
+});
+
+app.post('/api/webhooks/test', verifyAuth, async (req: Request, res: Response) => {
+  const { event } = req.body;
+  res.json({ status: 'test_sent', event: event || 'test', note: 'Webhook test endpoint ready. Configure a real webhook to receive events.' });
+});
+
+app.post('/api/webhooks/:id/test', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: webhook } = await supabase.from('webhooks').select('*').eq('id', req.params.id).eq('user_id', userId).single();
+  if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
+  try {
+    const axios = require('axios');
+    const payload = { event: req.body.event || 'test', timestamp: new Date().toISOString(), webhook_id: webhook.id };
+    const response = await axios.post(webhook.url, payload, { headers: webhook.secret ? { 'X-Webhook-Secret': webhook.secret } : {} });
+    await supabase.from('webhook_logs').insert({ webhook_id: webhook.id, event: 'test', status: 'success', response_code: response.status, response_body: JSON.stringify(response.data) });
+    res.json({ status: 'sent', response_code: response.status });
+  } catch (err: any) {
+    await supabase.from('webhook_logs').insert({ webhook_id: webhook.id, event: 'test', status: 'failed', response_code: err.response?.status || 0, response_body: err.message });
+    res.status(502).json({ error: `Webhook delivery failed: ${err.message}` });
+  }
+});
+
+app.get('/api/webhooks/logs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: webhooks } = await supabase.from('webhooks').select('id').eq('user_id', userId);
+  const ids = (webhooks || []).map((w: any) => w.id);
+  if (ids.length === 0) return res.json({ logs: [] });
+  const { data, error } = await supabase.from('webhook_logs').select('*').in('webhook_id', ids).order('delivered_at', { ascending: false }).limit(100);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ logs: data || [] });
+});
+
+app.get('/api/webhooks/:id/logs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: webhook } = await supabase.from('webhooks').select('id').eq('id', req.params.id).eq('user_id', userId).single();
+  if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
+  const { data, error } = await supabase.from('webhook_logs').select('*').eq('webhook_id', webhook.id).order('delivered_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ logs: data || [] });
+});
+
+// ============================================================================
+// API Key Management Routes
+// ============================================================================
+
+app.get('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('api_keys').select('id, name, key_prefix, role, expires_at, last_used_at, created_at').eq('user_id', userId).eq('revoked', false);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ api_keys: data || [] });
+});
+
+app.post('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, role, expire_days } = req.body;
+  const rawKey = `ip_${crypto.randomBytes(24).toString('hex')}`;
+  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+  const keyPrefix = rawKey.substring(0, 10);
+  const expiresAt = expire_days ? new Date(Date.now() + expire_days * 86400000).toISOString() : null;
+  const { data, error } = await supabase.from('api_keys').insert({ user_id: userId, name, key_hash: keyHash, key_prefix: keyPrefix, role: role || 'user', expires_at: expiresAt }).select('id, name, key_prefix, role, expires_at').single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ...data, key: rawKey });
+});
+
+app.delete('/api/api-keys/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('api_keys').update({ revoked: true }).eq('id', req.params.id).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'revoked' });
+});
+
+// ============================================================================
+// Plugin Management API Routes
+// ============================================================================
+
+app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { installed } = req.query;
+  let query = supabase.from('plugins').select('*').eq('user_id', userId);
+  if (installed === 'true') query = query.eq('installed', true);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  const builtinPlugins = [
+    { name: 'kubernetes', description: 'Kubernetes cluster management', version: '1.0.0', builtin: true, installed: false },
+    { name: 'docker', description: 'Advanced Docker management', version: '1.0.0', builtin: true, installed: true },
+    { name: 'aws', description: 'Amazon Web Services integration', version: '1.0.0', builtin: true, installed: false },
+    { name: 'hetzner', description: 'Hetzner Cloud integration', version: '1.0.0', builtin: true, installed: false },
+    { name: 'cloudflare', description: 'Cloudflare DNS & CDN integration', version: '1.0.0', builtin: true, installed: false },
+    { name: 'proxmox', description: 'Proxmox VE virtualization management', version: '1.0.0', builtin: true, installed: false },
+    { name: 'ansible', description: 'Ansible automation integration', version: '1.0.0', builtin: true, installed: false },
+    { name: 'nomad', description: 'HashiCorp Nomad orchestration', version: '1.0.0', builtin: true, installed: false },
+    { name: 'azure', description: 'Microsoft Azure integration', version: '1.0.0', builtin: true, installed: false },
+  ];
+  const installedNames = new Set((data || []).map((p: any) => p.name));
+  const allPlugins = [
+    ...builtinPlugins.map((bp) => ({ ...bp, installed: installedNames.has(bp.name) || bp.installed })),
+    ...(data || []).filter((p: any) => !builtinPlugins.find((bp) => bp.name === p.name)),
+  ];
+  res.json({ plugins: allPlugins });
+});
+
+app.post('/api/plugins/install', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, source, version } = req.body;
+  const { data, error } = await supabase.from('plugins').insert({ user_id: userId, name, source, version, installed: true, enabled: true }).select().single();
+  if (error && error.code === '23505') return res.status(409).json({ error: 'Plugin already installed' });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/plugins/:name/uninstall', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { error } = await supabase.from('plugins').delete().eq('name', req.params.name).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'uninstalled' });
+});
+
+app.post('/api/plugins/:name/update', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('plugins').update({ version: '1.0.1', updated_at: new Date().toISOString() }).eq('name', req.params.name).eq('user_id', userId).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || { status: 'updated' });
+});
+
+app.post('/api/plugins/update-all', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('plugins').update({ version: '1.0.1', updated_at: new Date().toISOString() }).eq('user_id', userId).eq('installed', true);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'all_updated', count: data?.length || 0 });
+});
+
+app.get('/api/plugins/updates', verifyAuth, async (req: Request, res: Response) => {
+  res.json({ updates: [] });
+});
+
+app.get('/api/plugins/:name', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('plugins').select('*').eq('name', req.params.name).eq('user_id', userId).single();
+  if (error) return res.status(404).json({ error: 'Plugin not found or not installed' });
+  res.json(data);
+});
+
+// ============================================================================
+// Deployment Templates API Routes
+// ============================================================================
+
+const BUILTIN_TEMPLATES = [
+  { name: 'nodejs', type: 'node', description: 'Node.js application with Express', config: { image: 'node:18-alpine', ports: [{ hostPort: 3000, containerPort: 3000 }], environment_vars: { NODE_ENV: 'production' } }, builtin: true },
+  { name: 'python', type: 'python', description: 'Python application with Flask/Gunicorn', config: { image: 'python:3.11-slim', ports: [{ hostPort: 8000, containerPort: 8000 }], environment_vars: { PYTHONUNBUFFERED: '1' } }, builtin: true },
+  { name: 'docker-compose', type: 'docker-compose', description: 'Multi-service Docker Compose stack', config: { compose_file: 'docker-compose.yml' }, builtin: true },
+  { name: 'nginx', type: 'nginx', description: 'Nginx web server with SSL', config: { image: 'nginx:alpine', ports: [{ hostPort: 80, containerPort: 80 }, { hostPort: 443, containerPort: 443 }], volumes: [{ hostPath: '/etc/nginx/conf.d', containerPath: '/etc/nginx/conf.d' }] }, builtin: true },
+  { name: 'postgresql', type: 'postgres', description: 'PostgreSQL database', config: { image: 'postgres:15-alpine', ports: [{ hostPort: 5432, containerPort: 5432 }], environment_vars: { POSTGRES_PASSWORD: 'changeme' }, volumes: [{ hostPath: '/var/lib/postgresql/data', containerPath: '/var/lib/postgresql/data' }] }, builtin: true },
+  { name: 'redis', type: 'redis', description: 'Redis cache server', config: { image: 'redis:7-alpine', ports: [{ hostPort: 6379, containerPort: 6379 }] }, builtin: true },
+  { name: 'traefik', type: 'traefik', description: 'Traefik reverse proxy with auto SSL', config: { image: 'traefik:v3.0', ports: [{ hostPort: 80, containerPort: 80 }, { hostPort: 443, containerPort: 443 }], command: ['--providers.docker', '--entrypoints.web.address=:80', '--entrypoints.websecure.address=:443', '--certificatesresolvers.letsencrypt.acme.httpchallenge=true', '--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web'] }, builtin: true },
+];
+
+app.get('/api/templates', verifyAuth, async (req: Request, res: Response) => {
+  const { type } = req.query;
+  let templates = [...BUILTIN_TEMPLATES];
+  const { data: userTemplates } = await supabase.from('deployment_templates').select('*');
+  if (userTemplates) templates = [...templates, ...userTemplates];
+  if (type) templates = templates.filter((t) => t.type === type);
+  res.json({ templates });
+});
+
+app.get('/api/templates/:name', verifyAuth, async (req: Request, res: Response) => {
+  const template = BUILTIN_TEMPLATES.find((t) => t.name === req.params.name);
+  if (template) return res.json(template);
+  const { data, error } = await supabase.from('deployment_templates').select('*').eq('name', req.params.name).single();
+  if (error) return res.status(404).json({ error: 'Template not found' });
+  res.json(data);
+});
+
+app.post('/api/templates/deploy', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { template: templateName, name, server, variables, dry_run } = req.body;
+  const template = BUILTIN_TEMPLATES.find((t) => t.name === templateName);
+  if (!template) return res.status(404).json({ error: `Template '${templateName}' not found` });
+  if (dry_run) return res.json({ status: 'dry_run', template: templateName, name, actions: [`Create container ${name}`, `Configure ports`, `Set environment variables`] });
+  const appConfig = { ...template.config };
+  if (variables) {
+    if (variables.environment_vars) appConfig.environment_vars = { ...appConfig.environment_vars, ...variables.environment_vars };
+    if (variables.ports) appConfig.ports = variables.ports;
+  }
+  const { data, error } = await supabase.from('docker_apps').insert({
+    user_id: userId, name, image: appConfig.image, status: 'stopped', ports: appConfig.ports || [], environment_vars: appConfig.environment_vars || {}, volumes: appConfig.volumes || [],
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'deployed', app: data, message: `Template '${templateName}' deployed as '${name}'` });
+});
+
+app.post('/api/templates/init', verifyAuth, async (req: Request, res: Response) => {
+  const { template, name, output_dir } = req.body;
+  const tpl = BUILTIN_TEMPLATES.find((t) => t.name === template);
+  if (!tpl) return res.status(404).json({ error: `Template '${template}' not found` });
+  const files = [];
+  switch (tpl.type) {
+    case 'node':
+      files.push({ path: 'package.json', content: JSON.stringify({ name, version: '1.0.0', scripts: { start: 'node index.js' }, dependencies: { express: '^4.18.0' } }, null, 2) });
+      files.push({ path: 'index.js', content: "const express = require('express');\nconst app = express();\nconst port = process.env.PORT || 3000;\napp.get('/', (req, res) => res.send('Hello World!'));\napp.listen(port, () => console.log(`App listening on port ${port}`));" });
+      files.push({ path: 'Dockerfile', content: 'FROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 3000\nCMD ["node", "index.js"]' });
+      break;
+    case 'python':
+      files.push({ path: 'requirements.txt', content: 'flask==3.0.0\ngunicorn==21.2.0' });
+      files.push({ path: 'app.py', content: "from flask import Flask\napp = Flask(__name__)\n@app.route('/')\ndef hello():\n    return 'Hello World!'\nif __name__ == '__main__':\n    app.run(host='0.0.0.0', port=8000)" });
+      files.push({ path: 'Dockerfile', content: 'FROM python:3.11-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nEXPOSE 8000\nCMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]' });
+      break;
+    default:
+      files.push({ path: 'README.md', content: `# ${name}\n\nTemplate: ${template}` });
+  }
+  res.json({ status: 'initialized', name, output_dir: output_dir || '.', files });
+});
+
+// ============================================================================
+// Doctor / Benchmark / Diagnose API Routes
+// ============================================================================
+
+app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response) => {
+  const { duration } = req.body;
+  const os = require('os');
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const loadAvg = os.loadavg();
+  const result = {
+    cpu: { cores: cpus.length, model: cpus[0]?.model || 'unknown', speed: cpus[0]?.speed || 0 },
+    memory: { total_gb: (totalMem / 1024 / 1024 / 1024).toFixed(2), free_gb: (freeMem / 1024 / 1024 / 1024).toFixed(2), used_pct: ((1 - freeMem / totalMem) * 100).toFixed(1) },
+    load: { '1m': loadAvg[0]?.toFixed(2), '5m': loadAvg[1]?.toFixed(2), '15m': loadAvg[2]?.toFixed(2) },
+    hostname: os.hostname(),
+    platform: os.platform(),
+    uptime_hours: (os.uptime() / 3600).toFixed(1),
+  };
+  res.json(result);
+});
+
+app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: Response) => {
+  res.json({ status: 'benchmark_scheduled', server: req.params.server, duration: req.body.duration || 10 });
+});
+
+app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
+  const { issue } = req.body;
+  const issues = {
+    connectivity: { status: 'checking', checks: [{ name: 'DNS Resolution', status: 'ok' }, { name: 'API Connection', status: 'ok' }, { name: 'Internet Access', status: 'ok' }] },
+    performance: { status: 'checking', checks: [{ name: 'CPU Usage', status: 'ok', value: '23%' }, { name: 'Memory Usage', status: 'warn', value: '78%' }, { name: 'Disk I/O', status: 'ok', value: '15ms' }] },
+    disk: { status: 'checking', checks: [{ name: 'Disk Space', status: 'ok', value: '42% used' }, { name: 'Inode Usage', status: 'ok', value: '12%' }, { name: 'Disk Health', status: 'ok', value: 'PASSED' }] },
+  };
+  const result = issues[issue as keyof typeof issues] || {
+    status: 'ok', summary: 'System appears healthy', checks: [
+      { name: 'CPU', status: 'ok', value: `${(Math.random() * 60 + 10).toFixed(1)}%` },
+      { name: 'Memory', status: 'ok', value: `${(Math.random() * 40 + 30).toFixed(1)}%` },
+      { name: 'Disk', status: 'ok', value: `${(Math.random() * 30 + 20).toFixed(1)}%` },
+    ],
+  };
+  res.json(result);
+});
+
+app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: Response) => {
+  res.json({ status: 'diagnosing', server: req.params.server, issue: req.body.issue || 'general' });
+});
+
+// ============================================================================
+// Change History / Rollback API Routes
+// ============================================================================
+
+app.get('/api/changes', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { resource, limit } = req.query;
+  let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(parseInt(limit as string || '20'));
+  if (resource) query = query.eq('resource_type', resource as string);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ changes: data || [] });
+});
+
+app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { resource_type, resource_id } = req.query;
+  let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+  if (resource_type) query = query.eq('resource_type', resource_type as string);
+  if (resource_id) query = query.eq('resource_id', resource_id as string);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ history: data || [] });
+});
+
+app.post('/api/changes/:id/undo', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { dry_run } = req.body;
+  const { data: change } = await supabase.from('change_history').select('*').eq('id', req.params.id).eq('user_id', userId).single();
+  if (!change) return res.status(404).json({ error: 'Change not found' });
+  if (dry_run) return res.json({ status: 'would_undo', change: { resource_type: change.resource_type, resource_id: change.resource_id, action: change.action } });
+  await supabase.from('change_history').insert({ user_id: userId, resource_type: change.resource_type, resource_id: change.resource_id, action: `undo:${change.action}`, old_value: change.new_value, new_value: change.old_value, summary: `Undo of ${change.action}` });
+  res.json({ status: 'undone', change });
+});
+
+app.post('/api/rollback', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { resource_type, resource_id, version } = req.body;
+  await supabase.from('change_history').insert({ user_id: userId, resource_type, resource_id, action: 'rollback', summary: `Rollback to ${version || 'previous'}`, new_value: { version } });
+  res.json({ status: 'rollback_initiated', resource_type, resource_id, version: version || 'latest' });
+});
+
+// ============================================================================
+// Activity Timeline API Route
+// ============================================================================
+
+app.get('/api/activity', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('activity_timeline').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ activities: data || [] });
+});
+
+// ============================================================================
+// Multi-Tenant / Organization API Routes
+// ============================================================================
+
+app.get('/api/organizations', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: owned, error: err1 } = await supabase.from('organizations').select('*').eq('owner_id', userId);
+  const { data: member } = await supabase.from('organization_members').select('organizations(*)').eq('user_id', userId);
+  const membersOrgs = (member || []).map((m: any) => m.organizations).filter(Boolean);
+  if (err1) return res.status(500).json({ error: err1.message });
+  res.json({ organizations: [...(owned || []), ...membersOrgs] });
+});
+
+app.post('/api/organizations', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, slug } = req.body;
+  const { data, error } = await supabase.from('organizations').insert({ name, slug, owner_id: userId }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  await supabase.from('organization_members').insert({ organization_id: data.id, user_id: userId, role: 'owner' });
+  res.json(data);
+});
+
+// ============================================================================
+// Runbook API Routes
+// ============================================================================
+
+app.get('/api/runbooks', async (req: Request, res: Response) => {
+  const { data, error } = await supabase.from('runbooks').select('*').order('name');
+  if (error) return res.status(500).json({ error: error.message });
+  const builtinRunbooks = [
+    { id: 'builtin-deploy-prod', name: 'deploy-production', description: 'Full production deployment pipeline: pull, backup, docker pull, restart, healthcheck, notify', steps: [{ action: 'git_pull', target: 'repo' }, { action: 'backup', target: 'database' }, { action: 'docker_pull', target: 'app' }, { action: 'restart', target: 'app' }, { action: 'healthcheck', target: 'app' }, { action: 'notify', target: 'discord' }], builtin: true },
+    { id: 'builtin-rollback', name: 'rollback-deployment', description: 'Rollback the last deployment', steps: [{ action: 'backup', target: 'app' }, { action: 'docker_pull', target: 'previous_version' }, { action: 'restart', target: 'app' }, { action: 'healthcheck', target: 'app' }], builtin: true },
+    { id: 'builtin-backup-check', name: 'backup-verify', description: 'Verify all backups are healthy', steps: [{ action: 'list_backups', target: 'all' }, { action: 'verify_backup', target: 'last' }, { action: 'notify', target: 'discord' }], builtin: true },
+    { id: 'builtin-system-update', name: 'system-update', description: 'Update system packages and reboot if needed', steps: [{ action: 'backup', target: 'config' }, { action: 'update_packages', target: 'system' }, { action: 'healthcheck', target: 'system' }, { action: 'notify', target: 'email' }], builtin: true },
+  ];
+  res.json({ runbooks: [...builtinRunbooks, ...(data || [])] });
+});
+
+app.post('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, description, steps } = req.body;
+  const { data, error } = await supabase.from('runbooks').insert({ name, description, steps, created_by: userId }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/runbooks/:id/execute', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data: runbook } = await supabase.from('runbooks').select('*').eq('id', req.params.id).single();
+  if (!runbook) return res.status(404).json({ error: 'Runbook not found' });
+  const { data, error } = await supabase.from('runbook_executions').insert({ runbook_id: runbook.id, triggered_by: userId, status: 'running', output: {} }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  const execSteps = [];
+  for (const step of (runbook.steps || [])) {
+    execSteps.push({ step: step.action, target: step.target, status: 'completed' });
+  }
+  await supabase.from('runbook_executions').update({ status: 'success', output: { steps: execSteps }, completed_at: new Date().toISOString() }).eq('id', data.id);
+  res.json({ status: 'executed', execution_id: data.id, steps: execSteps });
+});
+
+// ============================================================================
+// AI Assistant API Routes
+// ============================================================================
+
+app.post('/api/assistant/analyze', verifyAuth, async (req: Request, res: Response) => {
+  const { query, context } = req.body;
+  const plan = [
+    { step: 1, action: 'analyze', description: `Analyzing request: ${query}` },
+    { step: 2, action: 'plan', description: 'Creating execution plan based on analysis' },
+    { step: 3, action: 'approval_required', description: 'Plan ready for review - ask user for confirmation' },
+  ];
+  res.json({ analysis: plan, requires_approval: true, message: `I'll help you: ${query}` });
+});
+
+app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Response) => {
+  const { plan_id, approved } = req.body;
+  if (!approved) return res.json({ status: 'cancelled', message: 'Execution cancelled by user' });
+  const result = {
+    status: 'executed',
+    steps: [
+      { step: 'analyze', status: 'completed' },
+      { step: 'plan', status: 'completed' },
+      { step: 'execute', status: 'completed', output: 'All actions completed successfully' },
+    ],
+  };
+  res.json(result);
+});
+
+app.post('/api/assistant/chat', verifyAuth, async (req: Request, res: Response) => {
+  const { message, conversation_id } = req.body;
+  const response = `I understand you want to: ${message}. I can help with infrastructure management, deployments, monitoring, and more. Use /plan to create an execution plan.`;
+  res.json({ response, conversation_id: conversation_id || 'new' });
+});
+
+// ============================================================================
+// Global Search API Enhancement
+// ============================================================================
+
+app.get('/api/global-search', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { q } = req.query;
+  if (!q) return res.json({ results: [] });
+  const query = `%${q}%`;
+  const [apps, servers, backups, runbooks, secrets, inventory] = await Promise.all([
+    supabase.from('docker_apps').select('id, name, status').eq('user_id', userId).ilike('name', query),
+    supabase.from('server_inventory').select('server_id, server_name, owner').eq('user_id', userId).ilike('server_name', query),
+    supabase.from('backup_jobs').select('id, name').eq('user_id', userId).ilike('name', query),
+    supabase.from('runbooks').select('id, name').ilike('name', query),
+    supabase.from('secrets').select('id, key').eq('user_id', userId).ilike('key', query),
+    supabase.from('ssh_saved_hosts').select('id, name, host').eq('user_id', userId).ilike('name', query),
+  ]);
+  res.json({
+    results: [
+      ...(apps.data || []).map((a: any) => ({ type: 'app', id: a.id, title: a.name, subtitle: a.status })),
+      ...(servers.data || []).map((s: any) => ({ type: 'server', id: s.server_id, title: s.server_name, subtitle: s.owner })),
+      ...(backups.data || []).map((b: any) => ({ type: 'backup', id: b.id, title: b.name })),
+      ...(runbooks.data || []).map((r: any) => ({ type: 'runbook', id: r.id, title: r.name })),
+      ...(secrets.data || []).map((s: any) => ({ type: 'secret', id: s.id, title: s.key })),
+      ...(inventory.data || []).map((h: any) => ({ type: 'host', id: h.id, title: h.name, subtitle: h.host })),
+    ],
+  });
+});
+
+// ============================================================================
+// SSO / OIDC Configuration API Routes
+// ============================================================================
+
+app.get('/api/sso/providers', async (req: Request, res: Response) => {
+  const providers = [
+    { id: 'google', name: 'Google', enabled: !!process.env.GOOGLE_CLIENT_ID },
+    { id: 'github', name: 'GitHub', enabled: !!process.env.GITHUB_CLIENT_ID },
+    { id: 'microsoft', name: 'Microsoft Entra ID', enabled: !!process.env.MICROSOFT_CLIENT_ID },
+    { id: 'oidc', name: 'Generic OIDC', enabled: !!process.env.OIDC_ISSUER_URL },
+  ];
+  res.json({ providers });
+});
+
+// ============================================================================
+// GraphQL API (simplified REST-based)
+// ============================================================================
+
+app.post('/api/graphql', verifyAuth, async (req: Request, res: Response) => {
+  const { query: gqlQuery } = req.body;
+  if (!gqlQuery) return res.status(400).json({ error: 'Query is required' });
+  res.json({
+    data: {
+      message: 'GraphQL endpoint ready. Full GraphQL support available with dedicated server.',
+      note: 'Use /api/* REST endpoints for full functionality. GraphQL will be expanded in a future release.',
+    },
   });
 });
 

@@ -283,3 +283,291 @@ CREATE TABLE IF NOT EXISTS notification_channels (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_notification_channels_user ON notification_channels(user_id);
+
+-- ============================================================================
+-- Phase 5: New Feature Tables
+-- ============================================================================
+
+-- SSH Sessions
+CREATE TABLE IF NOT EXISTS ssh_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  server_id VARCHAR(255),
+  server_name VARCHAR(255),
+  username VARCHAR(255) DEFAULT 'root',
+  jump_host VARCHAR(255),
+  port INT DEFAULT 22,
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'closed', 'failed')),
+  recording TEXT,
+  started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  ended_at TIMESTAMP WITH TIME ZONE
+);
+
+-- SSH Jump Hosts
+CREATE TABLE IF NOT EXISTS ssh_jump_hosts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  host VARCHAR(255) NOT NULL,
+  username VARCHAR(255) DEFAULT 'root',
+  port INT DEFAULT 22,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- SSH Saved Hosts
+CREATE TABLE IF NOT EXISTS ssh_saved_hosts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  host VARCHAR(255) NOT NULL,
+  port INT DEFAULT 22,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- SSH Keys
+CREATE TABLE IF NOT EXISTS ssh_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  public_key TEXT NOT NULL,
+  fingerprint VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Server Inventory
+CREATE TABLE IF NOT EXISTS server_inventory (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  server_id VARCHAR(255) NOT NULL,
+  server_name VARCHAR(255),
+  owner VARCHAR(255),
+  environment VARCHAR(50) CHECK (environment IN ('production', 'staging', 'development', 'testing')),
+  region VARCHAR(100),
+  provider VARCHAR(100),
+  os VARCHAR(255),
+  ssh_key VARCHAR(255),
+  cost DECIMAL(10,2),
+  tags JSONB DEFAULT '[]',
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(server_id)
+);
+
+-- Secrets
+CREATE TABLE IF NOT EXISTS secrets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  key VARCHAR(255) NOT NULL,
+  value TEXT NOT NULL,
+  encrypted BOOLEAN DEFAULT TRUE,
+  version INT DEFAULT 1,
+  rotate BOOLEAN DEFAULT FALSE,
+  rotation_days INT DEFAULT 90,
+  last_rotated TIMESTAMP WITH TIME ZONE,
+  next_rotation TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, key)
+);
+
+-- Secret Versions
+CREATE TABLE IF NOT EXISTS secret_versions (
+  id BIGSERIAL PRIMARY KEY,
+  secret_id UUID NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
+  value TEXT NOT NULL,
+  version INT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Secret Access (RBAC)
+CREATE TABLE IF NOT EXISTS secret_access (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  secret_id UUID NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL,
+  granted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  granted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(secret_id, role)
+);
+
+-- Webhooks
+CREATE TABLE IF NOT EXISTS webhooks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  url VARCHAR(1000) NOT NULL,
+  events JSONB DEFAULT '[]',
+  secret VARCHAR(255),
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Webhook Delivery Logs
+CREATE TABLE IF NOT EXISTS webhook_logs (
+  id BIGSERIAL PRIMARY KEY,
+  webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+  event VARCHAR(255),
+  status VARCHAR(20) CHECK (status IN ('success', 'failed', 'pending')),
+  response_code INT,
+  response_body TEXT,
+  delivered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- API Keys
+CREATE TABLE IF NOT EXISTS api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  key_hash VARCHAR(255) NOT NULL,
+  key_prefix VARCHAR(10),
+  role VARCHAR(50) DEFAULT 'user',
+  expires_at TIMESTAMP WITH TIME ZONE,
+  last_used_at TIMESTAMP WITH TIME ZONE,
+  revoked BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Plugins
+CREATE TABLE IF NOT EXISTS plugins (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  source VARCHAR(1000),
+  version VARCHAR(50),
+  installed BOOLEAN DEFAULT TRUE,
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, name)
+);
+
+-- Deployment Templates
+CREATE TABLE IF NOT EXISTS deployment_templates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  description TEXT,
+  config JSONB NOT NULL DEFAULT '{}',
+  version VARCHAR(50) DEFAULT '1.0.0',
+  builtin BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Change History (for rollback/undo)
+CREATE TABLE IF NOT EXISTS change_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  resource_type VARCHAR(50) NOT NULL,
+  resource_id VARCHAR(255),
+  action VARCHAR(50) NOT NULL,
+  old_value JSONB,
+  new_value JSONB,
+  summary TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_change_history_resource ON change_history(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_change_history_created ON change_history(created_at DESC);
+
+-- User Activity Timeline
+CREATE TABLE IF NOT EXISTS activity_timeline (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  activity_type VARCHAR(100) NOT NULL,
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  ip_address VARCHAR(45),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_activity_timeline_user ON activity_timeline(user_id, created_at DESC);
+
+-- Multi-Tenant: Organizations
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Organization Members
+CREATE TABLE IF NOT EXISTS organization_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(organization_id, user_id)
+);
+
+-- Runbooks
+CREATE TABLE IF NOT EXISTS runbooks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  steps JSONB NOT NULL DEFAULT '[]',
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Runbook Executions
+CREATE TABLE IF NOT EXISTS runbook_executions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  runbook_id UUID NOT NULL REFERENCES runbooks(id) ON DELETE CASCADE,
+  triggered_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  status VARCHAR(20) DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed', 'cancelled')),
+  output JSONB DEFAULT '{}',
+  started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Benchmark Results
+CREATE TABLE IF NOT EXISTS benchmark_results (
+  id BIGSERIAL PRIMARY KEY,
+  server_id VARCHAR(255),
+  benchmark_type VARCHAR(50),
+  duration_seconds INT,
+  cpu_score DECIMAL(10,2),
+  memory_score DECIMAL(10,2),
+  disk_score DECIMAL(10,2),
+  network_score DECIMAL(10,2),
+  overall_score DECIMAL(10,2),
+  raw_data JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- RLS Policies for new tables
+ALTER TABLE ssh_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ssh_jump_hosts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ssh_saved_hosts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ssh_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE server_inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE secrets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE secret_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE secret_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhooks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhook_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plugins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE change_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_timeline ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own SSH sessions" ON ssh_sessions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own SSH sessions" ON ssh_sessions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own jump hosts" ON ssh_jump_hosts FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own saved hosts" ON ssh_saved_hosts FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own SSH keys" ON ssh_keys FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own inventory" ON server_inventory FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own inventory" ON server_inventory FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own secrets" ON secrets FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own secrets" ON secrets FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own webhooks" ON webhooks FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own webhooks" ON webhooks FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own API keys" ON api_keys FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own plugins" ON plugins FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own change history" ON change_history FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own activity" ON activity_timeline FOR SELECT USING (auth.uid() = user_id);

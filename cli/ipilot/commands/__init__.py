@@ -31,7 +31,7 @@ register("gw", "LoRaWAN gateways")(lora_wan_app)
 register("pipeline", "Data pipelines")(data_pipeline_app)
 
 from .green.energy_management import app as energy_app
-from .green.carbon_footprint import app as carbon_app
+from .green.carbon import app as carbon_app
 from .green.green_scheduler import app as green_app
 from .green.resource_reclamation import app as reclaim_app
 from .green.auto_shutdown import app as shutdown_app
@@ -259,6 +259,31 @@ register("federated", "Federated learning")(federated_app)
 register("zkp", "Zero knowledge proofs")(zkp_app)
 register("dcn", "Decentralized compute")(dcn_app)
 
+# New feature commands
+from .gitops import app as gitops_app
+from .ssh import app as ssh_app
+from .inventory import app as inventory_app
+from .secrets import app as secrets_app
+from .plugins import app as plugins_app
+from .doctor import app as doctor_app
+from .webhooks import app as webhooks_app
+from .apikeys import app as apikeys_app
+from .templates import app as templates_app
+from .tui import app as tui_app
+from .rollback import app as rollback_app
+
+register("gitops", "Infrastructure as Code (GitOps)")(gitops_app)
+register("ssh", "SSH session management")(ssh_app)
+register("inventory", "Server inventory")(inventory_app)
+register("secrets", "Secret management")(secrets_app)
+register("plugins", "Plugin management")(plugins_app)
+register("doctor", "System diagnostics")(doctor_app)
+register("webhooks", "Webhook management")(webhooks_app)
+register("apikeys", "API key management")(apikeys_app)
+register("templates", "Deployment templates")(templates_app)
+register("tui", "Terminal UI mode")(tui_app)
+register("rollback", "Undo/rollback changes")(rollback_app)
+
 from .platform.resiliency.disaster_recovery import app as dr_app
 from .platform.resiliency.active_active import app as active_active_app
 from .platform.resiliency.backup_sla_manager import app as backup_sla_app
@@ -314,4 +339,7 @@ __all__: list[str] = [
     "dr_app", "active_active_app", "backup_sla_app", "chaos_exp_app",
     "res_score_app", "dep_sim_app", "rb_exec_app", "data_integrity_app",
     "res_pipeline_app", "bc_dashboard_app",
+    "gitops_app", "ssh_app", "inventory_app", "secrets_app",
+    "plugins_app", "doctor_app", "webhooks_app", "apikeys_app", "templates_app",
+    "tui_app", "rollback_app",
 ]

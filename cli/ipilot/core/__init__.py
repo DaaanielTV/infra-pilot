@@ -1,5 +1,7 @@
 """Core CLI utilities."""
 
+from typing import Any
+
 from .command_registry import register, discover_commands, attach_to_app, get_registry
 from .exceptions import (
     CLIError,
@@ -12,7 +14,7 @@ from .exceptions import (
 )
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     if name in {"create_app", "get_client", "LegacyBridge", "legacy_bridge"}:
         from . import cli
 

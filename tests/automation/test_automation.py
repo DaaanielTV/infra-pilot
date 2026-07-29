@@ -1,5 +1,9 @@
 
+import os
 import pytest
+
+if not os.environ.get("CI") and not os.environ.get("INTEGRATION_SERVICE_URL"):
+    pytest.skip("integration_service not configured (set CI or INTEGRATION_SERVICE_URL)", allow_module_level=True)
 
 pytest.importorskip(
     "services.integration_service",

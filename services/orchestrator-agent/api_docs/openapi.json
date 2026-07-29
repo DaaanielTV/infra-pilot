@@ -1,0 +1,579 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Infra Pilot Orchestrator Agent API",
+    "description": "REST API for the Infra Pilot infrastructure orchestration platform. Manage servers, deployments, containers, networking, DNS, billing, monitoring, and more through a unified API.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Infra Pilot Team",
+      "url": "https://github.com/drosemann/infra-pilot",
+      "email": "team@infra-pilot.example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    { "url": "https://api.infra-pilot.example.com/v1", "description": "Production server" },
+    { "url": "https://staging.api.infra-pilot.example.com/v1", "description": "Staging server" },
+    { "url": "http://localhost:8500/v1", "description": "Local development" }
+  ],
+  "security": [
+    { "ApiKeyAuth": [] },
+    { "BearerAuth": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key authentication. Obtain your API key from the dashboard."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token authentication. Obtain a token via /auth/login."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "code": { "type": "integer" },
+          "details": { "type": "object" }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "degraded", "unhealthy"] },
+          "version": { "type": "string" },
+          "uptime": { "type": "number" },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "database": { "type": "string" },
+              "redis": { "type": "string" },
+              "discord": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Server": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["running", "stopped", "error", "pending"] },
+          "type": { "type": "string" },
+          "region": { "type": "string" },
+          "ip_address": { "type": "string" },
+          "os": { "type": "string" },
+          "cpu": { "type": "integer" },
+          "memory_mb": { "type": "integer" },
+          "disk_gb": { "type": "integer" },
+          "bandwidth_gb": { "type": "integer" },
+          "cost_per_hour": { "type": "number" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      },
+      "Container": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string" },
+          "status": { "type": "string" },
+          "ports": { "type": "array", "items": { "type": "object" } },
+          "mounts": { "type": "array", "items": { "type": "object" } },
+          "resource_limits": { "type": "object" },
+          "health": { "type": "string" },
+          "created": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Deployment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string" },
+          "strategy": { "type": "string" },
+          "replicas": { "type": "integer" },
+          "image": { "type": "string" },
+          "namespace": { "type": "string" },
+          "created": { "type": "string", "format": "date-time" },
+          "updated": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateServerRequest": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string", "minLength": 3, "maxLength": 64 },
+          "type": { "type": "string" },
+          "region": { "type": "string", "default": "us-east" },
+          "os": { "type": "string", "default": "ubuntu-22.04" },
+          "cpu": { "type": "integer", "default": 2 },
+          "memory_mb": { "type": "integer", "default": 2048 },
+          "disk_gb": { "type": "integer", "default": 50 },
+          "ssh_keys": { "type": "array", "items": { "type": "string" } },
+          "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      }
+    },
+    "parameters": {
+      "serverId": { "name": "serverId", "in": "path", "required": true, "schema": { "type": "string" } },
+      "containerId": { "name": "containerId", "in": "path", "required": true, "schema": { "type": "string" } },
+      "deploymentId": { "name": "deploymentId", "in": "path", "required": true, "schema": { "type": "string" } },
+      "limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 200 } },
+      "offset": { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0 } },
+      "namespace": { "name": "namespace", "in": "query", "schema": { "type": "string", "default": "default" } }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Health check",
+        "description": "Returns the health status of the orchestrator agent and its dependencies.",
+        "security": [],
+        "responses": {
+          "200": { "description": "Service is healthy", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } } },
+          "503": { "description": "Service is unhealthy", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Prometheus metrics",
+        "description": "Returns Prometheus-formatted metrics for the orchestrator agent.",
+        "security": [],
+        "responses": {
+          "200": { "description": "Metrics in Prometheus text format", "content": { "text/plain": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/servers": {
+      "get": {
+        "tags": ["Servers"],
+        "summary": "List servers",
+        "description": "List all servers with optional filtering by status, region, and labels.",
+        "parameters": [
+          { "$ref": "#/components/parameters/limit" },
+          { "$ref": "#/components/parameters/offset" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["running", "stopped", "error"] } },
+          { "name": "region", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of servers", "content": { "application/json": { "schema": { "type": "object", "properties": { "servers": { "type": "array", "items": { "$ref": "#/components/schemas/Server" } }, "total": { "type": "integer" } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Servers"],
+        "summary": "Create server",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateServerRequest" } } } },
+        "responses": {
+          "201": { "description": "Server created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Server" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/servers/{serverId}": {
+      "get": {
+        "tags": ["Servers"],
+        "summary": "Get server details",
+        "parameters": [{ "$ref": "#/components/parameters/serverId" }],
+        "responses": {
+          "200": { "description": "Server details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Server" } } } },
+          "404": { "description": "Server not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Servers"],
+        "summary": "Delete server",
+        "parameters": [{ "$ref": "#/components/parameters/serverId" }],
+        "responses": {
+          "204": { "description": "Server deleted" },
+          "404": { "description": "Server not found" }
+        }
+      }
+    },
+    "/servers/{serverId}/start": {
+      "post": {
+        "tags": ["Servers"],
+        "summary": "Start server",
+        "parameters": [{ "$ref": "#/components/parameters/serverId" }],
+        "responses": {
+          "200": { "description": "Server starting" },
+          "409": { "description": "Server already running" }
+        }
+      }
+    },
+    "/servers/{serverId}/stop": {
+      "post": {
+        "tags": ["Servers"],
+        "summary": "Stop server",
+        "parameters": [{ "$ref": "#/components/parameters/serverId" }],
+        "responses": {
+          "200": { "description": "Server stopping" },
+          "409": { "description": "Server already stopped" }
+        }
+      }
+    },
+    "/servers/{serverId}/restart": {
+      "post": {
+        "tags": ["Servers"],
+        "summary": "Restart server",
+        "parameters": [{ "$ref": "#/components/parameters/serverId" }],
+        "responses": {
+          "200": { "description": "Server restarting" }
+        }
+      }
+    },
+    "/containers": {
+      "get": {
+        "tags": ["Containers"],
+        "summary": "List containers",
+        "parameters": [
+          { "$ref": "#/components/parameters/limit" },
+          { "$ref": "#/components/parameters/offset" },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of containers", "content": { "application/json": { "schema": { "type": "object", "properties": { "containers": { "type": "array", "items": { "$ref": "#/components/schemas/Container" } }, "total": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/containers/{containerId}": {
+      "get": {
+        "tags": ["Containers"],
+        "summary": "Get container details",
+        "parameters": [{ "$ref": "#/components/parameters/containerId" }],
+        "responses": { "200": { "description": "Container details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Container" } } } } }
+      }
+    },
+    "/containers/{containerId}/logs": {
+      "get": {
+        "tags": ["Containers"],
+        "summary": "Get container logs",
+        "parameters": [
+          { "$ref": "#/components/parameters/containerId" },
+          { "name": "tail", "in": "query", "schema": { "type": "integer", "default": 100 } },
+          { "name": "since", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "Container logs", "content": { "text/plain": { "schema": { "type": "string" } } } } }
+      }
+    },
+    "/containers/{containerId}/stats": {
+      "get": {
+        "tags": ["Containers"],
+        "summary": "Get container stats",
+        "parameters": [{ "$ref": "#/components/parameters/containerId" }],
+        "responses": { "200": { "description": "Container resource statistics" } }
+      }
+    },
+    "/deployments": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "List deployments",
+        "parameters": [
+          { "$ref": "#/components/parameters/limit" },
+          { "$ref": "#/components/parameters/offset" },
+          { "$ref": "#/components/parameters/namespace" }
+        ],
+        "responses": { "200": { "description": "List of deployments" } }
+      },
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Create deployment",
+        "parameters": [{ "$ref": "#/components/parameters/namespace" }],
+        "responses": { "201": { "description": "Deployment created" } }
+      }
+    },
+    "/deployments/{deploymentId}": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Get deployment details",
+        "parameters": [{ "$ref": "#/components/parameters/deploymentId" }],
+        "responses": { "200": { "description": "Deployment details" } }
+      },
+      "delete": {
+        "tags": ["Deployments"],
+        "summary": "Delete deployment",
+        "parameters": [{ "$ref": "#/components/parameters/deploymentId" }],
+        "responses": { "204": { "description": "Deployment deleted" } }
+      }
+    },
+    "/deployments/{deploymentId}/scale": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Scale deployment",
+        "parameters": [{ "$ref": "#/components/parameters/deploymentId" }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "replicas": { "type": "integer", "minimum": 0, "maximum": 100 } }, "required": ["replicas"] } } } },
+        "responses": { "200": { "description": "Deployment scaled" } }
+      }
+    },
+    "/deployments/{deploymentId}/rollout": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Restart rollout",
+        "parameters": [{ "$ref": "#/components/parameters/deploymentId" }],
+        "responses": { "200": { "description": "Rollout restarted" } }
+      }
+    },
+    "/deployments/{deploymentId}/rollback": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Rollback deployment",
+        "parameters": [{ "$ref": "#/components/parameters/deploymentId" }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "revision": { "type": "integer" } } } } } },
+        "responses": { "200": { "description": "Deployment rolled back" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login with API key",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "api_key": { "type": "string" } }, "required": ["api_key"] } } } },
+        "responses": { "200": { "description": "Login successful" } }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register new API key",
+        "security": [],
+        "responses": { "201": { "description": "API key created" } }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhooks",
+        "responses": { "200": { "description": "List of webhooks" } }
+      },
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Create webhook",
+        "responses": { "201": { "description": "Webhook created" } }
+      }
+    },
+    "/webhooks/{webhookId}": {
+      "delete": {
+        "tags": ["Webhooks"],
+        "summary": "Delete webhook",
+        "parameters": [{ "name": "webhookId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "Webhook deleted" } }
+      }
+    },
+    "/webhooks/triggers": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List available webhook triggers",
+        "responses": { "200": { "description": "List of triggers" } }
+      }
+    },
+    "/billing/usage": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "Get current usage",
+        "responses": { "200": { "description": "Usage details" } }
+      }
+    },
+    "/billing/invoices": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "List invoices",
+        "responses": { "200": { "description": "List of invoices" } }
+      }
+    },
+    "/billing/credits": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "Get credit balance",
+        "responses": { "200": { "description": "Credit balance" } }
+      }
+    },
+    "/dns/zones": {
+      "get": {
+        "tags": ["DNS"],
+        "summary": "List DNS zones",
+        "responses": { "200": { "description": "List of DNS zones" } }
+      },
+      "post": {
+        "tags": ["DNS"],
+        "summary": "Create DNS zone",
+        "responses": { "201": { "description": "DNS zone created" } }
+      }
+    },
+    "/dns/zones/{zoneId}": {
+      "delete": {
+        "tags": ["DNS"],
+        "summary": "Delete DNS zone",
+        "parameters": [{ "name": "zoneId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "DNS zone deleted" } }
+      }
+    },
+    "/dns/zones/{zoneId}/records": {
+      "get": {
+        "tags": ["DNS"],
+        "summary": "List DNS records",
+        "parameters": [{ "name": "zoneId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "List of DNS records" } }
+      },
+      "post": {
+        "tags": ["DNS"],
+        "summary": "Create DNS record",
+        "parameters": [{ "name": "zoneId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "DNS record created" } }
+      }
+    },
+    "/monitoring/alerts": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "List alerts",
+        "responses": { "200": { "description": "List of alerts" } }
+      },
+      "post": {
+        "tags": ["Monitoring"],
+        "summary": "Create alert rule",
+        "responses": { "201": { "description": "Alert rule created" } }
+      }
+    },
+    "/monitoring/alerts/{alertId}": {
+      "delete": {
+        "tags": ["Monitoring"],
+        "summary": "Delete alert rule",
+        "parameters": [{ "name": "alertId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "Alert rule deleted" } }
+      }
+    },
+    "/networks": {
+      "get": {
+        "tags": ["Networking"],
+        "summary": "List networks",
+        "responses": { "200": { "description": "List of networks" } }
+      },
+      "post": {
+        "tags": ["Networking"],
+        "summary": "Create network",
+        "responses": { "201": { "description": "Network created" } }
+      }
+    },
+    "/ssh-keys": {
+      "get": {
+        "tags": ["SSH Keys"],
+        "summary": "List SSH keys",
+        "responses": { "200": { "description": "List of SSH keys" } }
+      },
+      "post": {
+        "tags": ["SSH Keys"],
+        "summary": "Add SSH key",
+        "responses": { "201": { "description": "SSH key added" } }
+      }
+    },
+    "/ssh-keys/{keyId}": {
+      "delete": {
+        "tags": ["SSH Keys"],
+        "summary": "Delete SSH key",
+        "parameters": [{ "name": "keyId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "SSH key deleted" } }
+      }
+    },
+    "/backups": {
+      "get": {
+        "tags": ["Backups"],
+        "summary": "List backups",
+        "responses": { "200": { "description": "List of backups" } }
+      },
+      "post": {
+        "tags": ["Backups"],
+        "summary": "Create backup",
+        "responses": { "201": { "description": "Backup created" } }
+      }
+    },
+    "/backups/{backupId}": {
+      "delete": {
+        "tags": ["Backups"],
+        "summary": "Delete backup",
+        "parameters": [{ "name": "backupId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "Backup deleted" } }
+      }
+    },
+    "/backups/{backupId}/restore": {
+      "post": {
+        "tags": ["Backups"],
+        "summary": "Restore from backup",
+        "parameters": [{ "name": "backupId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Restore initiated" } }
+      }
+    },
+    "/volumes": {
+      "get": {
+        "tags": ["Volumes"],
+        "summary": "List volumes",
+        "responses": { "200": { "description": "List of volumes" } }
+      },
+      "post": {
+        "tags": ["Volumes"],
+        "summary": "Create volume",
+        "responses": { "201": { "description": "Volume created" } }
+      }
+    },
+    "/firewalls": {
+      "get": {
+        "tags": ["Firewalls"],
+        "summary": "List firewalls",
+        "responses": { "200": { "description": "List of firewalls" } }
+      },
+      "post": {
+        "tags": ["Firewalls"],
+        "summary": "Create firewall",
+        "responses": { "201": { "description": "Firewall created" } }
+      }
+    },
+    "/templates": {
+      "get": {
+        "tags": ["Templates"],
+        "summary": "List templates",
+        "responses": { "200": { "description": "List of templates" } }
+      }
+    },
+    "/marketplace/items": {
+      "get": {
+        "tags": ["Marketplace"],
+        "summary": "List marketplace items",
+        "responses": { "200": { "description": "List of marketplace items" } }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Monitoring", "description": "Health checks and metrics endpoints" },
+    { "name": "Servers", "description": "Server lifecycle management" },
+    { "name": "Containers", "description": "Container management and monitoring" },
+    { "name": "Deployments", "description": "Deployment management and orchestration" },
+    { "name": "Authentication", "description": "Authentication and API key management" },
+    { "name": "Webhooks", "description": "Webhook configuration and management" },
+    { "name": "Billing", "description": "Usage metering, invoices, and credits" },
+    { "name": "DNS", "description": "DNS zone and record management" },
+    { "name": "Networking", "description": "Network and firewall management" },
+    { "name": "SSH Keys", "description": "SSH key management" },
+    { "name": "Backups", "description": "Backup and restore operations" },
+    { "name": "Volumes", "description": "Volume management" },
+    { "name": "Firewalls", "description": "Firewall rule management" },
+    { "name": "Templates", "description": "Instance template management" },
+    { "name": "Marketplace", "description": "Marketplace item listing" }
+  ],
+  "externalDocs": {
+    "description": "Infra Pilot Documentation",
+    "url": "https://docs.infra-pilot.example.com"
+  }
+}

@@ -49,7 +49,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.2.7",
     "react-intl": "^10.1.18",
-    "react-router-dom": "^7.17.0",
+    "react-router-dom": "^7.18.2",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.6.0",
     "ws": "^8.21.0"

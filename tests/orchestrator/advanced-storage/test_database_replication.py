@@ -1,4 +1,4 @@
-\"\"\"test_database_replication tests.\"\"\"
+"""test_database_replication tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

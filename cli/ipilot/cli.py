@@ -4958,34 +4958,34 @@ def main_inner(args, parser=None):
         'workers': cmd_dcn_workers,
     },
 
-}
+    }
 
-if args.command in sub_router:
-    sub_map = sub_router[args.command]
-    entry = sub_map.get(args.subcommand)
-    if isinstance(entry, dict):
-        action = getattr(args, 'action', None)
-        if action and action in entry:
-            inner = entry[action]
-            if isinstance(inner, dict):
-                maint_action = getattr(args, 'maint_action', None)
-                inner.get(maint_action, lambda a: parser.print_help())(args)
+    if args.command in sub_router:
+        sub_map = sub_router[args.command]
+        entry = sub_map.get(args.subcommand)
+        if isinstance(entry, dict):
+            action = getattr(args, 'action', None)
+            if action and action in entry:
+                inner = entry[action]
+                if isinstance(inner, dict):
+                    maint_action = getattr(args, 'maint_action', None)
+                    inner.get(maint_action, lambda _args: parser.print_help())(args)
+                else:
+                    inner(args)
             else:
-                inner(args)
+                parser.print_help()
+        elif entry:
+            entry(args)
         else:
             parser.print_help()
-    elif entry:
-        entry(args)
+    elif args.command == 'logs':
+        cmd_logs(args)
+    elif args.command == 'deploy':
+        cmd_deploy(args)
+    elif args.command in cmd_map:
+        cmd_map[args.command](args)
     else:
         parser.print_help()
-elif args.command == 'logs':
-    cmd_logs(args)
-elif args.command == 'deploy':
-    cmd_deploy(args)
-elif args.command in cmd_map:
-    cmd_map[args.command](args)
-else:
-    parser.print_help()
 
 
 def main():

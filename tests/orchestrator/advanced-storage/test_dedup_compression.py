@@ -1,4 +1,4 @@
-\"\"\"test_dedup_compression tests.\"\"\"
+"""test_dedup_compression tests."""
 import pytest
 from unittest.mock import AsyncMock, patch
 

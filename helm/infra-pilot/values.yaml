@@ -1,0 +1,192 @@
+# Default values for infra-pilot Helm chart
+
+replicaCount: 1
+
+global:
+  environment: production
+  imageRegistry: ghcr.io/drosemann
+
+image:
+  repository: infra-pilot
+  pullPolicy: Always
+  tag: "latest"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8500
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: api.infra-pilot.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infra-pilot-tls
+      hosts:
+        - api.infra-pilot.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+postgresql:
+  enabled: true
+  auth:
+    database: infrapilot
+    username: infrapilot
+    password: changeme
+  primary:
+    persistence:
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme
+  architecture: replication
+  replica:
+    replicaCount: 2
+  metrics:
+    enabled: true
+
+orchestrator:
+  enabled: true
+  image:
+    repository: ghcr.io/drosemann/infra-pilot-orchestrator-agent
+    tag: latest
+  config:
+    logLevel: INFO
+    workerCount: 4
+  env:
+    - name: DB_HOST
+      value: "infra-pilot-postgresql"
+    - name: REDIS_HOST
+      value: "infra-pilot-redis-master"
+    - name: ENVIRONMENT
+      value: production
+
+managementPanel:
+  enabled: true
+  image:
+    repository: ghcr.io/drosemann/infra-pilot-management-panel
+    tag: latest
+  service:
+    port: 3000
+  env:
+    - name: API_URL
+      value: "http://infra-pilot-orchestrator:8500"
+    - name: SUPABASE_URL
+      value: ""
+    - name: SUPABASE_ANON_KEY
+      value: ""
+
+discordService:
+  enabled: false
+  image:
+    repository: ghcr.io/drosemann/infra-pilot-discord-service
+    tag: latest
+  env:
+    - name: DISCORD_TOKEN
+      value: ""
+    - name: DB_HOST
+      value: "infra-pilot-postgresql"
+
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+  nodeExporter:
+    enabled: true
+  pushgateway:
+    enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: admin
+  dashboards:
+    enabled: true
+  datasources:
+    enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+configMaps:
+  create: true
+  data:
+    LOG_LEVEL: INFO
+    MAX_CONNECTIONS: "100"
+    CACHE_TTL: "300"
+
+secrets:
+  create: true
+  data:
+    DB_PASSWORD: ""
+    REDIS_PASSWORD: ""
+    JWT_SECRET: ""
+    API_KEY: ""
+
+networkPolicies:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8500
+        - port: 3000
+  egress:
+    enabled: true
+
+serviceMesh:
+  enabled: false
+  sidecar: true
+  mtls: true

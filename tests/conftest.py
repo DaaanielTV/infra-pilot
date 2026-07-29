@@ -11,8 +11,9 @@ _cli_root = str(Path(__file__).resolve().parent.parent / "cli")
 if _cli_root not in sys.path:
     sys.path.insert(0, _cli_root)
 
-if "cli" in sys.modules:
-    del sys.modules["cli"]
+for mod in list(sys.modules):
+    if mod == "cli" or mod.startswith("cli."):
+        del sys.modules[mod]
 
 
 def pytest_pyfunc_call(pyfuncitem):

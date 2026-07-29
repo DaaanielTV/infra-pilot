@@ -4969,7 +4969,7 @@ def main_inner(args, parser=None):
                 inner = entry[action]
                 if isinstance(inner, dict):
                     maint_action = getattr(args, 'maint_action', None)
-                    inner.get(maint_action, lambda a: parser.print_help())(args)
+                    inner.get(maint_action, lambda _args: parser.print_help())(args)
                 else:
                     inner(args)
             else:

@@ -4,7 +4,7 @@
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 /** @constant {number} */
@@ -18,22 +18,24 @@ class StatsCommands {
      */
     constructor(client) {
         this.client = client;
-        /** @type {import('mysql2/promise').Connection|null} */
+        /** @type {import('pg').Pool|null} */
         this.db = null;
         this.initializeDatabase();
     }
 
     /**
-     * Initialize the MySQL database connection.
+     * Initialize the PostgreSQL connection pool.
      * @returns {Promise<void>}
      */
     async initializeDatabase() {
         try {
-            this.db = await mysql.createConnection({
+            this.db = new Pool({
                 host: process.env.DB_HOST,
+                port: parseInt(process.env.DB_PORT, 10) || 5432,
                 user: process.env.DB_USER,
                 password: process.env.DB_PASSWORD,
-                database: process.env.DB_NAME
+                database: process.env.DB_NAME,
+                max: 2,
             });
         } catch (error) {
             console.error('[StatsCommands] Database connection failed:', error.message);
@@ -96,12 +98,12 @@ class StatsCommands {
                 return interaction.editReply({ content: '❌ Database not available.', ephemeral: true });
             }
 
-            const [rows] = await this.db.execute(
-                'SELECT * FROM player_statistics WHERE uuid = ?',
+            const result = await this.db.query(
+                'SELECT * FROM player_statistics WHERE uuid = $1',
                 [userId]
             );
 
-            if (rows.length === 0) {
+            if (result.rows.length === 0) {
                 return interaction.editReply({
                     content: targetUser ?
                         `❌ No server statistics found for ${targetUser.username}` :
@@ -110,7 +112,7 @@ class StatsCommands {
                 });
             }
 
-            const stats = rows[0];
+            const stats = result.rows[0];
             const embed = new EmbedBuilder()
                 .setTitle(`${targetUser ? targetUser.username + '\'s' : 'Your'} Server Statistics`)
                 .setColor('#00ff00')
@@ -174,9 +176,9 @@ class StatsCommands {
                 return interaction.editReply({ content: '❌ Database not available.', ephemeral: true });
             }
 
-            const [rows] = await this.db.execute(config.query, [LEADERBOARD_LIMIT]);
+            const result = await this.db.query(config.query, [LEADERBOARD_LIMIT]);
 
-            if (rows.length === 0) {
+            if (result.rows.length === 0) {
                 return interaction.editReply('No statistics available for the leaderboard.');
             }
 
@@ -186,20 +188,20 @@ class StatsCommands {
                 .setTimestamp();
 
             let description = '';
-            for (let i = 0; i < rows.length; i++) {
-                const user = await this.client.users.fetch(rows[i].uuid).catch(() => null);
+            for (let i = 0; i < result.rows.length; i++) {
+                const user = await this.client.users.fetch(result.rows[i].uuid).catch(() => null);
                 const username = user ? user.username : 'Unknown User';
 
                 let value = '';
                 switch (category) {
                     case 'players':
-                        value = `${rows[i].peak_players} players`;
+                        value = `${result.rows[i].peak_players} players`;
                         break;
                     case 'uptime':
-                        value = `${rows[i].uptime_percentage.toFixed(1)}% uptime`;
+                        value = `${result.rows[i].uptime_percentage.toFixed(1)}% uptime`;
                         break;
                     case 'playtime':
-                        value = this.formatTime(rows[i].total_playtime);
+                        value = this.formatTime(result.rows[i].total_playtime);
                         break;
                 }
 

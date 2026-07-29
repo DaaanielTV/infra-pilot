@@ -13,7 +13,7 @@ _OVERRIDE_ENV = "PROVIDER_CONFIG_OVERRIDE"
 _ENV_NAME = "TEST_ENV"
 
 
-def _load_yaml_file(path: Optional[Path]) -> dict[str, Any]:
+def _load_yaml_file(path: Optional[Path]) -> dict[str, str]:
     """Load a YAML mapping from ``path`` and return an empty map on errors."""
     if path is None or not path.exists():
         return {}
@@ -21,10 +21,12 @@ def _load_yaml_file(path: Optional[Path]) -> dict[str, Any]:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-    except (OSError, yaml.YAMLError):
+    except (OSError, yaml.YAMLError, UnicodeDecodeError):
         return {}
 
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v) for k, v in data.items() if isinstance(k, str) and isinstance(v, str)}
 
 
 def _load_base_map() -> dict[str, Any]:

@@ -17,22 +17,21 @@ dotenv.config();
 /** @constant {string} Path to server limits JSON file (fallback) */
 const SERVER_LIMITS_FILE = path.join(__dirname, 'server_limits.json');
 
-// MySQL connection pool for server limits (replaces flat file as primary store)
+// PostgreSQL connection pool for server limits
+const { Pool } = require('pg');
 let _dbPool = null;
 async function _getDbPool() {
   if (!_dbPool) {
-    const mysql = require('mysql2/promise');
-    _dbPool = mysql.createPool({
+    _dbPool = new Pool({
       host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
+      port: parseInt(process.env.DB_PORT, 10) || 5432,
+      user: process.env.DB_USER || 'infra_pilot',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'infra_pilot',
-      waitForConnections: true,
-      connectionLimit: 5,
+      max: 5,
     });
     try {
-      const conn = await _dbPool.getConnection();
-      await conn.execute(`
+      await _dbPool.query(`
         CREATE TABLE IF NOT EXISTS server_limits (
           user_id VARCHAR(255) NOT NULL,
           server_identifier VARCHAR(255) NOT NULL,
@@ -40,7 +39,6 @@ async function _getDbPool() {
           PRIMARY KEY (user_id, server_identifier)
         )
       `);
-      conn.release();
     } catch (err) {
       console.error('[DB] server_limits table setup failed:', err.message);
     }
@@ -124,11 +122,11 @@ const ReportBot = require('./modules/reportBot');
 async function loadServerLimits() {
   try {
     const pool = await _getDbPool();
-    const [rows] = await pool.execute(
+    const result = await pool.query(
       'SELECT user_id, server_identifier FROM server_limits'
     );
     const limits = {};
-    for (const row of rows) {
+    for (const row of result.rows) {
       if (!limits[row.user_id]) limits[row.user_id] = [];
       limits[row.user_id].push(row.server_identifier);
     }
@@ -157,8 +155,8 @@ async function loadServerLimits() {
 async function saveServerLimits(userId, serverIdentifier) {
   try {
     const pool = await _getDbPool();
-    await pool.execute(
-      'INSERT IGNORE INTO server_limits (user_id, server_identifier) VALUES (?, ?)',
+    await pool.query(
+      'INSERT INTO server_limits (user_id, server_identifier) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [userId, serverIdentifier]
     );
   } catch (error) {

@@ -15,7 +15,6 @@ const StatsCommands = require('./modules/statsCommands');
 const RoleManager = require('./modules/roleManager');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
 const SERVER_CREATION_CHANNEL_ID = process.env.SERVER_CREATION_CHANNEL_ID;
 const SERVER_CREATOR_ROLE_ID = process.env.SERVER_CREATOR_ROLE_ID;
 const LOCATION_ID = process.env.LOCATION_ID;
@@ -54,44 +53,51 @@ const serverStatus = new ServerStatus(client);
 
 async function handleEmailInput(message, userState) {
   if (!validateEmail(message.content)) {
-    await message.reply({ content: 'Ungültige E-Mail-Adresse. Bitte gib eine gültige E-Mail-Adresse ein.', ephemeral: true });
-    return false;
+    await message.reply({ content: 'Ungültige E-Mail-Adresse. Bitte gib eine gültige E-Mail-Adresse ein.' });
+    return { ok: false };
   }
   userState.data.email = message.content;
   userState.step = 'username';
   const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('E-Mail gespeichert. Bitte gib nun deinen gewünschten Benutzernamen ein:').setColor('#007bff').setFooter({ text: 'Schritt 2 von 3: Benutzername' });
-  await message.reply({ embeds: [embed], ephemeral: true });
-  return true;
+  await message.reply({ embeds: [embed] });
+  return { ok: true };
 }
 
 async function handleUsernameInput(message, userState) {
   if (!validateUsername(message.content)) {
-    await message.reply({ content: 'Ungültiger Benutzername. Der Benutzername muss 3-20 Zeichen lang sein und darf nur Buchstaben, Zahlen und Unterstriche enthalten.', ephemeral: true });
-    return false;
+    await message.reply({ content: 'Ungültiger Benutzername. Der Benutzername muss 3-20 Zeichen lang sein und darf nur Buchstaben, Zahlen und Unterstriche enthalten.' });
+    return { ok: false };
   }
   userState.data.username = message.content;
   userState.step = 'password';
   const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Benutzername gespeichert. Bitte gib nun dein gewünschtes Passwort ein.\n\n**Sicherheitshinweis**: Dein Passwort sollte mindestens 8 Zeichen lang sein und eine Kombination aus Buchstaben, Zahlen und Sonderzeichen enthalten.').setColor('#007bff').setFooter({ text: 'Schritt 3 von 3: Passwort' });
-  await message.reply({ embeds: [embed], ephemeral: true });
-  return true;
+  await message.reply({ embeds: [embed] });
+  return { ok: true };
 }
 
 async function handlePasswordInput(message, userState) {
   if (!validatePassword(message.content)) {
-    await message.reply({ content: 'Passwort zu schwach. Es sollte mindestens 8 Zeichen lang sein und Buchstaben, Zahlen und Sonderzeichen enthalten.', ephemeral: true });
-    return false;
+    await message.reply({ content: 'Passwort zu schwach. Es sollte mindestens 8 Zeichen lang sein und Buchstaben, Zahlen und Sonderzeichen enthalten.' });
+    return { ok: false };
   }
   userState.data.password = message.content;
   userState.step = 'processing';
   const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Alle Informationen gesammelt. Erstelle deinen Account und Server...').setColor('#ffc107').setFooter({ text: 'Wird verarbeitet...' });
-  const processingMsg = await message.reply({ embeds: [embed], ephemeral: true });
-  return { processingMsg };
+  const processingMsg = await message.reply({ embeds: [embed] });
+  return { ok: true, processingMsg };
 }
 
 async function processServerCreation(message, userState, processingMsg) {
   try {
     if (!userState.data.serverType || !SERVER_TYPES[userState.data.serverType]) {
       throw new Error('Ungültiger Server-Typ');
+    }
+    const serverType = userState.data.serverType;
+    const serverConfig = SERVER_TYPES[serverType];
+    const eggId = parseInt(serverConfig.eggId, 10);
+    const locationId = parseInt(LOCATION_ID, 10);
+    if (isNaN(eggId) || isNaN(locationId)) {
+      throw new Error('Ungültige Server-Konfiguration: eggId oder Location-ID fehlt');
     }
     const userData = {
       username: userState.data.username,
@@ -104,19 +110,17 @@ async function processServerCreation(message, userState, processingMsg) {
     };
     const userResponse = await pterodactyl.createUser(userData);
     const userId = userResponse.id;
-    const serverType = userState.data.serverType;
-    const serverConfig = SERVER_TYPES[serverType];
     const serverData = {
       name: `${userState.data.username}'s ${serverConfig.name}`,
       user: userId,
-      egg: parseInt(serverConfig.eggId, 10),
+      egg: eggId,
       docker_image: serverConfig.dockerImage,
       startup: serverType === 'nodejs' ? 'npm start' : '',
       environment: serverType === 'nodejs' ? { STARTUP_CMD: 'npm start', NODE_VERSION: '18' } : {},
       limits: { memory: serverConfig.memory, swap: 0, disk: 1024, io: 500, cpu: 100 },
       feature_limits: { databases: 0, allocations: 1, backups: 1 },
       allocation: { default: null },
-      deploy: { locations: [parseInt(LOCATION_ID, 10)], dedicated_ip: false, port_range: [] }
+      deploy: { locations: [locationId], dedicated_ip: false, port_range: [] }
     };
     const serverResponse = await pterodactyl.createServer(serverData);
     await saveServerLimits(message.author.id, serverResponse.identifier);
@@ -130,14 +134,18 @@ async function processServerCreation(message, userState, processingMsg) {
       .setTitle('Server-Erstellung erfolgreich')
       .setDescription(`Dein ${serverConfig.name} wurde erfolgreich erstellt.\n\n**Serverdetails:**\n- Name: ${serverResponse.name}\n- Typ: ${serverConfig.name}\n- Speicher: ${serverConfig.memory} MB\n- Server-ID: ${serverResponse.identifier}\n\nDu kannst dich nun mit deiner E-Mail und dem Passwort im Pterodactyl-Panel anmelden.`)
       .setColor('#28a745');
-    await processingMsg.edit({ embeds: [successEmbed] });
+    if (processingMsg) {
+      await processingMsg.edit({ embeds: [successEmbed] });
+    }
   } catch (error) {
-    console.error('[ServerCreation] Error during server creation:', error);
+    console.error('[ServerCreation] Error during server creation:', error.message);
     const errorEmbed = new EmbedBuilder()
       .setTitle('Server-Erstellung fehlgeschlagen')
       .setDescription(`Es gab einen Fehler: ${error.message || 'Unbekannter Fehler'}\n\nBitte versuche es später erneut oder kontaktiere einen Administrator.`)
       .setColor('#dc3545');
-    await processingMsg.edit({ embeds: [errorEmbed] });
+    if (processingMsg) {
+      await processingMsg.edit({ embeds: [errorEmbed] });
+    }
   } finally {
     userRegistrationState.delete(message.author.id);
   }
@@ -157,9 +165,7 @@ async function registerCommands() {
     { name: 'report', description: 'Report bot commands', type: 1, options: [{ name: 'send', description: 'Send a report to this channel', type: 1, options: [{ name: 'type', description: 'Report type', type: 3, required: false, choices: [{ name: 'Executive Summary', value: 'executive-summary' }, { name: 'Cost Report', value: 'cost' }, { name: 'Performance Report', value: 'performance' }, { name: 'Incident Report', value: 'incidents' }] }] }] },
   ];
   try {
-    for (const cmd of allCommands) {
-      await client.application.commands.create(cmd);
-    }
+    await client.application.commands.set(allCommands);
     console.log(`[Commands] ${allCommands.length} slash commands registered.`);
   } catch (error) {
     console.error('[Commands] Error registering commands:', error);
@@ -181,46 +187,62 @@ client.on('guildMemberAdd', async (member) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (interaction.isCommand()) {
-    if (interaction.channelId === SERVER_CREATION_CHANNEL_ID && interaction.commandName === 'server') {
-      const serverLimits = await loadServerLimits();
-      const userServers = serverLimits[interaction.user.id] || [];
-      if (userServers.length >= MAX_SERVERS_PER_USER) {
-        return interaction.reply({ content: `Du hast bereits die maximale Anzahl von ${MAX_SERVERS_PER_USER} Servern erreicht.`, ephemeral: true });
+  try {
+    if (interaction.isCommand()) {
+      if (interaction.channelId === SERVER_CREATION_CHANNEL_ID && interaction.commandName === 'server') {
+        const serverLimits = await loadServerLimits();
+        const userServers = serverLimits[interaction.user.id] || [];
+        if (userServers.length >= MAX_SERVERS_PER_USER) {
+          return interaction.reply({ content: `Du hast bereits die maximale Anzahl von ${MAX_SERVERS_PER_USER} Servern erreicht.`, ephemeral: true });
+        }
+        const row = new ActionRowBuilder().addComponents(
+          Object.entries(SERVER_TYPES).map(([key, type]) =>
+            new ButtonBuilder().setCustomId(`servertype_${key}`).setLabel(type.name).setStyle(ButtonStyle.Primary)
+          )
+        );
+        const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Wähle den Typ des Servers, den du erstellen möchtest:').setColor('#007bff');
+        return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
       }
-      const row = new ActionRowBuilder().addComponents(
-        Object.entries(SERVER_TYPES).map(([key, type]) =>
-          new ButtonBuilder().setCustomId(`servertype_${key}`).setLabel(type.name).setStyle(ButtonStyle.Primary)
-        )
-      );
-      const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Wähle den Typ des Servers, den du erstellen möchtest:').setColor('#007bff');
-      return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+      if (['setuptickets', 'addstaff', 'removestaff', 'ticketstats'].includes(interaction.commandName)) {
+        return ticketCommands.handleCommand(interaction);
+      }
+      if (['serverstats', 'leaderboard'].includes(interaction.commandName)) {
+        return statsCommands.handleCommand(interaction);
+      }
+      if (['status', 'role'].includes(interaction.commandName)) {
+        return serverStatus.handleCommand(interaction);
+      }
+      return;
     }
-    ticketCommands.handleCommand(interaction);
-    statsCommands.handleCommand(interaction);
-    serverStatus.handleCommand(interaction);
-    return;
-  }
-  if (interaction.isButton()) {
-    if (interaction.customId.startsWith('servertype_')) {
-      const serverType = interaction.customId.split('_')[1];
-      userRegistrationState.set(interaction.user.id, { step: 'email', data: { serverType }, messageId: null });
-      const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription(`Du hast ${SERVER_TYPES[serverType].name} ausgewählt.\n\nBitte gib deine E-Mail-Adresse ein:`).setColor('#007bff').setFooter({ text: 'Schritt 1 von 3: E-Mail' });
-      return interaction.update({ embeds: [embed], components: [] });
+    if (interaction.isButton()) {
+      if (interaction.customId.startsWith('servertype_')) {
+        const serverType = interaction.customId.split('_')[1];
+        if (!SERVER_TYPES[serverType]) {
+          return interaction.reply({ content: 'Ungültiger Server-Typ ausgewählt.', ephemeral: true });
+        }
+        userRegistrationState.set(interaction.user.id, { step: 'email', data: { serverType }, messageId: null });
+        const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription(`Du hast ${SERVER_TYPES[serverType].name} ausgewählt.\n\nBitte gib deine E-Mail-Adresse ein:`).setColor('#007bff').setFooter({ text: 'Schritt 1 von 3: E-Mail' });
+        return interaction.update({ embeds: [embed], components: [] });
+      }
+      if (interaction.customId.startsWith('ticket_')) {
+        return ticketSystem.handleTicketCreate(interaction);
+      }
+      return serverStatus.handleButton(interaction);
     }
-    ticketSystem.handleTicketCreate(interaction);
-    ticketSystem.handleTicketClose(interaction);
-    serverStatus.handleButton(interaction);
-    return;
-  }
-  if (interaction.isModalSubmit()) {
-    return;
-  }
-  if (interaction.isStringSelectMenu()) {
-    return;
-  }
-  if (interaction.isUserSelect()) {
-    return;
+    if (interaction.isModalSubmit()) {
+      return;
+    }
+    if (interaction.isStringSelectMenu()) {
+      return;
+    }
+    if (interaction.isUserSelect()) {
+      return;
+    }
+  } catch (error) {
+    console.error('[Discord] Error in interactionCreate handler:', error.message);
+    if (interaction.isRepliable()) {
+      await interaction.reply({ content: 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.', ephemeral: true }).catch(() => {});
+    }
   }
 });
 
@@ -246,17 +268,28 @@ client.on('messageCreate', async (message) => {
     const userState = userRegistrationState.get(message.author.id);
     if (userState) {
       if (message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
-      try { await message.delete(); } catch (error) { console.error('[Discord] Error deleting message:', error); }
+      try {
+        await message.delete();
+      } catch (error) {
+        console.error('[Discord] Error deleting message:', error);
+        userRegistrationState.delete(message.author.id);
+        await message.channel.send({ content: 'Ich konnte deine Nachricht nicht löschen. Bitte lösche sie manuell, um deine Daten zu schützen.' });
+        return;
+      }
       switch (userState.step) {
-        case 'email':
-          if (await handleEmailInput(message, userState) === false) return;
+        case 'email': {
+          const result = await handleEmailInput(message, userState);
+          if (!result.ok) return;
           break;
-        case 'username':
-          if (await handleUsernameInput(message, userState) === false) return;
+        }
+        case 'username': {
+          const result = await handleUsernameInput(message, userState);
+          if (!result.ok) return;
           break;
+        }
         case 'password': {
           const result = await handlePasswordInput(message, userState);
-          if (result === false) return;
+          if (!result.ok) return;
           await processServerCreation(message, userState, result.processingMsg);
           break;
         }
@@ -271,8 +304,10 @@ const WEBHOOK_PORT = parseInt(process.env.CODE_REVIEW_WEBHOOK_PORT, 10) || 3000;
 const webhookServer = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', service: 'discord-service', discord: DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN ? 'disabled' : 'enabled' }));
+      const discordStatus = DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN ? 'disabled' : client.isReady() ? 'connected' : 'unhealthy';
+      const httpStatus = discordStatus === 'unhealthy' ? 503 : 200;
+      res.writeHead(httpStatus, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: httpStatus === 200 ? 'ok' : 'degraded', service: 'discord-service', discord: discordStatus }));
     } else {
       res.writeHead(404);
       res.end();

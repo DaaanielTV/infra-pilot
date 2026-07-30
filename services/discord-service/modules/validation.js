@@ -9,6 +9,7 @@ function validateUsername(username) {
 }
 
 function validatePassword(password) {
+  if (typeof password !== 'string') return false;
   return password.length >= 8 &&
     /[A-Za-z]/.test(password) &&
     /[0-9]/.test(password) &&

@@ -109,7 +109,7 @@ async function processServerCreation(message, userState, processingMsg) {
     const serverData = {
       name: `${userState.data.username}'s ${serverConfig.name}`,
       user: userId,
-      egg: parseInt(serverConfig.eggId, 10),
+      egg: eggId,
       docker_image: serverConfig.dockerImage,
       startup: serverType === 'nodejs' ? 'npm start' : '',
       environment: serverType === 'nodejs' ? { STARTUP_CMD: 'npm start', NODE_VERSION: '18' } : {},
@@ -157,9 +157,7 @@ async function registerCommands() {
     { name: 'report', description: 'Report bot commands', type: 1, options: [{ name: 'send', description: 'Send a report to this channel', type: 1, options: [{ name: 'type', description: 'Report type', type: 3, required: false, choices: [{ name: 'Executive Summary', value: 'executive-summary' }, { name: 'Cost Report', value: 'cost' }, { name: 'Performance Report', value: 'performance' }, { name: 'Incident Report', value: 'incidents' }] }] }] },
   ];
   try {
-    for (const cmd of allCommands) {
-      await client.application.commands.create(cmd);
-    }
+    await client.application.commands.set(allCommands);
     console.log(`[Commands] ${allCommands.length} slash commands registered.`);
   } catch (error) {
     console.error('[Commands] Error registering commands:', error);
@@ -248,15 +246,19 @@ client.on('messageCreate', async (message) => {
       if (message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
       try { await message.delete(); } catch (error) { console.error('[Discord] Error deleting message:', error); }
       switch (userState.step) {
-        case 'email':
-          if (await handleEmailInput(message, userState) === false) return;
+        case 'email': {
+          const result = await handleEmailInput(message, userState);
+          if (!result.ok) return;
           break;
-        case 'username':
-          if (await handleUsernameInput(message, userState) === false) return;
+        }
+        case 'username': {
+          const result = await handleUsernameInput(message, userState);
+          if (!result.ok) return;
           break;
+        }
         case 'password': {
           const result = await handlePasswordInput(message, userState);
-          if (result === false) return;
+          if (!result.ok) return;
           await processServerCreation(message, userState, result.processingMsg);
           break;
         }

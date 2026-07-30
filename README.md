@@ -4,31 +4,15 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> CLI-first infrastructure platform for VPS management, GitOps deployments, and server operations.
+> Learning project: a CLI + web dashboard for managing VPS servers.
 
 ---
 
-## Overview
+## What This Is
 
-Infra Pilot is a self-hosted platform that unifies server management, deployment, and operations into a single CLI and web dashboard. Stop jumping between cloud provider dashboards, SSH windows, and custom scripts.
+I'm building this to learn full-stack infrastructure tooling – Python CLI, React dashboard, Docker orchestration, PostgreSQL, and everything in between.
 
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| Server Management | Create, delete, monitor VPS servers |
-| GitOps | Declarative YAML-based deployments with drift detection |
-| SSH | Session management, jump hosts, key management |
-| Backup & Restore | Scheduled backups with retention policies |
-| Secret Store | Encrypted, versioned, with auto-rotation and RBAC |
-| Deployment Templates | Blueprints for Node.js, Python, Docker Compose, Nginx, PostgreSQL, Redis, Traefik |
-| Plugin System | 9 built-in providers (Docker, Kubernetes, AWS, Azure, Hetzner, Proxmox, Cloudflare, Ansible, Nomad) |
-| Webhooks | Event-driven HTTP callbacks with delivery logs |
-| API Keys | Role-based API key management |
-| Doctor | Server benchmarking and diagnostics |
-| Rollback | Change history with undo/rollback |
+It's a work-in-progress and contributions of all kinds are welcome.
 
 ---
 
@@ -42,12 +26,27 @@ pip install ./cli
 ipilot login
 ```
 
-| Service | URL |
-|---------|-----|
-| Management Panel | http://localhost:5173 |
-| API | http://localhost:3001 |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+---
+
+## CLI Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `server` | List, create, delete servers |
+| `backup` | Create and list backups |
+| `deploy` | Deploy to a server |
+| `logs` | Tail server logs |
+| `gitops` | YAML-based deployments |
+| `ssh` | SSH session management, keys, jump hosts |
+| `inventory` | Server metadata and tags |
+| `secrets` | Encrypted key-value store |
+| `plugins` | Install, update, remove plugins |
+| `doctor` | Benchmark and diagnose servers |
+| `webhooks` | Create, list, test webhooks |
+| `apikeys` | API key CRUD |
+| `templates` | Deployment blueprints |
+| `tui` | Terminal UI mode |
+| `rollback` | Undo/rollback changes |
 
 ---
 
@@ -71,14 +70,11 @@ ipilot login
 
 ---
 
-## Documentation
+## Contributing
 
-- [Installation](wiki/01-Installation.md)
-- [First Deployment](wiki/02-First-Deployment.md)
-- [Configuration](wiki/03-Configuration.md)
-- [CLI Reference](wiki/05-CLI-Reference.md)
-- [Architecture](wiki/06-Architecture.md)
-- [FAQ](wiki/09-FAQ.md)
+All PRs, issues, and ideas are welcome. This is a learning project and every contribution helps.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [wiki/07-Contributing.md](wiki/07-Contributing.md).
 
 ---
 

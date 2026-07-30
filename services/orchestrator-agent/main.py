@@ -131,9 +131,22 @@ async def start_webhook_server(bot_instance: commands.Bot):
     app.middlewares.append(federation_auth_middleware)
 
     async def health(request: web.Request) -> web.Response:
+        from db import get_pool as _get_pool
+
+        db_ok = False
+        try:
+            pool = await _get_pool()
+            conn = await pool.acquire()
+            await conn.execute("SELECT 1")
+            await pool.release(conn)
+            db_ok = True
+        except Exception:
+            pass
+
         return web.json_response({
-            "status": "ok",
+            "status": "ok" if db_ok else "degraded",
             "service": "orchestrator-agent",
+            "postgresql": "up" if db_ok else "down",
         })
 
     async def metrics(request: web.Request) -> web.Response:

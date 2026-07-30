@@ -156,7 +156,7 @@ class ApiClient:
         Returns:
             Response data containing a ``token`` on success.
         """
-        return self._request("POST", "/auth/login", {"api_key": api_key})  # TODO: no matching backend route – verify
+        return self._request("POST", "/auth/login", {"api_key": api_key})
 
     def logout(self) -> Any:
         """Invalidate the current session.
@@ -164,7 +164,7 @@ class ApiClient:
         Returns:
             Response data.
         """
-        return self._request("POST", "/auth/logout")  # TODO: no matching backend route – verify
+        return self._request("POST", "/auth/logout")
 
     # ------------------------------------------------------------------
     # Server management

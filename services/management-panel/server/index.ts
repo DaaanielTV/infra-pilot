@@ -228,12 +228,25 @@ const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) {
-    return res.status(401).json({ error: 'Invalid token' });
+  if (data?.user) {
+    (req as any).user = data.user;
+    return next();
   }
 
-  (req as any).user = data.user;
-  next();
+  const keyHash = crypto.createHash('sha256').update(token).digest('hex');
+  const { data: apiKeyRow } = await supabase
+    .from('api_keys')
+    .select('user_id')
+    .eq('key_hash', keyHash)
+    .eq('revoked', false)
+    .maybeSingle();
+
+  if (apiKeyRow) {
+    (req as any).user = { id: apiKeyRow.user_id };
+    return next();
+  }
+
+  return res.status(401).json({ error: 'Invalid token' });
 };
 
 /**
@@ -1226,6 +1239,38 @@ app.get('/api/auth/2fa/backup-codes', verifyAuth, async (req: Request, res: Resp
 
 app.post('/api/auth/2fa/verify-backup', async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/verify-backup');
+});
+
+// POST /api/auth/login - Authenticate with an API key
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  const { api_key } = req.body;
+  if (!api_key || typeof api_key !== 'string') {
+    return res.status(400).json({ error: 'api_key is required' });
+  }
+
+  const keyHash = crypto.createHash('sha256').update(api_key).digest('hex');
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('user_id')
+    .eq('key_hash', keyHash)
+    .eq('revoked', false)
+    .maybeSingle();
+
+  if (error || !data) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  await supabase
+    .from('api_keys')
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('key_hash', keyHash);
+
+  res.json({ token: api_key, user_id: data.user_id });
+});
+
+// POST /api/auth/logout - Invalidate the current session
+app.post('/api/auth/logout', async (_req: Request, res: Response) => {
+  res.json({ success: true });
 });
 
 // GET /api/demo/flag - Expose the Demo feature flag for testing/CI verification

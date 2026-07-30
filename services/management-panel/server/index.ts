@@ -856,6 +856,29 @@ app.post('/api/apps/:appId/snapshots/:snapshotId/restore', verifyAuth, async (re
   res.json(snapshot);
 });
 
+// GET /api/apps/:appId/status - Get app status
+app.get('/api/apps/:appId/status', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('docker_apps')
+      .select('id, status, started_at, memory_limit, cpu_shares')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'App not found' });
+    }
+
+    res.json({ status: data.status, started_at: data.started_at, memory_limit: data.memory_limit, cpu_shares: data.cpu_shares });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch app status' });
+  }
+});
+
 app.get('/api/apps/:appId/autopilot', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;

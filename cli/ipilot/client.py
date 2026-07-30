@@ -221,7 +221,7 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("GET", f"/servers/{server_id}/status")  # TODO: no matching backend route – verify
+        return self._request("GET", f"/apps/{server_id}/status")
 
     def get_logs(
         self, server_id: str, lines: int = 50, follow: bool = False

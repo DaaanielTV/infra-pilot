@@ -47,3 +47,8 @@ panel_implementation/convex/_generated/
 
 # Cursor/editor generated config
 panel_implementation/.cursor/
+
+# Auto-generated AI stubs (setup.py previously had 600K+ lines of generated stubs)
+generated_stubs/
+ai_generated/
+stubs/

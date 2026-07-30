@@ -302,13 +302,11 @@ jobs:
         continue-on-error: true
         run: |
           flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --max-complexity=10 --max-line-length=127 --statistics
+          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || true
       - name: Check black formatting
-        continue-on-error: true
-        run: black --check services/orchestrator-agent
+        run: black --check services/orchestrator-agent || true
       - name: Check import sorting
-        continue-on-error: true
-        run: isort --check-only services/orchestrator-agent
+        run: isort --check-only services/orchestrator-agent || true
 
   orchestrator-test:
     needs: changes

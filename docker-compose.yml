@@ -227,7 +227,8 @@ services:
     image: grafana/grafana:11.1.0
     container_name: infra-pilot-grafana
     volumes:
-      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./infrastructure/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - grafana_data:/var/lib/grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
@@ -242,7 +243,29 @@ services:
       retries: 3
       start_period: 15s
     depends_on:
-      prometheus:
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: infra-pilot-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}?sslmode=disable"
+    ports:
+      - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - infra-pilot-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    profiles:
+      - monitoring
+
+  prometheus:
         condition: service_healthy
     networks:
       - infra-pilot-net

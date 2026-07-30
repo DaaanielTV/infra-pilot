@@ -102,10 +102,17 @@ make lint           # Run linting
 
 ## Documentation
 
+- [Home](wiki/Home.md)
 - [Installation](wiki/01-Installation.md)
+- [First Deployment](wiki/02-First-Deployment.md)
 - [Configuration](wiki/03-Configuration.md)
+- [Usage Examples](wiki/04-Usage-Examples.md)
 - [CLI Reference](wiki/05-CLI-Reference.md)
 - [Architecture](wiki/06-Architecture.md)
+- [Contributing](wiki/07-Contributing.md)
+- [Security](wiki/08-Security.md)
+- [FAQ](wiki/09-FAQ.md)
+- [Troubleshooting](wiki/10-Troubleshooting.md)
 - [Contributing](CONTRIBUTING.md)
 
 ---

@@ -11,18 +11,11 @@ from . import __version__
 from .config import load_config, save_config, set_key, get
 from .client import ApiClient
 from .output import print_output
-from .commands.operations.health import get_health_status, format_health_output
-
-def health(): # file is located in cli/ipilot/commands/health.py
-    # api endpoint aufrufen, um Status zu prüfen
-    return get_health_status()
-
-
 def cmd_health(args):
     """Health Check Befehl - zeigt den Status aller Systemkomponenten"""
-    health_data = health()
-    formatted_output = format_health_output(health_data)
-    print_output(formatted_output, args.output)
+    client = get_client()
+    health_data = client.health_check()
+    print_output(health_data, args.output)
 
 
 def get_client():

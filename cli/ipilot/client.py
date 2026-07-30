@@ -253,7 +253,7 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("POST", f"/backup-jobs")
+        return self._request("POST", "/backup-jobs", {"app_id": server_id, "name": f"backup-{server_id}", "schedule_type": "manual"})
 
     def deploy(self, server_id: str, branch: str) -> Any:
         """Deploy a branch to a server.

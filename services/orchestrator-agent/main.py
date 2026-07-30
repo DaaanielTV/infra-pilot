@@ -217,6 +217,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
         })
 
     app.router.add_get("/health", health)
+    app.router.add_get("/api/health", health)
     app.router.add_get("/metrics", metrics)
     app.router.add_get("/api/v1/federation/status", federation_status)
 

@@ -1211,6 +1211,11 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', uptime: process.uptime(), version: APP_VERSION, metrics });
 });
 
+// CLI-compatible health endpoint (CLI prepends /api to all paths)
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', uptime: process.uptime(), version: APP_VERSION, metrics });
+});
+
 // ============================================================================
 // 2FA (Two-Factor Authentication) Routes
 // ============================================================================

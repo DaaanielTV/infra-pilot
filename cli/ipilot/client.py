@@ -270,7 +270,7 @@ class ApiClient:
 
     def health_check(self) -> Any:
         """Check API health."""
-        return self._request("GET", "/health")  # TODO: no matching backend route – verify (/health without /api prefix on backends)
+        return self._request("GET", "/health")
 
     # ------------------------------------------------------------------
     # SSH Session Management

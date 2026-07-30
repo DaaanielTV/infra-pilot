@@ -244,8 +244,8 @@ class ApiClient:
         Args:
             server_id: Optional server ID to filter by.
         """
-        path = f"/backup-jobs/{server_id}" if server_id else "/backup-jobs"
-        return self._request("GET", path)  # TODO: server_id variant has no matching backend route – verify
+        path = f"/backup-jobs?app_id={server_id}" if server_id else "/backup-jobs"
+        return self._request("GET", path)
 
     def create_backup(self, server_id: str) -> Any:
         """Create a backup of a server.

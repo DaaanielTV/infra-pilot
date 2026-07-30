@@ -1974,12 +1974,14 @@ app.post('/api/scheduled-tasks/:id/toggle', verifyAuth, async (req: Request, res
 // Backup Jobs CRUD
 app.get('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
+  const appId = req.query.app_id as string | undefined;
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('backup_jobs')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('user_id', userId);
+    if (appId) query = query.eq('app_id', appId);
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     res.json(data || []);
   } catch (err) {

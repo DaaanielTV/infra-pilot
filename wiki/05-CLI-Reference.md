@@ -8,135 +8,6 @@ ipilot [global-flags] <command> [subcommand] [flags]
 
 Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--no-color`
 
-## New Feature Commands (v2.0)
-
-### GitOps (Infrastructure as Code)
-
-Manage infrastructure declaratively with YAML config files.
-
-| Command | Description |
-|---------|-------------|
-| `gitops export [-o file.yaml] [-s server]` | Export current infra as YAML |
-| `gitops plan [-f file.yaml]` | Show diff between current state and YAML |
-| `gitops apply [-f file.yaml] [--dry-run] [-y]` | Apply YAML config to infra |
-| `gitops drift [--scan]` | Detect configuration drift |
-| `gitops import-config <file>` | Import from YAML file |
-
-### SSH Session Management
-
-| Command | Description |
-|---------|-------------|
-| `ssh list [--status active\|closed]` | List SSH sessions |
-| `ssh connect <server> [-u user] [-j jump] [-p port]` | Connect via SSH |
-| `ssh jump_hosts [--create --host --user]` | Manage jump hosts |
-| `ssh keys [--add --name] [--delete]` | Manage SSH keys |
-| `ssh record <session-id>` | View session recording |
-| `ssh saved [--add host@host:port] [--delete]` | Manage saved hosts |
-
-### Server Inventory
-
-| Command | Description |
-|---------|-------------|
-| `inventory list [--tag] [--environment] [--region] [--owner] [--provider]` | List with filters |
-| `inventory show <server>` | Show server metadata |
-| `inventory update <server> [--owner] [--environment] [--region] [--provider] [--os] [--cost] [--tags]` | Update metadata |
-| `inventory tags [--list] [--server] [--add server:tag] [--remove server:tag]` | Tag management |
-
-### Secret Management
-
-| Command | Description |
-|---------|-------------|
-| `secrets list [--path]` | List secrets |
-| `secrets get <key> [--version]` | Get secret value |
-| `secrets set <key> <value> [--rotate] [--rotation-days]` | Store a secret |
-| `secrets delete <key>` | Delete a secret |
-| `secrets versions <key>` | List version history |
-| `secrets rotate [--key] [--all]` | Rotate secrets |
-| `secrets roles <key> [--grant role] [--revoke role]` | RBAC for secrets |
-
-### Deployment Templates
-
-| Command | Description |
-|---------|-------------|
-| `templates list [--type node\|python\|docker-compose\|nginx\|postgres\|redis\|traefik]` | List templates |
-| `templates show <template>` | Show template details |
-| `templates deploy <template> <name> [--server] [--vars] [--dry-run]` | Deploy from template |
-| `templates init <template> <name> [--output]` | Initialize local project |
-
-### Plugin System
-
-| Command | Description |
-|---------|-------------|
-| `plugins list [--installed]` | List available plugins |
-| `plugins install <name> [--source] [--version]` | Install a plugin |
-| `plugins uninstall <name>` | Uninstall a plugin |
-| `plugins update [--name] [--all]` | Update plugins |
-| `plugins info <name>` | Plugin details |
-
-Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad, azure
-
-### Webhooks
-
-| Command | Description |
-|---------|-------------|
-| `webhooks list` | List webhooks |
-| `webhooks create <name> <url> [--events] [--secret]` | Create webhook |
-| `webhooks delete <id>` | Delete webhook |
-| `webhooks test [--id] [--event]` | Test delivery |
-| `webhooks logs [--id]` | Delivery logs |
-
-### API Keys
-
-| Command | Description |
-|---------|-------------|
-| `apikeys list` | List API keys |
-| `apikeys create <name> [--role] [--expire]` | Create API key |
-| `apikeys revoke <id>` | Revoke API key |
-
-### Undo / Rollback
-
-| Command | Description |
-|---------|-------------|
-| `rollback list [--resource] [--limit]` | Recent changes |
-| `rollback undo <change-id> [--dry-run]` | Undo a change |
-| `rollback rollback <resource-type> <resource-id> [--version]` | Rollback resource |
-| `rollback history [--resource] [--id]` | Change history |
-
-### TUI (Terminal UI)
-
-| Command | Description |
-|---------|-------------|
-| `tui dashboard` | Interactive dashboard |
-| `tui monitor [server]` | Real-time monitoring |
-| `tui logs [server]` | Log viewer |
-
-### Developer Tools
-
-| Command | Description |
-|---------|-------------|
-| `doctor [--fix] [--verbose]` | System diagnostics |
-| `benchmark [--server]` | Performance benchmarks |
-| `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis |
-
-### Runbooks
-
-| Command | Description |
-|---------|-------------|
-| `runbook list` | List runbooks |
-| `runbook use <id> [--params]` | Execute runbook |
-| `runbook create <name> [--description] [--steps]` | Create runbook |
-| `runbook execute <id>` | Execute by ID |
-| `runbook show <id>` | Show details |
-
-Built-in: `deploy-production`, `rollback-deployment`, `backup-verify`, `system-update`
-
-### AI Assistant
-
-| Command | Description |
-|---------|-------------|
-| `assistant analyze <query>` | Analyze and create plan |
-| `assistant chat <message>` | Chat with AI |
-
 ## Core Commands
 
 | Command | Description |
@@ -146,9 +17,7 @@ Built-in: `deploy-production`, `rollback-deployment`, `backup-verify`, `system-u
 | `version` | Show version |
 | `interactive` | REPL mode |
 | `completion [shell] [--install]` | Shell completion |
-| `batch --file ops.yaml` | Batch operations |
 | `health` | System health |
-| `docs` | Generate docs |
 
 ## Server Management
 
@@ -179,36 +48,111 @@ Built-in: `deploy-production`, `rollback-deployment`, `backup-verify`, `system-u
 | `deploy status <id>` | Deployment status |
 | `deploy rollback <id>` | Rollback deployment |
 
-## Networking
+## GitOps (Infrastructure as Code)
 
-`dns zones/create/records/add-delete` · `vpn create/delete/status` · `proxy create/delete/toggle`
-`bgp sessions/create/delete/routes` · `segment list/create/delete` · `sdwan status/apps`
-`capture list/start/stop` · `dnsfilter status/rules/add/remove` · `dhcp leases`
-`cell networks/register/sims/activate` · `netcost show/budget`
+| Command | Description |
+|---------|-------------|
+| `gitops export [-o file.yaml] [-s server]` | Export current infra as YAML |
+| `gitops plan [-f file.yaml]` | Show diff between current state and YAML |
+| `gitops apply [-f file.yaml] [--dry-run] [-y]` | Apply YAML config to infra |
+| `gitops drift [--scan]` | Detect configuration drift |
+| `gitops import-config <file>` | Import from YAML file |
 
-## Security & Identity
+## SSH Session Management
 
-`oidc clients/register/delete` · `webauthn credentials/remove` · `session list/revoke`
-`pam requests/request/approve/deny` · `breach list/report` · `policy list/create/evaluate`
-`compliance scan/report/checks` · `audit anomalies/trend/summary` · `classify scan/inventory`
-`vendor list/create/assess`
+| Command | Description |
+|---------|-------------|
+| `ssh list [--status active\|closed]` | List SSH sessions |
+| `ssh connect <server> [-u user] [-j jump] [-p port]` | Connect via SSH |
+| `ssh jump_hosts [--create --host --user]` | Manage jump hosts |
+| `ssh keys [--add --name] [--delete]` | Manage SSH keys |
+| `ssh record <session-id>` | View session recording |
+| `ssh saved [--add host@host:port] [--delete]` | Manage saved hosts |
 
-## Orchestration
+## Server Inventory
 
-`workflow list/create/run` · `infra-pipeline list/run` · `drift scan/list`
-`quota list/check` · `remediate rules/history` · `maintenance list/schedule`
-`chaos experiments/create/run/stop/faults` · `heal status/history/retrain`
+| Command | Description |
+|---------|-------------|
+| `inventory list [--tag] [--environment] [--region] [--owner] [--provider]` | List with filters |
+| `inventory show <server>` | Show server metadata |
+| `inventory update <server> [--owner] [--environment] [--region] [--provider] [--os] [--cost] [--tags]` | Update metadata |
+| `inventory tags [--list] [--server] [--add server:tag] [--remove server:tag]` | Tag management |
 
-## AIOps
+## Secret Management
 
-`rca analyze/incidents/events` · `dem list/create/check/stats` · `alert ingest/incidents/stats`
-`scaling predict/metrics/policy` · `health-f services/register/forecast/dashboard`
-`assistant message/stats` · `change plan/approve/stats` · `capacity recommend/usage/simulate`
-`chatbot message/tasks/analytics`
+| Command | Description |
+|---------|-------------|
+| `secrets list [--path]` | List secrets |
+| `secrets get <key> [--version]` | Get secret value |
+| `secrets set <key> <value> [--rotate] [--rotation-days]` | Store a secret |
+| `secrets delete <key>` | Delete a secret |
+| `secrets versions <key>` | List version history |
+| `secrets rotate [--key] [--all]` | Rotate secrets |
+| `secrets roles <key> [--grant role] [--revoke role]` | RBAC for secrets |
 
-## Monitoring & Observability
+## Deployment Templates
 
-`metrics aggregated/realtime/history` · `logs access` · `health-checks` · `alert-configs`
+| Command | Description |
+|---------|-------------|
+| `templates list [--type node\|python\|docker-compose\|nginx\|postgres\|redis\|traefik]` | List templates |
+| `templates show <template>` | Show template details |
+| `templates deploy <template> <name> [--server] [--vars] [--dry-run]` | Deploy from template |
+| `templates init <template> <name> [--output]` | Initialize local project |
+
+## Plugin System
+
+| Command | Description |
+|---------|-------------|
+| `plugins list [--installed]` | List available plugins |
+| `plugins install <name> [--source] [--version]` | Install a plugin |
+| `plugins uninstall <name>` | Uninstall a plugin |
+| `plugins update [--name] [--all]` | Update plugins |
+| `plugins info <name>` | Plugin details |
+
+Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad, azure
+
+## Webhooks
+
+| Command | Description |
+|---------|-------------|
+| `webhooks list` | List webhooks |
+| `webhooks create <name> <url> [--events] [--secret]` | Create webhook |
+| `webhooks delete <id>` | Delete webhook |
+| `webhooks test [--id] [--event]` | Test delivery |
+| `webhooks logs [--id]` | Delivery logs |
+
+## API Keys
+
+| Command | Description |
+|---------|-------------|
+| `apikeys list` | List API keys |
+| `apikeys create <name> [--role] [--expire]` | Create API key |
+| `apikeys revoke <id>` | Revoke API key |
+
+## Undo / Rollback
+
+| Command | Description |
+|---------|-------------|
+| `rollback list [--resource] [--limit]` | Recent changes |
+| `rollback undo <change-id> [--dry-run]` | Undo a change |
+| `rollback rollback <resource-type> <resource-id> [--version]` | Rollback resource |
+| `rollback history [--resource] [--id]` | Change history |
+
+## TUI (Terminal UI)
+
+| Command | Description |
+|---------|-------------|
+| `tui dashboard` | Interactive dashboard |
+| `tui monitor [server]` | Real-time monitoring |
+| `tui logs [server]` | Log viewer |
+
+## Developer Tools
+
+| Command | Description |
+|---------|-------------|
+| `doctor [--fix] [--verbose]` | System diagnostics |
+| `benchmark [--server]` | Performance benchmarks |
+| `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis |
 
 ---
 

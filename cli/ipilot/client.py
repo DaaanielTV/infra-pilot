@@ -72,11 +72,19 @@ class ApiClient:
                 return resp.json()
             return {}
         except requests.HTTPError as exc:
+            status = exc.response.status_code
             try:
                 msg = exc.response.json().get("message", str(exc))
             except (json.JSONDecodeError, AttributeError):
                 msg = str(exc)
-            logger.warning("HTTP error %s: %s", exc.response.status_code, msg)
+            if status == 404:
+                logger.warning("Endpoint not found (404): %s – this endpoint may not be implemented yet", path)
+                msg = f"Not found: {path} – the backend does not implement this endpoint"
+            elif status == 501:
+                logger.warning("Not implemented (501): %s – the backend received your request but does not support it", path)
+                msg = f"Not implemented: {path} – the backend does not support this operation"
+            else:
+                logger.warning("HTTP error %s on %s: %s", status, path, msg)
             return {"error": msg}
         except requests.ConnectionError as exc:
             logger.warning("Connection failed: %s", exc)

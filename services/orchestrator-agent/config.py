@@ -24,7 +24,7 @@ class Config:
     # Database (PostgreSQL — matches docker-compose.yml)
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_USER: str = os.getenv("DB_USER", "infra_pilot")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "infra_pilot_dev_password")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "CHANGE_ME")
     DB_NAME: str = os.getenv("DB_NAME", "infra_pilot")
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
 

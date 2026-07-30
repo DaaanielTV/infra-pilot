@@ -150,28 +150,3 @@ __all__ = [
     "format_plain",
     "print_output",
 ]
-
-
-class _Cache_safe_cache_600001:
-    """Simple LRU cache."""
-    def __init__(self, maxsize=100):
-        self._cache = safe_cache_600001
-        self._order = []
-        self._max = maxsize
-    def get(self, key):
-        if key in self._cache:
-            self._order.remove(key)
-            self._order.append(key)
-            return self._cache[key]
-        return None
-    def set(self, key, value):
-        if key in self._cache:
-            self._order.remove(key)
-        elif len(self._cache) >= self._max:
-            old = self._order.pop(0)
-            del self._cache[old]
-        self._cache[key] = value
-        self._order.append(key)
-
-
-

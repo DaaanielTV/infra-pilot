@@ -156,7 +156,7 @@ class ApiClient:
         Returns:
             Response data containing a ``token`` on success.
         """
-        return self._request("POST", "/auth/login", {"api_key": api_key})
+        return self._request("POST", "/auth/login", {"api_key": api_key})  # TODO: no matching backend route – verify
 
     def logout(self) -> Any:
         """Invalidate the current session.
@@ -164,7 +164,7 @@ class ApiClient:
         Returns:
             Response data.
         """
-        return self._request("POST", "/auth/logout")
+        return self._request("POST", "/auth/logout")  # TODO: no matching backend route – verify
 
     # ------------------------------------------------------------------
     # Server management
@@ -172,7 +172,7 @@ class ApiClient:
 
     def list_servers(self) -> Any:
         """List all servers."""
-        return self._request("GET", "/servers")
+        return self._request("GET", "/apps")
 
     def get_server(self, server_id: str) -> Any:
         """Get details for a specific server.
@@ -183,7 +183,7 @@ class ApiClient:
         Returns:
             Server details.
         """
-        return self._request("GET", f"/servers/{server_id}")
+        return self._request("GET", f"/apps/{server_id}")
 
     def create_server(
         self,
@@ -203,7 +203,7 @@ class ApiClient:
         """
         return self._request(
             "POST",
-            "/servers",
+            "/apps",
             {"name": name, "type": server_type, "memory": memory},
         )
 
@@ -213,7 +213,7 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("DELETE", f"/servers/{server_id}")
+        return self._request("DELETE", f"/apps/{server_id}")
 
     def server_status(self, server_id: str) -> Any:
         """Get server status.
@@ -221,7 +221,7 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("GET", f"/servers/{server_id}/status")
+        return self._request("GET", f"/servers/{server_id}/status")  # TODO: no matching backend route – verify
 
     def get_logs(
         self, server_id: str, lines: int = 50, follow: bool = False
@@ -235,7 +235,7 @@ class ApiClient:
         """
         return self._request(
             "GET",
-            f"/servers/{server_id}/logs?lines={lines}&follow={follow}",
+            f"/apps/{server_id}/logs?lines={lines}&follow={follow}",
         )
 
     def list_backups(self, server_id: Optional[str] = None) -> Any:
@@ -244,8 +244,8 @@ class ApiClient:
         Args:
             server_id: Optional server ID to filter by.
         """
-        path = f"/backups/{server_id}" if server_id else "/backups"
-        return self._request("GET", path)
+        path = f"/backup-jobs/{server_id}" if server_id else "/backup-jobs"
+        return self._request("GET", path)  # TODO: server_id variant has no matching backend route – verify
 
     def create_backup(self, server_id: str) -> Any:
         """Create a backup of a server.
@@ -253,7 +253,7 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("POST", f"/servers/{server_id}/backups")
+        return self._request("POST", f"/backup-jobs")
 
     def deploy(self, server_id: str, branch: str) -> Any:
         """Deploy a branch to a server.
@@ -264,13 +264,13 @@ class ApiClient:
         """
         return self._request(
             "POST",
-            f"/servers/{server_id}/deploy",
+            f"/deployments",
             {"branch": branch},
         )
 
     def health_check(self) -> Any:
         """Check API health."""
-        return self._request("GET", "/health")
+        return self._request("GET", "/health")  # TODO: no matching backend route – verify (/health without /api prefix on backends)
 
     # ------------------------------------------------------------------
     # SSH Session Management
@@ -354,7 +354,7 @@ class ApiClient:
 
     def get_inventory_tags(self, server_id: str) -> Any:
         """Get tags for a server."""
-        return self._request("GET", f"/inventory/{server_id}/tags")
+        return self._request("GET", f"/inventory/{server_id}/tags")  # TODO: no matching backend route – verify
 
     def list_inventory_tags(self) -> Any:
         """List all inventory tags in use."""

@@ -3355,6 +3355,13 @@ app.patch('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Resp
   res.json(data);
 });
 
+app.get('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { data, error } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
+  if (error) return res.status(404).json({ error: 'Not found' });
+  res.json({ tags: data?.tags || [] });
+});
+
 app.post('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { tag } = req.body;

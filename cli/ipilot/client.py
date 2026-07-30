@@ -354,7 +354,7 @@ class ApiClient:
 
     def get_inventory_tags(self, server_id: str) -> Any:
         """Get tags for a server."""
-        return self._request("GET", f"/inventory/{server_id}/tags")  # TODO: no matching backend route – verify
+        return self._request("GET", f"/inventory/{server_id}/tags")
 
     def list_inventory_tags(self) -> Any:
         """List all inventory tags in use."""

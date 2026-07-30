@@ -264,9 +264,9 @@ class ApiClient:
         """
         return self._request(
             "POST",
-            f"/deployments",
-            {"branch": branch},
-        )
+            "/deployments",
+            {"name": f"deploy-{server_id}", "repoUrl": branch, "branch": branch, "containerId": server_id},
+        )  # TODO: backend expects name + repoUrl (git URL); branch alone is insufficient – verify
 
     def health_check(self) -> Any:
         """Check API health."""

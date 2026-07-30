@@ -11,7 +11,7 @@ setup(
     author_email="drosemann@users.noreply.github.com",
     license="MIT",
     packages=find_packages(),
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     install_requires=[
         "click>=8.0",
         "requests>=2.28",
@@ -25,9 +25,9 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: System :: Systems Administration",
     ],
 )

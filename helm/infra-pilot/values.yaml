@@ -68,7 +68,7 @@ postgresql:
   auth:
     database: infrapilot
     username: infrapilot
-    password: changeme
+    password: ""  # MUST be overridden in production via --set postgresql.auth.password=$DB_PASSWORD or external secret
   primary:
     persistence:
       size: 50Gi
@@ -81,7 +81,7 @@ redis:
   enabled: true
   auth:
     enabled: true
-    password: changeme
+    password: ""  # MUST be overridden in production via --set redis.auth.password=$REDIS_PASSWORD or external secret
   architecture: replication
   replica:
     replicaCount: 2
@@ -143,7 +143,7 @@ prometheus:
 
 grafana:
   enabled: true
-  adminPassword: admin
+  adminPassword: ""  # MUST be overridden in production via --set grafana.adminPassword=$GRAFANA_PASSWORD or external secret
   dashboards:
     enabled: true
   datasources:
@@ -167,11 +167,12 @@ configMaps:
 
 secrets:
   create: true
+  # WARNING: In production, use external-secrets or a vault provider instead of plain values
   data:
-    DB_PASSWORD: ""
-    REDIS_PASSWORD: ""
-    JWT_SECRET: ""
-    API_KEY: ""
+    DB_PASSWORD: ""  # REQUIRED in production
+    REDIS_PASSWORD: ""  # REQUIRED in production
+    JWT_SECRET: ""  # REQUIRED in production - generate via: openssl rand -hex 32
+    API_KEY: ""  # REQUIRED in production - generate via: openssl rand -hex 32
 
 networkPolicies:
   enabled: true

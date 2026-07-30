@@ -13,7 +13,7 @@ from .core.exceptions import APIError, AuthenticationError, ConnectionError
 
 logger = logging.getLogger(__name__)
 
-API_PREFIX = "/api/v1"
+API_PREFIX = "/api"
 DEFAULT_TIMEOUT = 30
 
 
@@ -56,7 +56,7 @@ class ApiClient:
 
         Args:
             method: HTTP method (GET, POST, PUT, DELETE, PATCH).
-            path: API endpoint path (appended to ``/api/v1``).
+            path: API endpoint path (appended to ``/api``).
             data: Optional JSON-serialisable request body.
 
         Returns:

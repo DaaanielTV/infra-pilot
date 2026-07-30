@@ -22,7 +22,7 @@ All via environment variables, loaded by `config.py`:
 | `DB_HOST` | `localhost` | PostgreSQL host |
 | `DB_PORT` | `5432` | PostgreSQL port |
 | `DB_USER` | `infra_pilot` | PostgreSQL user |
-| `DB_PASSWORD` | `infra_pilot_dev_password` | PostgreSQL password |
+| `DB_PASSWORD` | `CHANGE_ME` | PostgreSQL password |
 | `DB_NAME` | `infra_pilot` | PostgreSQL database |
 | `GITOPS_WEBHOOK_PORT` | `8500` | Webhook/API server port |
 | `FEDERATION_API_TOKEN` | `""` | Shared secret for federation peers (empty = no auth) |

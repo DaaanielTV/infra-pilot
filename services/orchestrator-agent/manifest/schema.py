@@ -204,6 +204,21 @@ class InfraFile:
                         "ssh_keys": i.ssh_keys,
                         "user_data": i.user_data,
                         "network": i.network,
+                        "health_check": (
+                            {
+                                "type": (
+                                    i.health_check.type.value
+                                    if isinstance(i.health_check.type, HealthCheckType)
+                                    else i.health_check.type
+                                ),
+                                "target": i.health_check.target,
+                                "interval_seconds": i.health_check.interval_seconds,
+                                "timeout_seconds": i.health_check.timeout_seconds,
+                                "retries": i.health_check.retries,
+                            }
+                            if i.health_check
+                            else None
+                        ),
                         "auto_remediate": i.auto_remediate,
                         "min_replicas": i.min_replicas,
                         "max_replicas": i.max_replicas,

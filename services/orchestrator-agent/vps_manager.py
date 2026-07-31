@@ -1086,12 +1086,12 @@ class VPSManager:
         try:
             conn = self._get_db_connection()
             cursor = conn.cursor(dictionary=True)
-                cursor.execute(
-                    "SELECT * FROM vps_statistics WHERE container_id = %s "
-                    "AND timestamp > NOW() - INTERVAL '1 HOUR' * %s "
-                    "ORDER BY timestamp ASC",
-                    (container_id, hours),
-                )
+            cursor.execute(
+                "SELECT * FROM vps_statistics WHERE container_id = %s "
+                "AND timestamp > NOW() - INTERVAL '1 HOUR' * %s "
+                "ORDER BY timestamp ASC",
+                (container_id, hours),
+            )
             results = cursor.fetchall()
             cursor.close()
             conn.close()
@@ -1114,17 +1114,17 @@ class VPSManager:
         try:
             conn = self._get_db_connection()
             cursor = conn.cursor(dictionary=True)
-                cursor.execute(
-                    "SELECT AVG(network_rx) as avg_rx, "
-                    "AVG(network_tx) as avg_tx, "
-                    "MAX(network_rx) as peak_rx, "
-                    "MAX(network_tx) as peak_tx, "
-                    "SUM(network_rx + network_tx) as total_traffic "
-                    "FROM vps_statistics "
-                    "WHERE container_id = %s "
-                    "AND timestamp > NOW() - INTERVAL '24 HOURS'",
-                    (container_id,),
-                )
+            cursor.execute(
+                "SELECT AVG(network_rx) as avg_rx, "
+                "AVG(network_tx) as avg_tx, "
+                "MAX(network_rx) as peak_rx, "
+                "MAX(network_tx) as peak_tx, "
+                "SUM(network_rx + network_tx) as total_traffic "
+                "FROM vps_statistics "
+                "WHERE container_id = %s "
+                "AND timestamp > NOW() - INTERVAL '24 HOURS'",
+                (container_id,),
+            )
             result = cursor.fetchone()
             cursor.close()
             conn.close()

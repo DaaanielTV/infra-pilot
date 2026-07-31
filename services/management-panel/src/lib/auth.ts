@@ -1,7 +1,11 @@
 import { createClient, Session } from '@supabase/supabase-js';
 
-const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || 'http://localhost:54321') as string;
-const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'test-anon-key') as string;
+const env = (import.meta as any).env || {};
+const supabaseUrl = (env.VITE_SUPABASE_URL || 'http://localhost:54321') as string;
+const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || 'dev-local-anon-key') as string;
+if (env.PROD && !env.VITE_SUPABASE_ANON_KEY) {
+  console.error('[infra-pilot] VITE_SUPABASE_ANON_KEY is not set in production; authentication will not work.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

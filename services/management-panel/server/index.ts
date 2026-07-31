@@ -139,7 +139,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'test-anon-key';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'dev-local-anon-key';
+if (process.env.NODE_ENV === 'production' && !process.env.VITE_SUPABASE_ANON_KEY) {
+  throw new Error('VITE_SUPABASE_ANON_KEY is required in production; refusing to start with a dummy key');
+}
 let supabase = createClient(supabaseUrl, supabaseKey);
 
 export function setSupabaseClientForTests(client: ReturnType<typeof createClient>) {

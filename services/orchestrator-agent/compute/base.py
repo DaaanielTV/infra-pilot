@@ -31,6 +31,7 @@ class InstanceNotFoundError(ProviderError):
 @dataclass
 class InstanceSpec:
     """Desired state of a compute instance."""
+
     name: str
     image: str
     cpu_cores: float
@@ -49,6 +50,7 @@ class InstanceSpec:
 @dataclass
 class InstanceInfo:
     """Reported state of an existing instance."""
+
     id: str
     name: str
     provider: str
@@ -64,6 +66,7 @@ class InstanceInfo:
 @dataclass
 class InstanceStats:
     """Live resource usage snapshot."""
+
     cpu_percent: float
     memory_percent: float
     memory_used_bytes: int
@@ -77,6 +80,7 @@ class InstanceStats:
 @dataclass
 class ProviderCapabilities:
     """What a provider can do."""
+
     supports_snapshots: bool = False
     supports_backups: bool = False
     supports_live_migration: bool = False
@@ -153,14 +157,10 @@ class ComputeProvider(ABC):
     ) -> Optional[str]:
         raise NotImplementedError
 
-    async def list_snapshots(
-        self, instance_id: str
-    ) -> List[Dict[str, Any]]:
+    async def list_snapshots(self, instance_id: str) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
-    async def restore_snapshot(
-        self, instance_id: str, snapshot_id: str
-    ) -> bool:
+    async def restore_snapshot(self, instance_id: str, snapshot_id: str) -> bool:
         raise NotImplementedError
 
     async def create_backup(
@@ -178,9 +178,7 @@ class ComputeProvider(ABC):
         info = await self.get(instance_id)
         return info.public_ips[0] if info.public_ips else None
 
-    async def execute_command(
-        self, instance_id: str, command: str
-    ) -> Tuple[bool, str]:
+    async def execute_command(self, instance_id: str, command: str) -> Tuple[bool, str]:
         raise NotImplementedError
 
     # ------------------------------------------------------------------

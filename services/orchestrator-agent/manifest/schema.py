@@ -116,6 +116,7 @@ class InfraFileMetadata:
 @dataclass
 class InfraFile:
     """Top-level manifest representing desired infrastructure state."""
+
     api_version: str = "v1"
     kind: str = "InfraFile"
     metadata: InfraFileMetadata = field(default_factory=InfraFileMetadata)

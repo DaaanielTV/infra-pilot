@@ -4,16 +4,16 @@ Create, list, and apply named templates with CPU/memory/storage/image
 presets for rapid VPS provisioning.
 """
 
-import discord
-from discord.ext import commands
-from discord import app_commands
-from datetime import datetime
-from typing import Optional
 import json
 import logging
+from datetime import datetime
+from typing import Optional
 
+import discord
 from config import config
-from vps_manager import VPSManager, VPSConfig
+from discord import app_commands
+from discord.ext import commands
+from vps_manager import VPSConfig, VPSManager
 
 
 class TemplateManager(commands.Cog):
@@ -22,9 +22,28 @@ class TemplateManager(commands.Cog):
         self.vps_manager = VPSManager()
 
     @app_commands.command(name="templatecreate", description="Create a VPS template")
-    @app_commands.describe(name="Template name", image="Docker image", cpu="CPU cores", memory="Memory MB", storage="Storage GB")
-    async def template_create(self, interaction: discord.Interaction, name: str, image: str, cpu: float = 1, memory: int = 1024, storage: int = 20):
-        template_config = {"image": image, "cpu": cpu, "memory": memory, "storage": storage}
+    @app_commands.describe(
+        name="Template name",
+        image="Docker image",
+        cpu="CPU cores",
+        memory="Memory MB",
+        storage="Storage GB",
+    )
+    async def template_create(
+        self,
+        interaction: discord.Interaction,
+        name: str,
+        image: str,
+        cpu: float = 1,
+        memory: int = 1024,
+        storage: int = 20,
+    ):
+        template_config = {
+            "image": image,
+            "cpu": cpu,
+            "memory": memory,
+            "storage": storage,
+        }
 
         try:
             conn = self.vps_manager._get_db_connection()
@@ -45,11 +64,19 @@ class TemplateManager(commands.Cog):
             embed.add_field(name="Storage", value=f"{storage}GB", inline=True)
             await interaction.response.send_message(embed=embed)
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
-    @app_commands.command(name="templateapply", description="Apply a template to create a VPS")
-    @app_commands.describe(template_name="Template name", version="Template version (default: latest)")
-    async def template_apply(self, interaction: discord.Interaction, template_name: str, version: int = None):
+    @app_commands.command(
+        name="templateapply", description="Apply a template to create a VPS"
+    )
+    @app_commands.describe(
+        template_name="Template name", version="Template version (default: latest)"
+    )
+    async def template_apply(
+        self, interaction: discord.Interaction, template_name: str, version: int = None
+    ):
         await interaction.response.defer()
 
         try:
@@ -57,16 +84,26 @@ class TemplateManager(commands.Cog):
             cursor = conn.cursor(dictionary=True)
 
             if version:
-                cursor.execute("SELECT * FROM templates WHERE name = %s AND version = %s", (template_name, version))
+                cursor.execute(
+                    "SELECT * FROM templates WHERE name = %s AND version = %s",
+                    (template_name, version),
+                )
             else:
-                cursor.execute("SELECT * FROM templates WHERE name = %s ORDER BY version DESC LIMIT 1", (template_name,))
+                cursor.execute(
+                    "SELECT * FROM templates WHERE name = %s ORDER BY version DESC LIMIT 1",
+                    (template_name,),
+                )
 
             template = cursor.fetchone()
             cursor.close()
             conn.close()
 
             if not template:
-                await interaction.followup.send(embed=discord.Embed(description="Template not found.", color=0xFF0000))
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        description="Template not found.", color=0xFF0000
+                    )
+                )
                 return
 
             tmpl = json.loads(template["config"])
@@ -79,17 +116,29 @@ class TemplateManager(commands.Cog):
                 env_vars={},
             )
 
-            container_id = await self.vps_manager.create_vps(str(interaction.user.id), cfg)
+            container_id = await self.vps_manager.create_vps(
+                str(interaction.user.id), cfg
+            )
             if container_id:
-                embed = discord.Embed(title="VPS Created from Template", color=discord.Color.green())
+                embed = discord.Embed(
+                    title="VPS Created from Template", color=discord.Color.green()
+                )
                 embed.add_field(name="Template", value=template_name, inline=True)
-                embed.add_field(name="Container ID", value=container_id[:12], inline=True)
+                embed.add_field(
+                    name="Container ID", value=container_id[:12], inline=True
+                )
                 embed.add_field(name="Image", value=tmpl["image"], inline=True)
                 await interaction.followup.send(embed=embed)
             else:
-                await interaction.followup.send(embed=discord.Embed(description="Failed to create VPS.", color=0xFF0000))
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        description="Failed to create VPS.", color=0xFF0000
+                    )
+                )
         except Exception as e:
-            await interaction.followup.send(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.followup.send(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
     @app_commands.command(name="templatelist", description="List available templates")
     async def template_list(self, interaction: discord.Interaction):
@@ -101,7 +150,9 @@ class TemplateManager(commands.Cog):
             cursor.close()
             conn.close()
 
-            embed = discord.Embed(title="Available Templates", color=discord.Color.blue())
+            embed = discord.Embed(
+                title="Available Templates", color=discord.Color.blue()
+            )
             if not templates:
                 embed.description = "No templates defined."
             else:
@@ -118,7 +169,9 @@ class TemplateManager(commands.Cog):
 
             await interaction.response.send_message(embed=embed)
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
 
 async def setup(bot):

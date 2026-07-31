@@ -5,16 +5,16 @@ problem of overly complex role hierarchies by offering a clean
 org → project → team model with scoped permissions.
 """
 
+from .engine import AccessDeniedError, RBACEngine
 from .models import (
-    Organization,
-    Project,
-    Team,
-    Role,
-    Permission,
-    Membership,
     ALL_PERMISSIONS,
+    Membership,
+    Organization,
+    Permission,
+    Project,
+    Role,
+    Team,
 )
-from .engine import RBACEngine, AccessDeniedError
 
 __all__ = [
     "Organization",

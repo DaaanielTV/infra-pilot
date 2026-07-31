@@ -30,6 +30,7 @@ class UsageMetric(str, Enum):
 @dataclass
 class ResourceUsage:
     """Snapshot of resource usage at a point in time."""
+
     instance_id: str
     instance_name: str
     org_id: str
@@ -48,6 +49,7 @@ class ResourceUsage:
 @dataclass
 class UsageRecord:
     """Aggregated usage for a time window."""
+
     org_id: str
     project_id: str
     instance_id: str
@@ -84,7 +86,9 @@ class UsageMeter:
                     if usage:
                         snapshots.append(usage)
             except Exception as exc:
-                logger.warning("Failed to collect usage from %s: %s", provider_name, exc)
+                logger.warning(
+                    "Failed to collect usage from %s: %s", provider_name, exc
+                )
 
         self._buffer.extend(snapshots)
         return snapshots

@@ -4,14 +4,14 @@ Supports ping, port, process, and API health checks with configurable
 intervals, timeouts, and retry counts.
 """
 
-import discord
-from discord.ext import commands, tasks
-from discord import app_commands
-from typing import Optional, Dict
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Dict, Optional
 
+import discord
 from config import config
+from discord import app_commands
+from discord.ext import commands, tasks
 from vps_manager import VPSManager
 
 
@@ -63,7 +63,10 @@ class HealthChecks(commands.Cog):
         try:
             conn = self.vps_manager._get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT user_id FROM vps_containers WHERE container_id = %s", (check["container_id"],))
+            cursor.execute(
+                "SELECT user_id FROM vps_containers WHERE container_id = %s",
+                (check["container_id"],),
+            )
             row = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -71,11 +74,23 @@ class HealthChecks(commands.Cog):
             if row:
                 user = await self.bot.fetch_user(int(row[0]))
                 if user:
-                    embed = discord.Embed(title="Health Check Failed", color=discord.Color.red())
-                    embed.add_field(name="Container", value=check["container_id"][:12], inline=True)
-                    embed.add_field(name="Check Type", value=check["check_type"], inline=True)
-                    embed.add_field(name="Response", value=f"{result['response_time_ms']}ms", inline=True)
-                    embed.add_field(name="Error", value=result.get("error", "Unknown"), inline=False)
+                    embed = discord.Embed(
+                        title="Health Check Failed", color=discord.Color.red()
+                    )
+                    embed.add_field(
+                        name="Container", value=check["container_id"][:12], inline=True
+                    )
+                    embed.add_field(
+                        name="Check Type", value=check["check_type"], inline=True
+                    )
+                    embed.add_field(
+                        name="Response",
+                        value=f"{result['response_time_ms']}ms",
+                        inline=True,
+                    )
+                    embed.add_field(
+                        name="Error", value=result.get("error", "Unknown"), inline=False
+                    )
                     await user.send(embed=embed)
         except Exception as e:
             logging.error(f"Error notifying failure: {e}")
@@ -89,7 +104,11 @@ class HealthChecks(commands.Cog):
             result = await self.vps_manager.run_health_check(container_id, check_type)
             results.append(result)
 
-        embed = discord.Embed(title=f"Health Check: {container_id[:12]}", color=discord.Color.blue(), timestamp=datetime.now())
+        embed = discord.Embed(
+            title=f"Health Check: {container_id[:12]}",
+            color=discord.Color.blue(),
+            timestamp=datetime.now(),
+        )
         for r in results:
             status_emoji = "✅" if r["status"] == "passed" else "❌"
             embed.add_field(
@@ -100,10 +119,25 @@ class HealthChecks(commands.Cog):
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="healthcreate", description="Create a health check")
-    @app_commands.describe(container_id="Container ID", check_type="ping/port/process/api", target="Target (host:port, process name, URL)")
-    async def health_create(self, interaction: discord.Interaction, container_id: str, check_type: str, target: str = None):
+    @app_commands.describe(
+        container_id="Container ID",
+        check_type="ping/port/process/api",
+        target="Target (host:port, process name, URL)",
+    )
+    async def health_create(
+        self,
+        interaction: discord.Interaction,
+        container_id: str,
+        check_type: str,
+        target: str = None,
+    ):
         if check_type not in self.check_types:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Invalid type. Options: {', '.join(self.check_types)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description=f"Invalid type. Options: {', '.join(self.check_types)}",
+                    color=0xFF0000,
+                )
+            )
             return
 
         try:
@@ -111,14 +145,26 @@ class HealthChecks(commands.Cog):
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO health_checks (container_id, check_type, target, interval_seconds) VALUES (%s, %s, %s, %s)",
-                (container_id, check_type, target, config.HEALTH_CHECK_INTERVAL_SECONDS),
+                (
+                    container_id,
+                    check_type,
+                    target,
+                    config.HEALTH_CHECK_INTERVAL_SECONDS,
+                ),
             )
             conn.commit()
             cursor.close()
             conn.close()
-            await interaction.response.send_message(embed=discord.Embed(description=f"Health check created: {check_type} on {container_id[:12]}", color=0x00FF00))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description=f"Health check created: {check_type} on {container_id[:12]}",
+                    color=0x00FF00,
+                )
+            )
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
     @app_commands.command(name="healthlist", description="List active health checks")
     async def health_list(self, interaction: discord.Interaction):
@@ -131,7 +177,11 @@ class HealthChecks(commands.Cog):
             conn.close()
 
             if not checks:
-                await interaction.response.send_message(embed=discord.Embed(description="No health checks configured.", color=0xFFFF00))
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        description="No health checks configured.", color=0xFFFF00
+                    )
+                )
                 return
 
             embed = discord.Embed(title="Health Checks", color=discord.Color.blue())
@@ -143,7 +193,9 @@ class HealthChecks(commands.Cog):
                 )
             await interaction.response.send_message(embed=embed)
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
 
 async def setup(bot):

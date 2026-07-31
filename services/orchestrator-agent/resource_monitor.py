@@ -1,23 +1,25 @@
-import psutil
-import docker
-import time
-import mysql.connector
-from datetime import datetime
-import logging
-from typing import Dict, Optional
 import json
+import logging
 import os
+import time
+from datetime import datetime
+from typing import Dict, Optional
+
+import docker
+import mysql.connector
+import psutil
+
 
 class ResourceMonitor:
-    def __init__(self, config_path: str = 'config.json'):
+    def __init__(self, config_path: str = "config.json"):
         self.docker_client = docker.from_env()
         self.config = self.load_config(config_path)
         self.db_connection = self.connect_to_database()
         self.containers_cache = {}
-        
+
     def load_config(self, config_path: str) -> dict:
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 return json.load(f)
         except Exception as e:
             logging.error(f"Error loading config: {str(e)}")
@@ -25,24 +27,24 @@ class ResourceMonitor:
 
     def connect_to_database(self) -> mysql.connector.connection.MySQLConnection:
         return mysql.connector.connect(
-            host=self.config['db_host'],
-            user=self.config['db_user'],
-            password=self.config['db_password'],
-            database=self.config['db_name']
+            host=self.config["db_host"],
+            user=self.config["db_user"],
+            password=self.config["db_password"],
+            database=self.config["db_name"],
         )
 
     def collect_system_stats(self) -> Dict:
         """Collect overall system statistics"""
         return {
-            'cpu_percent': psutil.cpu_percent(interval=1),
-            'memory': dict(psutil.virtual_memory()._asdict()),
-            'disk': {
+            "cpu_percent": psutil.cpu_percent(interval=1),
+            "memory": dict(psutil.virtual_memory()._asdict()),
+            "disk": {
                 mount.mountpoint: dict(psutil.disk_usage(mount.mountpoint)._asdict())
                 for mount in psutil.disk_partitions()
                 if mount.fstype
             },
-            'network': dict(psutil.net_io_counters()._asdict()),
-            'timestamp': datetime.now().isoformat()
+            "network": dict(psutil.net_io_counters()._asdict()),
+            "timestamp": datetime.now().isoformat(),
         }
 
     def collect_container_stats(self, container_id: str) -> Optional[Dict]:
@@ -50,12 +52,16 @@ class ResourceMonitor:
         try:
             container = self.docker_client.containers.get(container_id)
             stats = container.stats(stream=False)
-            
+
             # Calculate CPU usage
-            cpu_delta = stats["cpu_stats"]["cpu_usage"]["total_usage"] - \
-                       stats["precpu_stats"]["cpu_usage"]["total_usage"]
-            system_delta = stats["cpu_stats"]["system_cpu_usage"] - \
-                          stats["precpu_stats"]["system_cpu_usage"]
+            cpu_delta = (
+                stats["cpu_stats"]["cpu_usage"]["total_usage"]
+                - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+            )
+            system_delta = (
+                stats["cpu_stats"]["system_cpu_usage"]
+                - stats["precpu_stats"]["system_cpu_usage"]
+            )
             cpu_usage = (cpu_delta / system_delta) * 100.0 if system_delta > 0 else 0.0
 
             # Calculate memory usage
@@ -70,32 +76,31 @@ class ResourceMonitor:
 
             # Get disk usage
             disk_stats = container.exec_run("df -h /").output.decode()
-            disk_percent = float(disk_stats.split()[11].strip('%'))
+            disk_percent = float(disk_stats.split()[11].strip("%"))
 
             return {
-                'container_id': container_id,
-                'name': container.name,
-                'status': container.status,
-                'cpu_usage': round(cpu_usage, 2),
-                'memory_usage': round(memory_percent, 2),
-                'memory_used': memory_usage,
-                'memory_total': memory_limit,
-                'network': {
-                    'rx_bytes': rx_bytes,
-                    'tx_bytes': tx_bytes
-                },
-                'disk_usage': disk_percent,
-                'timestamp': datetime.now().isoformat()
+                "container_id": container_id,
+                "name": container.name,
+                "status": container.status,
+                "cpu_usage": round(cpu_usage, 2),
+                "memory_usage": round(memory_percent, 2),
+                "memory_used": memory_usage,
+                "memory_total": memory_limit,
+                "network": {"rx_bytes": rx_bytes, "tx_bytes": tx_bytes},
+                "disk_usage": disk_percent,
+                "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            logging.error(f"Error collecting container stats for {container_id}: {str(e)}")
+            logging.error(
+                f"Error collecting container stats for {container_id}: {str(e)}"
+            )
             return None
 
     def update_database(self, container_id: str, stats: Dict):
         """Update container statistics in the database"""
         try:
             cursor = self.db_connection.cursor()
-            
+
             # Insert current stats
             query = """
                 INSERT INTO vps_statistics 
@@ -105,18 +110,18 @@ class ResourceMonitor:
             """
             values = (
                 container_id,
-                stats['cpu_usage'],
-                stats['memory_usage'],
-                stats['memory_used'],
-                stats['memory_total'],
-                stats['network']['rx_bytes'],
-                stats['network']['tx_bytes'],
-                stats['disk_usage'],
-                stats['status'],
-                stats['timestamp']
+                stats["cpu_usage"],
+                stats["memory_usage"],
+                stats["memory_used"],
+                stats["memory_total"],
+                stats["network"]["rx_bytes"],
+                stats["network"]["tx_bytes"],
+                stats["disk_usage"],
+                stats["status"],
+                stats["timestamp"],
             )
             cursor.execute(query, values)
-            
+
             # Update peak statistics
             peak_query = """
                 INSERT INTO vps_peak_statistics 
@@ -130,12 +135,12 @@ class ResourceMonitor:
             """
             peak_values = (
                 container_id,
-                stats['cpu_usage'],
-                stats['memory_usage'],
-                max(stats['network']['rx_bytes'], stats['network']['tx_bytes'])
+                stats["cpu_usage"],
+                stats["memory_usage"],
+                max(stats["network"]["rx_bytes"], stats["network"]["tx_bytes"]),
             )
             cursor.execute(peak_query, peak_values)
-            
+
             self.db_connection.commit()
             cursor.close()
         except Exception as e:
@@ -164,8 +169,7 @@ class ResourceMonitor:
                 # Update container cache
                 containers = self.docker_client.containers.list()
                 self.containers_cache = {
-                    container.id: container.name 
-                    for container in containers
+                    container.id: container.name for container in containers
                 }
 
                 # Collect and store stats for each container
@@ -183,7 +187,9 @@ class ResourceMonitor:
                 logging.error(f"Error in monitoring loop: {str(e)}")
                 time.sleep(10)  # Wait before retrying
 
-    def get_container_history(self, container_id: str, hours: int = 24) -> Optional[Dict]:
+    def get_container_history(
+        self, container_id: str, hours: int = 24
+    ) -> Optional[Dict]:
         """Get historical statistics for a container"""
         try:
             cursor = self.db_connection.cursor(dictionary=True)
@@ -202,16 +208,14 @@ class ResourceMonitor:
             logging.error(f"Error getting container history: {str(e)}")
             return None
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('resource_monitor.log'),
-            logging.StreamHandler()
-        ]
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler("resource_monitor.log"), logging.StreamHandler()],
     )
-    
+
     monitor = ResourceMonitor()
     monitor.monitor_resources()

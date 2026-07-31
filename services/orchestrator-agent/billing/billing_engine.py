@@ -27,6 +27,7 @@ class InvoiceStatus(str, Enum):
 @dataclass
 class InvoiceLineItem:
     """A single line on an invoice."""
+
     description: str
     quantity: float
     unit: str
@@ -38,6 +39,7 @@ class InvoiceLineItem:
 @dataclass
 class Invoice:
     """A periodic bill for an organization."""
+
     id: str
     org_id: str
     org_name: str

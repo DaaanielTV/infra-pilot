@@ -5,21 +5,23 @@ them for dashboard commands, generates matplotlib charts, and alerts
 users when metrics cross configurable thresholds.
 """
 
-import discord
-from discord.ext import commands, tasks
-from discord import app_commands
-import psutil
-import docker
-from datetime import datetime, timedelta
 import asyncio
-from typing import Dict, List, Optional
 import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+
+import discord
+import docker
 import matplotlib
+import psutil
+from discord import app_commands
+from discord.ext import commands, tasks
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import io
 import os
 
+import matplotlib.pyplot as plt
 from config import config
 from db import get_sync_connection
 from vps_manager import VPSManager
@@ -58,8 +60,14 @@ class Monitoring(commands.Cog):
     def _get_container_stats(self, container) -> Optional[Dict]:
         try:
             stats = container.stats(stream=False)
-            cpu_delta = stats["cpu_stats"]["cpu_usage"]["total_usage"] - stats["precpu_stats"]["cpu_usage"]["total_usage"]
-            system_delta = stats["cpu_stats"]["system_cpu_usage"] - stats["precpu_stats"]["system_cpu_usage"]
+            cpu_delta = (
+                stats["cpu_stats"]["cpu_usage"]["total_usage"]
+                - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+            )
+            system_delta = (
+                stats["cpu_stats"]["system_cpu_usage"]
+                - stats["precpu_stats"]["system_cpu_usage"]
+            )
             cpu_usage = (cpu_delta / system_delta) * 100.0 if system_delta > 0 else 0.0
 
             memory_usage = stats["memory_stats"]["usage"]
@@ -96,11 +104,27 @@ class Monitoring(commands.Cog):
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO vps_statistics (container_id, cpu_usage, memory_usage, memory_used, memory_total, network_rx, network_tx, disk_usage, status, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                (container_id, stats["cpu_usage"], stats["memory_usage"], stats["memory_used"], stats["memory_total"], stats["network"]["rx_bytes"], stats["network"]["tx_bytes"], stats["disk_usage"], stats["status"], stats["timestamp"]),
+                (
+                    container_id,
+                    stats["cpu_usage"],
+                    stats["memory_usage"],
+                    stats["memory_used"],
+                    stats["memory_total"],
+                    stats["network"]["rx_bytes"],
+                    stats["network"]["tx_bytes"],
+                    stats["disk_usage"],
+                    stats["status"],
+                    stats["timestamp"],
+                ),
             )
             cursor.execute(
                 "INSERT INTO vps_peak_statistics (container_id, peak_cpu, peak_memory, peak_network) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE peak_cpu = GREATEST(peak_cpu, VALUES(peak_cpu)), peak_memory = GREATEST(peak_memory, VALUES(peak_memory)), peak_network = GREATEST(peak_network, VALUES(peak_network)), last_updated = NOW()",
-                (container_id, stats["cpu_usage"], stats["memory_usage"], max(stats["network"]["rx_bytes"], stats["network"]["tx_bytes"])),
+                (
+                    container_id,
+                    stats["cpu_usage"],
+                    stats["memory_usage"],
+                    max(stats["network"]["rx_bytes"], stats["network"]["tx_bytes"]),
+                ),
             )
             conn.commit()
             cursor.close()
@@ -123,7 +147,10 @@ class Monitoring(commands.Cog):
         try:
             conn = self.get_db()
             cursor = conn.cursor()
-            cursor.execute("SELECT user_id FROM vps_containers WHERE container_id = %s", (container_id,))
+            cursor.execute(
+                "SELECT user_id FROM vps_containers WHERE container_id = %s",
+                (container_id,),
+            )
             result = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -131,8 +158,14 @@ class Monitoring(commands.Cog):
             if result:
                 user = await self.bot.fetch_user(int(result[0]))
                 if user:
-                    embed = discord.Embed(title="VPS Resource Alert", description=f"Container: {container_id[:12]}", color=discord.Color.red())
-                    embed.add_field(name="Alerts", value="\n".join(alerts), inline=False)
+                    embed = discord.Embed(
+                        title="VPS Resource Alert",
+                        description=f"Container: {container_id[:12]}",
+                        color=discord.Color.red(),
+                    )
+                    embed.add_field(
+                        name="Alerts", value="\n".join(alerts), inline=False
+                    )
                     await user.send(embed=embed)
         except Exception as e:
             logging.error(f"Error sending alert: {e}")
@@ -145,30 +178,67 @@ class Monitoring(commands.Cog):
         if not stats:
             stats = await self.vps_manager.get_vps_stats(container_id)
         if not stats:
-            await interaction.followup.send(embed=discord.Embed(description="No stats available.", color=0xFF0000))
+            await interaction.followup.send(
+                embed=discord.Embed(description="No stats available.", color=0xFF0000)
+            )
             return
 
-        embed = discord.Embed(title=f"VPS Stats: {container_id[:12]}", color=discord.Color.blue(), timestamp=datetime.now())
-        embed.add_field(name="Status", value=stats.get("status", "unknown"), inline=True)
+        embed = discord.Embed(
+            title=f"VPS Stats: {container_id[:12]}",
+            color=discord.Color.blue(),
+            timestamp=datetime.now(),
+        )
+        embed.add_field(
+            name="Status", value=stats.get("status", "unknown"), inline=True
+        )
         embed.add_field(name="CPU", value=f"{stats.get('cpu_usage', 0)}%", inline=True)
-        embed.add_field(name="Memory", value=f"{stats.get('memory_usage', 0)}%", inline=True)
+        embed.add_field(
+            name="Memory", value=f"{stats.get('memory_usage', 0)}%", inline=True
+        )
         net = stats.get("network", {})
-        embed.add_field(name="Network", value=f"↓ {net.get('rx_bytes', 0)}\n↑ {net.get('tx_bytes', 0)}", inline=True)
+        embed.add_field(
+            name="Network",
+            value=f"↓ {net.get('rx_bytes', 0)}\n↑ {net.get('tx_bytes', 0)}",
+            inline=True,
+        )
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="vpsgraph", description="Generate resource usage graph")
-    @app_commands.describe(container_id="Container ID", metric="Metric (cpu/memory/disk)", period="Period in hours (default: 24)")
-    async def vps_graph(self, interaction: discord.Interaction, container_id: str, metric: str = "cpu", period: int = 24):
+    @app_commands.describe(
+        container_id="Container ID",
+        metric="Metric (cpu/memory/disk)",
+        period="Period in hours (default: 24)",
+    )
+    async def vps_graph(
+        self,
+        interaction: discord.Interaction,
+        container_id: str,
+        metric: str = "cpu",
+        period: int = 24,
+    ):
         await interaction.response.defer()
         history = await self.vps_manager.get_usage_history(container_id, period)
         if not history:
-            await interaction.followup.send(embed=discord.Embed(description="No data available.", color=0xFF0000))
+            await interaction.followup.send(
+                embed=discord.Embed(description="No data available.", color=0xFF0000)
+            )
             return
 
-        metric_map = {"cpu": "cpu_usage", "memory": "memory_usage", "disk": "disk_usage"}
+        metric_map = {
+            "cpu": "cpu_usage",
+            "memory": "memory_usage",
+            "disk": "disk_usage",
+        }
         col = metric_map.get(metric.lower(), "cpu_usage")
 
-        timestamps = [datetime.fromisoformat(r["timestamp"].strftime("%Y-%m-%dT%H:%M:%S") if isinstance(r["timestamp"], datetime) else r["timestamp"]) for r in history]
+        timestamps = [
+            datetime.fromisoformat(
+                r["timestamp"].strftime("%Y-%m-%dT%H:%M:%S")
+                if isinstance(r["timestamp"], datetime)
+                else r["timestamp"]
+            )
+            for r in history
+        ]
         values = [r[col] for r in history]
 
         plt.figure(figsize=(10, 4))
@@ -187,17 +257,35 @@ class Monitoring(commands.Cog):
 
         await interaction.followup.send(file=discord.File(buf, f"{metric}_graph.png"))
 
-    @app_commands.command(name="setalertthreshold", description="Set alert threshold (Admin)")
-    @app_commands.describe(resource="cpu/memory/disk/network", threshold="Threshold percentage (0-100)")
-    async def set_alert_threshold(self, interaction: discord.Interaction, resource: str, threshold: float):
+    @app_commands.command(
+        name="setalertthreshold", description="Set alert threshold (Admin)"
+    )
+    @app_commands.describe(
+        resource="cpu/memory/disk/network", threshold="Threshold percentage (0-100)"
+    )
+    async def set_alert_threshold(
+        self, interaction: discord.Interaction, resource: str, threshold: float
+    ):
         if str(interaction.user.id) not in config.WHITELIST_IDS:
-            await interaction.response.send_message(embed=discord.Embed(description="Admin only.", color=0xFF0000), ephemeral=True)
+            await interaction.response.send_message(
+                embed=discord.Embed(description="Admin only.", color=0xFF0000),
+                ephemeral=True,
+            )
             return
         if resource not in self.alert_thresholds or not (0 <= threshold <= 100):
-            await interaction.response.send_message(embed=discord.Embed(description="Invalid resource or threshold.", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description="Invalid resource or threshold.", color=0xFF0000
+                )
+            )
             return
         self.alert_thresholds[resource] = threshold
-        await interaction.response.send_message(embed=discord.Embed(description=f"Threshold for {resource} set to {threshold}%", color=0x00FF00))
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                description=f"Threshold for {resource} set to {threshold}%",
+                color=0x00FF00,
+            )
+        )
 
     @tasks.loop(minutes=5)
     async def update_status(self):

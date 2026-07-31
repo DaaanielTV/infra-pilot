@@ -3,8 +3,7 @@
 import logging
 
 import pytest
-
-from config import Config, PLACEHOLDER_SECRETS, config, validate_secrets
+from config import PLACEHOLDER_SECRETS, Config, config, validate_secrets
 
 
 class TestValidateSecrets:
@@ -14,7 +13,9 @@ class TestValidateSecrets:
 
     def test_placeholder_bot_token_rejected_in_production(self):
         with pytest.raises(RuntimeError, match="DISCORD_BOT_TOKEN"):
-            validate_secrets("production", "real-password", "your_discord_bot_token_here")
+            validate_secrets(
+                "production", "real-password", "your_discord_bot_token_here"
+            )
 
     def test_missing_db_password_rejected_in_production(self):
         with pytest.raises(RuntimeError, match="DB_PASSWORD"):

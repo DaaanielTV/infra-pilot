@@ -74,9 +74,7 @@ class Config:
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
 
     # VPS
-    VPS_INSTANCES_FILE: str = os.getenv(
-        "VPS_INSTANCES_FILE", "vps_instances.json"
-    )
+    VPS_INSTANCES_FILE: str = os.getenv("VPS_INSTANCES_FILE", "vps_instances.json")
     DATABASE_FILE: str = os.getenv("DATABASE_FILE", "database.txt")
     DEFAULT_IMAGE: str = os.getenv("DEFAULT_IMAGE", "ubuntu-22.04-with-tmate")
     RAM_LIMIT: str = os.getenv("RAM_LIMIT", "1g")
@@ -161,19 +159,29 @@ class Config:
     # Templates
     DEFAULT_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "ubuntu-22.04": {
-            "image": "ubuntu:22.04", "cpu": 1, "memory": 1024, "storage": 20
+            "image": "ubuntu:22.04",
+            "cpu": 1,
+            "memory": 1024,
+            "storage": 20,
         },
         "ubuntu-24.04": {
-            "image": "ubuntu:24.04", "cpu": 1, "memory": 1024, "storage": 20
+            "image": "ubuntu:24.04",
+            "cpu": 1,
+            "memory": 1024,
+            "storage": 20,
         },
-        "debian-12": {
-            "image": "debian:12", "cpu": 1, "memory": 1024, "storage": 20
-        },
+        "debian-12": {"image": "debian:12", "cpu": 1, "memory": 1024, "storage": 20},
         "nginx-server": {
-            "image": "nginx:latest", "cpu": 0.5, "memory": 512, "storage": 10
+            "image": "nginx:latest",
+            "cpu": 0.5,
+            "memory": 512,
+            "storage": 10,
         },
         "postgres-db": {
-            "image": "postgres:16", "cpu": 2, "memory": 2048, "storage": 50
+            "image": "postgres:16",
+            "cpu": 2,
+            "memory": 2048,
+            "storage": 50,
         },
     }
 
@@ -239,9 +247,7 @@ class Config:
 
     # Disaster recovery
     DR_PLANS_FILE: str = os.getenv("DR_PLANS_FILE", "data/dr_plans.json")
-    DR_DRILL_INTERVAL_HOURS: int = int(
-        os.getenv("DR_DRILL_INTERVAL_HOURS", "24")
-    )
+    DR_DRILL_INTERVAL_HOURS: int = int(os.getenv("DR_DRILL_INTERVAL_HOURS", "24"))
     RTO_TARGET_SECONDS: int = int(os.getenv("RTO_TARGET_SECONDS", "300"))
     RPO_TARGET_SECONDS: int = int(os.getenv("RPO_TARGET_SECONDS", "3600"))
 
@@ -272,16 +278,12 @@ class Config:
     ]
 
     # Security scanning
-    SCAN_RESULTS_FILE: str = os.getenv(
-        "SCAN_RESULTS_FILE", "data/scan_results.json"
-    )
+    SCAN_RESULTS_FILE: str = os.getenv("SCAN_RESULTS_FILE", "data/scan_results.json")
     SCAN_INTERVAL_HOURS: int = int(os.getenv("SCAN_INTERVAL_HOURS", "6"))
     SCAN_POLICY_DEFAULT_SEVERITY: str = os.getenv(
         "SCAN_POLICY_DEFAULT_SEVERITY", "CRITICAL"
     )
-    SCAN_POLICY_DEFAULT_ACTION: str = os.getenv(
-        "SCAN_POLICY_DEFAULT_ACTION", "block"
-    )
+    SCAN_POLICY_DEFAULT_ACTION: str = os.getenv("SCAN_POLICY_DEFAULT_ACTION", "block")
 
     def validate(self) -> list:
         """Fail fast on insecure configuration; returns insecure settings."""

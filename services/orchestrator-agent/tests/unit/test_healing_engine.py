@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-
 from healing.engine import (
     HealingEngine,
     HealthStatus,
@@ -79,6 +78,7 @@ class TestRemediation:
         # Add many recent restarts
         for _ in range(10):
             from healing.engine import RemediationResult
+
             engine._recent_actions.append(
                 RemediationResult(
                     instance_id="i-rate",

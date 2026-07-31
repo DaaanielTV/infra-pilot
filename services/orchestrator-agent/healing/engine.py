@@ -37,6 +37,7 @@ class RemediationAction(str, Enum):
 @dataclass
 class RemediationResult:
     """Outcome of a remediation attempt."""
+
     instance_id: str
     action: RemediationAction
     success: bool
@@ -48,6 +49,7 @@ class RemediationResult:
 @dataclass
 class HealthCheck:
     """A single health check configuration."""
+
     instance_id: str
     check_type: str  # ping, port, process, http
     target: str = ""
@@ -62,6 +64,7 @@ class HealthCheck:
 @dataclass
 class RemediationPolicy:
     """Rules for when and how to remediate an instance."""
+
     instance_id: str
     max_restarts_per_hour: int = 3
     restart_cooldown_seconds: int = 30
@@ -181,11 +184,16 @@ class HealingEngine:
 
         # Check rate limits
         recent_restarts = [
-            r for r in self._recent_actions[-60:]
+            r
+            for r in self._recent_actions[-60:]
             if r.instance_id == instance_id and r.action == RemediationAction.RESTART
         ]
         if len(recent_restarts) >= policy.max_restarts_per_hour:
-            logger.warning("Rate limit hit for %s (%d restarts/hour)", instance_id, len(recent_restarts))
+            logger.warning(
+                "Rate limit hit for %s (%d restarts/hour)",
+                instance_id,
+                len(recent_restarts),
+            )
             return await self._escalate(instance_id, "Rate limit exceeded")
 
         actions = [
@@ -223,12 +231,16 @@ class HealingEngine:
             self._recent_actions.append(result)
 
             if success:
-                logger.info("Remediation succeeded for %s: %s", instance_id, action.value)
+                logger.info(
+                    "Remediation succeeded for %s: %s", instance_id, action.value
+                )
                 return result
 
         return await self._escalate(instance_id, "All remediation actions failed")
 
-    async def _escalate(self, instance_id: str, reason: str) -> Optional[RemediationResult]:
+    async def _escalate(
+        self, instance_id: str, reason: str
+    ) -> Optional[RemediationResult]:
         """Escalate to a human operator."""
         handler = self._handlers.get(RemediationAction.ESCALATE)
         if handler:
@@ -246,7 +258,9 @@ class HealingEngine:
     # ------------------------------------------------------------------
     # Default handlers (can be overridden)
     # ------------------------------------------------------------------
-    async def _default_restart(self, instance_id: str, action: RemediationAction) -> bool:
+    async def _default_restart(
+        self, instance_id: str, action: RemediationAction
+    ) -> bool:
         """Default: restart via Docker provider."""
         prov = ProviderRegistry.get("docker")
         if not prov:
@@ -261,11 +275,14 @@ class HealingEngine:
     def _default_scale_up(self, instance_id: str, action: RemediationAction) -> bool:
         """Delegate SCALE_UP to the connected ScalingEngine."""
         if not self._scaling_engine:
-            logger.warning("No scaling engine connected for SCALE_UP on %s", instance_id)
+            logger.warning(
+                "No scaling engine connected for SCALE_UP on %s", instance_id
+            )
             return False
         try:
             # Trigger an immediate evaluate for all rules on this instance
             import asyncio
+
             task = asyncio.ensure_future(self._scaling_engine.evaluate_all())
             self._pending_tasks.add(task)
             task.add_done_callback(self._pending_tasks.discard)

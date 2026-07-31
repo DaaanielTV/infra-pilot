@@ -1,10 +1,8 @@
 import asyncio
-
 import importlib
 import sys
 
 import docker
-
 from conftest import MockDockerClient
 
 

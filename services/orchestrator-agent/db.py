@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 import asyncpg
 import psycopg2
 import psycopg2.extras
-
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,10 @@ class DatabasePool:
         )
         logger.info(
             "Database pool created: %s@%s:%d/%s",
-            config.DB_USER, config.DB_HOST, config.DB_PORT, config.DB_NAME,
+            config.DB_USER,
+            config.DB_HOST,
+            config.DB_PORT,
+            config.DB_NAME,
         )
         return pool
 

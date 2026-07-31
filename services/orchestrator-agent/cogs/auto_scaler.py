@@ -8,11 +8,10 @@ import logging
 from datetime import datetime, timedelta
 
 import discord
-from discord.ext import commands
-from discord import app_commands
-
 from config import config
 from db import get_sync_cursor
+from discord import app_commands
+from discord.ext import commands
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,9 @@ class AutoScaler(commands.Cog):
     # ------------------------------------------------------------------
     @app_commands.command(name="scaling-rules")
     @app_commands.describe(container_id="Optional: show rules for a specific container")
-    async def list_rules(self, interaction: discord.Interaction, container_id: str = ""):
+    async def list_rules(
+        self, interaction: discord.Interaction, container_id: str = ""
+    ):
         """List all auto-scaling rules, optionally filtered by container."""
         await interaction.response.defer()
         try:
@@ -109,16 +110,22 @@ class AutoScaler(commands.Cog):
         await interaction.response.defer()
 
         if not self._validate_metric(metric):
-            await interaction.followup.send("Invalid metric. Use `cpu_usage` or `memory_usage`.")
+            await interaction.followup.send(
+                "Invalid metric. Use `cpu_usage` or `memory_usage`."
+            )
             return
         if not self._validate_action(action):
-            await interaction.followup.send("Invalid action. Use `scale_up` or `scale_down`.")
+            await interaction.followup.send(
+                "Invalid action. Use `scale_up` or `scale_down`."
+            )
             return
         if threshold < 1 or threshold > 100:
             await interaction.followup.send("Threshold must be between 1 and 100.")
             return
         if duration < 1 or duration > 60:
-            await interaction.followup.send("Duration must be between 1 and 60 minutes.")
+            await interaction.followup.send(
+                "Duration must be between 1 and 60 minutes."
+            )
             return
 
         try:
@@ -136,15 +143,18 @@ class AutoScaler(commands.Cog):
 
             # Also add to in-memory engine if available
             if self.engine:
-                from scaling import ScalingRule, ScalingEngine
-                self.engine.add_rule(ScalingRule(
-                    id=rule_id,
-                    container_id=container_id,
-                    metric=metric,
-                    threshold=threshold,
-                    duration_minutes=duration,
-                    action=action,
-                ))
+                from scaling import ScalingEngine, ScalingRule
+
+                self.engine.add_rule(
+                    ScalingRule(
+                        id=rule_id,
+                        container_id=container_id,
+                        metric=metric,
+                        threshold=threshold,
+                        duration_minutes=duration,
+                        action=action,
+                    )
+                )
 
             await interaction.followup.send(
                 f"✅ Created scaling rule **#{rule_id}**\n"
@@ -168,7 +178,9 @@ class AutoScaler(commands.Cog):
 
             if deleted:
                 self.engine and self.engine.remove_rule(rule_id)
-                await interaction.followup.send(f"🗑️ Deleted scaling rule **#{rule_id}**")
+                await interaction.followup.send(
+                    f"🗑️ Deleted scaling rule **#{rule_id}**"
+                )
             else:
                 await interaction.followup.send(f"Rule **#{rule_id}** not found.")
         except Exception as exc:
@@ -197,7 +209,9 @@ class AutoScaler(commands.Cog):
                     rule = self.engine.get_rule(rule_id)
                     if rule:
                         rule.enabled = row["enabled"]
-                await interaction.followup.send(f"🔄 Rule **#{rule_id}** is now **{status}**")
+                await interaction.followup.send(
+                    f"🔄 Rule **#{rule_id}** is now **{status}**"
+                )
             else:
                 await interaction.followup.send(f"Rule **#{rule_id}** not found.")
         except Exception as exc:

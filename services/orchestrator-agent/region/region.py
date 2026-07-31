@@ -21,6 +21,7 @@ class RegionStatus(str, Enum):
 @dataclass
 class Datacenter:
     """A physical or logical datacenter / availability zone."""
+
     id: str
     name: str
     region_id: str
@@ -52,16 +53,28 @@ class Datacenter:
         """Return resource utilization as percentages."""
         return {
             "cpu_percent": round(
-                (self.used_cpu_cores / self.total_cpu_cores * 100)
-                if self.total_cpu_cores > 0 else 0, 1
+                (
+                    (self.used_cpu_cores / self.total_cpu_cores * 100)
+                    if self.total_cpu_cores > 0
+                    else 0
+                ),
+                1,
             ),
             "memory_percent": round(
-                (self.used_memory_mb / self.total_memory_mb * 100)
-                if self.total_memory_mb > 0 else 0, 1
+                (
+                    (self.used_memory_mb / self.total_memory_mb * 100)
+                    if self.total_memory_mb > 0
+                    else 0
+                ),
+                1,
             ),
             "storage_percent": round(
-                (self.used_storage_gb / self.total_storage_gb * 100)
-                if self.total_storage_gb > 0 else 0, 1
+                (
+                    (self.used_storage_gb / self.total_storage_gb * 100)
+                    if self.total_storage_gb > 0
+                    else 0
+                ),
+                1,
             ),
         }
 
@@ -69,6 +82,7 @@ class Datacenter:
 @dataclass
 class Region:
     """A logical region that groups datacenters."""
+
     id: str
     name: str
     display_name: str = ""

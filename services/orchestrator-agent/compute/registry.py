@@ -42,7 +42,11 @@ class ProviderRegistry:
             return cls._instances[name]
         provider_cls = cls._providers.get(name)
         if not provider_cls:
-            logger.error("Unknown compute provider: %s (available: %s)", name, list(cls._providers))
+            logger.error(
+                "Unknown compute provider: %s (available: %s)",
+                name,
+                list(cls._providers),
+            )
             return None
         try:
             instance = provider_cls(**kwargs)
@@ -55,7 +59,9 @@ class ProviderRegistry:
     @classmethod
     def list_providers(cls) -> Dict[str, str]:
         """Return ``{name: qualname}`` for every registered provider."""
-        return {n: f"{c.__module__}.{c.__qualname__}" for n, c in cls._providers.items()}
+        return {
+            n: f"{c.__module__}.{c.__qualname__}" for n, c in cls._providers.items()
+        }
 
     @classmethod
     def clear(cls) -> None:

@@ -2,7 +2,6 @@
 
 import pytest
 import yaml
-
 from manifest.schema import (
     HealthCheckType,
     InfraFile,
@@ -10,7 +9,6 @@ from manifest.schema import (
     InfraNetwork,
     InfraStorage,
 )
-
 
 SAMPLE_YAML = """
 api_version: v1

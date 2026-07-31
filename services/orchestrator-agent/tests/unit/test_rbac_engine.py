@@ -3,16 +3,8 @@
 import uuid
 
 import pytest
-
-from rbac.engine import RBACEngine, AccessDeniedError
-from rbac.models import (
-    BUILT_IN_ROLES,
-    Organization,
-    Permission,
-    Project,
-    Role,
-    Team,
-)
+from rbac.engine import AccessDeniedError, RBACEngine
+from rbac.models import BUILT_IN_ROLES, Organization, Permission, Project, Role, Team
 
 
 @pytest.fixture
@@ -76,7 +68,9 @@ class TestProjectManagement:
 
 class TestPermissionChecks:
     def test_owner_has_all_permissions(self, engine, org):
-        assert engine.has_permission("user-1", Permission.INSTANCE_CREATE, org_id=org.id)
+        assert engine.has_permission(
+            "user-1", Permission.INSTANCE_CREATE, org_id=org.id
+        )
         assert engine.has_permission("user-1", Permission.ORG_DELETE, org_id=org.id)
         assert engine.has_permission("user-1", Permission.BILLING_MANAGE, org_id=org.id)
 
@@ -85,7 +79,9 @@ class TestPermissionChecks:
 
     def test_require_permission_fails(self, engine, org):
         with pytest.raises(AccessDeniedError):
-            engine.require_permission("unknown", Permission.INSTANCE_READ, org_id=org.id)
+            engine.require_permission(
+                "unknown", Permission.INSTANCE_READ, org_id=org.id
+            )
 
     def test_scoped_to_org(self, engine):
         o1 = Organization(id="scope1", name="scope-org", owner_user_id="alice")
@@ -93,42 +89,68 @@ class TestPermissionChecks:
         engine.create_org(o1)
         engine.create_org(o2)
         assert engine.has_permission("alice", Permission.INSTANCE_READ, org_id="scope1")
-        assert not engine.has_permission("alice", Permission.INSTANCE_READ, org_id="scope2")
+        assert not engine.has_permission(
+            "alice", Permission.INSTANCE_READ, org_id="scope2"
+        )
 
 
 class TestTeamAndAssignment:
     def test_team_creation(self, engine, org, project):
-        team = Team(id="t1", org_id=org.id, project_id=project.id, name="devs", role_name="developer")
+        team = Team(
+            id="t1",
+            org_id=org.id,
+            project_id=project.id,
+            name="devs",
+            role_name="developer",
+        )
         engine.create_team(team)
         engine.add_user_to_team("t1", "charlie")
         assert "charlie" in team.member_ids
-        assert engine.has_permission("charlie", Permission.INSTANCE_START, org_id=org.id, project_id=project.id)
+        assert engine.has_permission(
+            "charlie", Permission.INSTANCE_START, org_id=org.id, project_id=project.id
+        )
 
     def test_remove_from_team(self, engine, org, project):
-        team = Team(id="t2", org_id=org.id, project_id=project.id, name="temps", role_name="viewer")
+        team = Team(
+            id="t2",
+            org_id=org.id,
+            project_id=project.id,
+            name="temps",
+            role_name="viewer",
+        )
         engine.create_team(team)
         engine.add_user_to_team("t2", "dave")
-        assert engine.has_permission("dave", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id)
+        assert engine.has_permission(
+            "dave", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id
+        )
         engine.remove_user_from_team("t2", "dave")
         assert "dave" not in team.member_ids
 
     def test_assign_role_directly(self, engine, org):
         engine.assign_role("eve", org.id, "billing")
         assert engine.has_permission("eve", Permission.BILLING_READ, org_id=org.id)
-        assert not engine.has_permission("eve", Permission.INSTANCE_CREATE, org_id=org.id)
+        assert not engine.has_permission(
+            "eve", Permission.INSTANCE_CREATE, org_id=org.id
+        )
 
     def test_remove_membership(self, engine, org):
         engine.assign_role("frank", org.id, "viewer")
         assert engine.has_permission("frank", Permission.INSTANCE_READ, org_id=org.id)
         engine.remove_membership("frank", org.id)
-        assert not engine.has_permission("frank", Permission.INSTANCE_READ, org_id=org.id)
+        assert not engine.has_permission(
+            "frank", Permission.INSTANCE_READ, org_id=org.id
+        )
 
 
 class TestCustomRoles:
     def test_create_custom_role(self, engine):
         role = Role(
             name="custom-deployer",
-            permissions={Permission.INSTANCE_READ, Permission.INSTANCE_UPDATE, Permission.MANIFEST_DEPLOY},
+            permissions={
+                Permission.INSTANCE_READ,
+                Permission.INSTANCE_UPDATE,
+                Permission.MANIFEST_DEPLOY,
+            },
         )
         engine.create_role(role)
         assert engine.get_role("custom-deployer") is role
@@ -139,12 +161,18 @@ class TestCustomRoles:
     def test_custom_role_assignment(self, engine, org):
         role = Role(
             name="pci-auditor",
-            permissions={Permission.AUDIT_READ, Permission.AUDIT_EXPORT, Permission.INSTANCE_READ},
+            permissions={
+                Permission.AUDIT_READ,
+                Permission.AUDIT_EXPORT,
+                Permission.INSTANCE_READ,
+            },
         )
         engine.create_role(role)
         engine.assign_role("grace", org.id, "pci-auditor")
         assert engine.has_permission("grace", Permission.AUDIT_READ, org_id=org.id)
-        assert not engine.has_permission("grace", Permission.INSTANCE_CREATE, org_id=org.id)
+        assert not engine.has_permission(
+            "grace", Permission.INSTANCE_CREATE, org_id=org.id
+        )
 
 
 class TestBuiltInRoles:
@@ -157,5 +185,7 @@ class TestBuiltInRoles:
     def test_viewer_limited(self, engine, org):
         engine.assign_role("ivy", org.id, "viewer")
         assert engine.has_permission("ivy", Permission.INSTANCE_READ, org_id=org.id)
-        assert not engine.has_permission("ivy", Permission.INSTANCE_CREATE, org_id=org.id)
+        assert not engine.has_permission(
+            "ivy", Permission.INSTANCE_CREATE, org_id=org.id
+        )
         assert not engine.has_permission("ivy", Permission.ORG_MANAGE, org_id=org.id)

@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
-import pytest
 
+import pytest
 from compute.base import (
     ComputeProvider,
     InstanceInfo,
@@ -47,7 +47,9 @@ class StubProvider(ComputeProvider):
             name="test",
             provider="stub",
             status=InstancePowerState.RUNNING,
-            spec=InstanceSpec(name="test", image="ubuntu", cpu_cores=1, memory_mb=512, storage_gb=10),
+            spec=InstanceSpec(
+                name="test", image="ubuntu", cpu_cores=1, memory_mb=512, storage_gb=10
+            ),
             created_at=datetime.now(),
             host="stub.example.com",
         )
@@ -109,7 +111,9 @@ class TestStubProvider:
 
     @pytest.mark.asyncio
     async def test_create(self):
-        spec = InstanceSpec(name="hello", image="ubuntu", cpu_cores=2, memory_mb=1024, storage_gb=20)
+        spec = InstanceSpec(
+            name="hello", image="ubuntu", cpu_cores=2, memory_mb=1024, storage_gb=20
+        )
         info = await self.prov.create(spec)
         assert info.status == InstancePowerState.RUNNING
         assert info.spec.cpu_cores == 2

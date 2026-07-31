@@ -6,7 +6,7 @@ basic HA and the OpenStack problem of requiring external monitoring
 stack for automated recovery.
 """
 
-from .engine import HealingEngine, RemediationAction, RemediationResult, HealthStatus
+from .engine import HealingEngine, HealthStatus, RemediationAction, RemediationResult
 
 __all__ = [
     "HealingEngine",

@@ -8,8 +8,8 @@ This addresses Proxmox's lack of native multi-datacenter support and
 avoids OpenStack's complexity of cells and availability zones.
 """
 
-from .region import Region, Datacenter, RegionStatus
 from .federation import Federation, FederationPeer
+from .region import Datacenter, Region, RegionStatus
 
 __all__ = [
     "Region",

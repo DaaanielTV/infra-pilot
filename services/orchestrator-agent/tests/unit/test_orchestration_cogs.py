@@ -1,10 +1,10 @@
 """Tests for actual orchestrator cogs and utilities."""
 
-import pytest
 from datetime import datetime
 
-from vps_manager import VPSConfig, VPSManager, SAFE_CONTAINER_PATTERN
+import pytest
 from config import Config
+from vps_manager import SAFE_CONTAINER_PATTERN, VPSConfig, VPSManager
 
 
 class TestVPSConfig:

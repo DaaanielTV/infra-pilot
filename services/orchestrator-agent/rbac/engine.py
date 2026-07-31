@@ -85,11 +85,15 @@ class RBACEngine:
     def delete_project(self, project_id: str) -> bool:
         project = self._projects.pop(project_id, None)
         if project:
-            self._teams = {k: v for k, v in self._teams.items() if v.project_id != project_id}
+            self._teams = {
+                k: v for k, v in self._teams.items() if v.project_id != project_id
+            }
         return project is not None
 
     def list_projects(self, org_id: str) -> List[Project]:
-        return [p for p in self._projects.values() if p.org_id == org_id and p.is_active]
+        return [
+            p for p in self._projects.values() if p.org_id == org_id and p.is_active
+        ]
 
     # ------------------------------------------------------------------
     # Team CRUD
@@ -121,7 +125,8 @@ class RBACEngine:
             return False
         team.member_ids = [uid for uid in team.member_ids if uid != user_id]
         self._memberships = [
-            m for m in self._memberships
+            m
+            for m in self._memberships
             if not (m.user_id == user_id and m.project_id == team.project_id)
         ]
         return True
@@ -130,14 +135,20 @@ class RBACEngine:
     # Permission checks
     # ------------------------------------------------------------------
     def has_permission(
-        self, user_id: str, permission: Permission, org_id: str = "",
+        self,
+        user_id: str,
+        permission: Permission,
+        org_id: str = "",
         project_id: str = "",
     ) -> bool:
         """Check if a user has a specific permission."""
         return permission in self._resolve_permissions(user_id, org_id, project_id)
 
     def require_permission(
-        self, user_id: str, permission: Permission, org_id: str = "",
+        self,
+        user_id: str,
+        permission: Permission,
+        org_id: str = "",
         project_id: str = "",
     ) -> None:
         """Raise AccessDeniedError if the user lacks the permission."""
@@ -158,7 +169,11 @@ class RBACEngine:
                 continue
             if org_id and membership.org_id != org_id:
                 continue
-            if project_id and membership.project_id and membership.project_id != project_id:
+            if (
+                project_id
+                and membership.project_id
+                and membership.project_id != project_id
+            ):
                 continue
 
             role = self._roles.get(membership.role_name)
@@ -183,8 +198,12 @@ class RBACEngine:
         return self._roles.pop(name, None) is not None
 
     def assign_role(
-        self, user_id: str, org_id: str, role_name: str,
-        project_id: str = "", granted_by: str = "",
+        self,
+        user_id: str,
+        org_id: str,
+        role_name: str,
+        project_id: str = "",
+        granted_by: str = "",
     ) -> Membership:
         membership = Membership(
             user_id=user_id,
@@ -196,12 +215,18 @@ class RBACEngine:
         self._memberships.append(membership)
         return membership
 
-    def remove_membership(self, user_id: str, org_id: str, project_id: str = "") -> bool:
+    def remove_membership(
+        self, user_id: str, org_id: str, project_id: str = ""
+    ) -> bool:
         before = len(self._memberships)
         self._memberships = [
-            m for m in self._memberships
-            if not (m.user_id == user_id and m.org_id == org_id
-                    and (not project_id or m.project_id == project_id))
+            m
+            for m in self._memberships
+            if not (
+                m.user_id == user_id
+                and m.org_id == org_id
+                and (not project_id or m.project_id == project_id)
+            )
         ]
         return len(self._memberships) < before
 
@@ -210,7 +235,8 @@ class RBACEngine:
     # ------------------------------------------------------------------
     def list_members(self, org_id: str, project_id: str = "") -> List[Membership]:
         return [
-            m for m in self._memberships
+            m
+            for m in self._memberships
             if m.org_id == org_id and (not project_id or m.project_id == project_id)
         ]
 

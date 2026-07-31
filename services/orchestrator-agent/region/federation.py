@@ -13,7 +13,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import aiohttp
-
 from region.region import Region, RegionStatus
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,7 @@ class PeerStatus(str, Enum):
 @dataclass
 class FederationPeer:
     """A remote infra-pilot instance."""
+
     id: str
     name: str
     api_url: str
@@ -110,9 +110,7 @@ class Federation:
     # ------------------------------------------------------------------
     # Remote operations (proxied)
     # ------------------------------------------------------------------
-    async def remote_list_instances(
-        self, peer: FederationPeer
-    ) -> List[Dict[str, Any]]:
+    async def remote_list_instances(self, peer: FederationPeer) -> List[Dict[str, Any]]:
         """List instances on a remote peer."""
         session = await self._get_session()
         headers = {"Authorization": f"Bearer {peer.api_token}"}

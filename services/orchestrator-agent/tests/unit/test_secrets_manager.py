@@ -3,15 +3,14 @@
 from typing import Any, Dict, List, Optional
 
 import pytest
-
 from secrets_manager import (
     AWSSecretsManagerBackend,
     AzureKeyVaultBackend,
     SecretsBackend,
     SecretsManager,
     VaultBackend,
-    init_secrets_manager,
     get_secrets_manager,
+    init_secrets_manager,
 )
 
 

@@ -5,6 +5,6 @@ queries live stats from VPSManager, and triggers scale actions
 (CPU/memory changes via Docker's ``container.update()``).
 """
 
-from .engine import ScalingEngine, ScalingAction, ScalingRule, ScalingEvent
+from .engine import ScalingAction, ScalingEngine, ScalingEvent, ScalingRule
 
 __all__ = ["ScalingEngine", "ScalingAction", "ScalingRule", "ScalingEvent"]

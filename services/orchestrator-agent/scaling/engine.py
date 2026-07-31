@@ -20,12 +20,13 @@ class ScalingAction(str, Enum):
 @dataclass
 class ScalingRule:
     """A single auto-scaling rule loaded from the database."""
+
     id: int
     container_id: str
-    metric: str            # cpu_usage, memory_usage
-    threshold: float       # trigger percentage (e.g. 80.0)
+    metric: str  # cpu_usage, memory_usage
+    threshold: float  # trigger percentage (e.g. 80.0)
     duration_minutes: int  # how long metric must exceed threshold before acting
-    action: str            # scale_up, scale_down
+    action: str  # scale_up, scale_down
     cooldown_until: Optional[datetime] = None
     enabled: bool = True
 
@@ -33,6 +34,7 @@ class ScalingRule:
 @dataclass
 class ScalingEvent:
     """Record of a scaling action that was taken."""
+
     container_id: str
     rule_id: int
     action: ScalingAction
@@ -121,7 +123,9 @@ class ScalingEngine:
     # ------------------------------------------------------------------
     # Scaling logic
     # ------------------------------------------------------------------
-    def _get_scale_step(self, current_cores: float, current_memory_mb: int, action: ScalingAction):
+    def _get_scale_step(
+        self, current_cores: float, current_memory_mb: int, action: ScalingAction
+    ):
         """Compute the new resource limits for a scale action.
 
         Scale up:   +1 CPU core, +1 GB RAM   (capped at max limits)
@@ -142,7 +146,9 @@ class ScalingEngine:
 
         return new_cores, new_memory
 
-    async def evaluate(self, rule: ScalingRule, stats: Dict[str, Any]) -> Optional[ScalingEvent]:
+    async def evaluate(
+        self, rule: ScalingRule, stats: Dict[str, Any]
+    ) -> Optional[ScalingEvent]:
         """Check if a rule's threshold is breached and scale if needed."""
         metric_value = stats.get(rule.metric, 0.0)
         container_id = rule.container_id
@@ -176,7 +182,9 @@ class ScalingEngine:
         current_cores = float(cfg.get("cpu_limit", 1))
         current_memory_mb = int(cfg.get("memory_limit", 1024))
 
-        new_cores, new_memory = self._get_scale_step(current_cores, current_memory_mb, action)
+        new_cores, new_memory = self._get_scale_step(
+            current_cores, current_memory_mb, action
+        )
 
         # Skip if no change
         if new_cores == current_cores and new_memory == current_memory_mb:
@@ -196,8 +204,12 @@ class ScalingEngine:
 
         logger.info(
             "Scaling %s %s: cpu %.1f->%.1f, mem %d->%d",
-            action.value, container_id[:12], current_cores, new_cores,
-            current_memory_mb, new_memory,
+            action.value,
+            container_id[:12],
+            current_cores,
+            new_cores,
+            current_memory_mb,
+            new_memory,
         )
 
         try:
@@ -224,7 +236,9 @@ class ScalingEngine:
         self._recent_events = self._recent_events[-200:]
 
         # Update cooldown in rule
-        rule.cooldown_until = now + timedelta(minutes=config.AUTO_SCALE_COOLDOWN_MINUTES)
+        rule.cooldown_until = now + timedelta(
+            minutes=config.AUTO_SCALE_COOLDOWN_MINUTES
+        )
 
         # Reset consecutive counter
         self._consecutive[breach_key] = 0

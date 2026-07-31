@@ -32,7 +32,10 @@ class MockContainer:
     def stats(self, stream=False):
         return {
             "cpu_stats": {"cpu_usage": {"total_usage": 300}, "system_cpu_usage": 1000},
-            "precpu_stats": {"cpu_usage": {"total_usage": 100}, "system_cpu_usage": 500},
+            "precpu_stats": {
+                "cpu_usage": {"total_usage": 100},
+                "system_cpu_usage": 500,
+            },
             "memory_stats": {"usage": 128, "limit": 512},
             "networks": {"eth0": {"rx_bytes": 10, "tx_bytes": 20}},
         }

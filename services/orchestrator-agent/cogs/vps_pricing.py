@@ -5,27 +5,28 @@ configuration and /purchasevps to deploy a VPS by paying from the
 player economy balance.
 """
 
-import discord
-from discord.ext import commands
-from discord import app_commands
-import psycopg2
-from typing import Dict, Optional
 import json
 import os
 from datetime import datetime, timedelta
+from typing import Dict, Optional
 
+import discord
+import psycopg2
 from db import get_sync_connection
+from discord import app_commands
+from discord.ext import commands
 from vps_manager import VPSConfig
+
 
 class VPSPricing(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = self.initialize_database()
         self.prices = {
-            'cpu_per_core': 50.0,  # $50 per CPU core
-            'memory_per_gb': 25.0,  # $25 per GB of RAM
-            'storage_per_gb': 1.0,  # $1 per GB of storage
-            'bandwidth_per_gb': 0.5  # $0.5 per GB of bandwidth
+            "cpu_per_core": 50.0,  # $50 per CPU core
+            "memory_per_gb": 25.0,  # $25 per GB of RAM
+            "storage_per_gb": 1.0,  # $1 per GB of storage
+            "bandwidth_per_gb": 0.5,  # $0.5 per GB of bandwidth
         }
         self.billing_interval = timedelta(days=30)  # Bill every 30 days
 
@@ -34,10 +35,10 @@ class VPSPricing(commands.Cog):
 
     def calculate_vps_cost(self, cpu: float, memory: int, storage: int) -> float:
         """Calculate the monthly cost for a VPS configuration"""
-        cpu_cost = cpu * self.prices['cpu_per_core']
-        memory_cost = (memory / 1024) * self.prices['memory_per_gb']  # Convert MB to GB
-        storage_cost = storage * self.prices['storage_per_gb']
-        
+        cpu_cost = cpu * self.prices["cpu_per_core"]
+        memory_cost = (memory / 1024) * self.prices["memory_per_gb"]  # Convert MB to GB
+        storage_cost = storage * self.prices["storage_per_gb"]
+
         return cpu_cost + memory_cost + storage_cost
 
     async def check_balance(self, user_id: str) -> float:
@@ -48,13 +49,17 @@ class VPSPricing(commands.Cog):
         cursor.close()
         return result[0] if result else 0.0
 
-    async def process_payment(self, user_id: str, amount: float, description: str) -> bool:
+    async def process_payment(
+        self, user_id: str, amount: float, description: str
+    ) -> bool:
         """Process a payment from user's balance"""
         try:
             cursor = self.db.cursor()
-            
+
             # Check balance
-            cursor.execute("SELECT balance FROM player_economy WHERE uuid = %s", (user_id,))
+            cursor.execute(
+                "SELECT balance FROM player_economy WHERE uuid = %s", (user_id,)
+            )
             result = cursor.fetchone()
             if not result or result[0] < amount:
                 return False
@@ -62,7 +67,7 @@ class VPSPricing(commands.Cog):
             # Update balance
             cursor.execute(
                 "UPDATE player_economy SET balance = balance - %s WHERE uuid = %s",
-                (amount, user_id)
+                (amount, user_id),
             )
 
             # Record transaction
@@ -70,7 +75,7 @@ class VPSPricing(commands.Cog):
                 """INSERT INTO economy_transactions 
                    (uuid, amount, type, description) 
                    VALUES (%s, %s, %s, %s)""",
-                (user_id, -amount, "VPS_PAYMENT", description)
+                (user_id, -amount, "VPS_PAYMENT", description),
             )
 
             self.db.commit()
@@ -85,14 +90,10 @@ class VPSPricing(commands.Cog):
     @app_commands.describe(
         cpu="Number of CPU cores (0.5-4)",
         memory="Memory in MB (512-8192)",
-        storage="Storage in GB (10-100)"
+        storage="Storage in GB (10-100)",
     )
     async def calculate_cost(
-        self,
-        interaction: discord.Interaction,
-        cpu: float,
-        memory: int,
-        storage: int
+        self, interaction: discord.Interaction, cpu: float, memory: int, storage: int
     ):
         """Calculate the cost of a VPS configuration"""
         await interaction.response.defer()
@@ -114,40 +115,36 @@ class VPSPricing(commands.Cog):
         embed = discord.Embed(
             title="VPS Cost Calculation",
             color=discord.Color.blue(),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
         embed.add_field(
             name="Configuration",
             value=f"CPU: {cpu} cores\nMemory: {memory}MB\nStorage: {storage}GB",
-            inline=False
+            inline=False,
         )
 
         embed.add_field(
             name="Cost Breakdown",
             value=f"CPU: ${cpu * self.prices['cpu_per_core']:.2f}\n"
-                  f"Memory: ${(memory / 1024) * self.prices['memory_per_gb']:.2f}\n"
-                  f"Storage: ${storage * self.prices['storage_per_gb']:.2f}",
-            inline=False
+            f"Memory: ${(memory / 1024) * self.prices['memory_per_gb']:.2f}\n"
+            f"Storage: ${storage * self.prices['storage_per_gb']:.2f}",
+            inline=False,
         )
 
         embed.add_field(
-            name="Total Monthly Cost",
-            value=f"${monthly_cost:.2f}",
-            inline=False
+            name="Total Monthly Cost", value=f"${monthly_cost:.2f}", inline=False
         )
 
-        embed.add_field(
-            name="Your Balance",
-            value=f"${user_balance:.2f}",
-            inline=False
-        )
+        embed.add_field(name="Your Balance", value=f"${user_balance:.2f}", inline=False)
 
         can_afford = user_balance >= monthly_cost
         embed.add_field(
             name="Status",
-            value="✅ You can afford this VPS!" if can_afford else "❌ Insufficient funds",
-            inline=False
+            value=(
+                "✅ You can afford this VPS!" if can_afford else "❌ Insufficient funds"
+            ),
+            inline=False,
         )
 
         await interaction.followup.send(embed=embed)
@@ -156,14 +153,10 @@ class VPSPricing(commands.Cog):
     @app_commands.describe(
         cpu="Number of CPU cores (0.5-4)",
         memory="Memory in MB (512-8192)",
-        storage="Storage in GB (10-100)"
+        storage="Storage in GB (10-100)",
     )
     async def purchase_vps(
-        self,
-        interaction: discord.Interaction,
-        cpu: float,
-        memory: int,
-        storage: int
+        self, interaction: discord.Interaction, cpu: float, memory: int, storage: int
     ):
         """Purchase a new VPS instance using your balance"""
         await interaction.response.defer()
@@ -192,11 +185,13 @@ class VPSPricing(commands.Cog):
         payment_success = await self.process_payment(
             str(interaction.user.id),
             monthly_cost,
-            f"VPS Purchase - {cpu} CPU, {memory}MB RAM, {storage}GB Storage"
+            f"VPS Purchase - {cpu} CPU, {memory}MB RAM, {storage}GB Storage",
         )
 
         if not payment_success:
-            await interaction.followup.send("Failed to process payment. Please try again later.")
+            await interaction.followup.send(
+                "Failed to process payment. Please try again later."
+            )
             return
 
         # Create VPS instance
@@ -204,45 +199,55 @@ class VPSPricing(commands.Cog):
             cpu_limit=cpu,
             memory_limit=memory,
             storage_limit=storage,
-            image='ubuntu:latest',
+            image="ubuntu:latest",
             ports={},
             env_vars={},
         )
 
         try:
-            vps_manager = self.bot.get_cog('VPSCommands').vps_manager
-            container_id = await vps_manager.create_vps(str(interaction.user.id), vps_config)
+            vps_manager = self.bot.get_cog("VPSCommands").vps_manager
+            container_id = await vps_manager.create_vps(
+                str(interaction.user.id), vps_config
+            )
 
             if container_id:
                 embed = discord.Embed(
                     title="VPS Purchase Successful",
                     description="Your VPS has been created!",
                     color=discord.Color.green(),
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.utcnow(),
                 )
 
                 embed.add_field(name="Container ID", value=container_id[:12])
                 embed.add_field(name="Monthly Cost", value=f"${monthly_cost:.2f}")
-                embed.add_field(name="Next Billing Date", value=(datetime.utcnow() + self.billing_interval).strftime("%Y-%m-%d"))
-                
+                embed.add_field(
+                    name="Next Billing Date",
+                    value=(datetime.utcnow() + self.billing_interval).strftime(
+                        "%Y-%m-%d"
+                    ),
+                )
+
                 await interaction.followup.send(embed=embed)
             else:
                 # Refund the payment if VPS creation fails
                 await self.process_payment(
                     str(interaction.user.id),
                     -monthly_cost,
-                    "VPS Creation Failed - Refund"
+                    "VPS Creation Failed - Refund",
                 )
-                await interaction.followup.send("Failed to create VPS. Your payment has been refunded.")
+                await interaction.followup.send(
+                    "Failed to create VPS. Your payment has been refunded."
+                )
         except Exception as e:
             self.bot.logger.error(f"VPS creation error: {e}")
             # Refund the payment
             await self.process_payment(
-                str(interaction.user.id),
-                -monthly_cost,
-                "VPS Creation Error - Refund"
+                str(interaction.user.id), -monthly_cost, "VPS Creation Error - Refund"
             )
-            await interaction.followup.send("An error occurred. Your payment has been refunded.")
+            await interaction.followup.send(
+                "An error occurred. Your payment has been refunded."
+            )
+
 
 async def setup(bot):
     await bot.add_cog(VPSPricing(bot))

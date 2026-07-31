@@ -183,9 +183,7 @@ class DockerProvider(ComputeProvider):
     async def list_backups(self, instance_id: str) -> List[Dict[str, Any]]:
         return await _get_manager().list_backups(instance_id)
 
-    async def execute_command(
-        self, instance_id: str, command: str
-    ) -> Tuple[bool, str]:
+    async def execute_command(self, instance_id: str, command: str) -> Tuple[bool, str]:
         mgr = _get_manager()
         try:
             container = mgr.client.containers.get(instance_id)
@@ -197,7 +195,10 @@ class DockerProvider(ComputeProvider):
         mgr = _get_manager()
         try:
             mgr.client.ping()
-            return {"status": "ok", "containers": len(mgr.client.containers.list(all=True))}
+            return {
+                "status": "ok",
+                "containers": len(mgr.client.containers.list(all=True)),
+            }
         except Exception as exc:
             return {"status": "unreachable", "error": str(exc)}
 

@@ -5,8 +5,8 @@ repository.  The engine reads the desired state, diffs it against
 current state, and reconciles any drift automatically.
 """
 
+from .engine import DriftEntry, DriftReport, ManifestEngine
 from .schema import InfraFile, InfraInstance, InfraNetwork, InfraStorage
-from .engine import ManifestEngine, DriftReport, DriftEntry
 
 __all__ = [
     "InfraFile",

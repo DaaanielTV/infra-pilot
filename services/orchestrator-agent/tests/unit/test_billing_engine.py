@@ -4,8 +4,12 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-from billing.billing_engine import BillingEngine, Invoice, InvoiceLineItem, InvoiceStatus
+from billing.billing_engine import (
+    BillingEngine,
+    Invoice,
+    InvoiceLineItem,
+    InvoiceStatus,
+)
 from billing.meter import ResourceUsage, UsageMeter
 
 
@@ -42,8 +46,14 @@ class TestUsageMeter:
         meter = UsageMeter()
         meter._buffer.append(
             ResourceUsage(
-                instance_id="i-1", instance_name="t", org_id="o", project_id="p",
-                provider="d", cpu_cores=1, memory_mb=512, storage_gb=10,
+                instance_id="i-1",
+                instance_name="t",
+                org_id="o",
+                project_id="p",
+                provider="d",
+                cpu_cores=1,
+                memory_mb=512,
+                storage_gb=10,
             )
         )
         assert meter.clear_buffer() == 1
@@ -56,7 +66,9 @@ class TestBillingEngine:
         self.now = datetime.now(timezone.utc)
         self.last_month = self.now - timedelta(days=30)
 
-    def _make_usage(self, cpu=2, memory=2048, storage=50, network_rx=10**9, network_tx=10**9):
+    def _make_usage(
+        self, cpu=2, memory=2048, storage=50, network_rx=10**9, network_tx=10**9
+    ):
         return ResourceUsage(
             instance_id="i-1",
             instance_name="web-01",
@@ -99,15 +111,25 @@ class TestBillingEngine:
     async def test_multiple_instances(self):
         recs = [
             ResourceUsage(
-                instance_id="i-a", instance_name="web-a", org_id="org-1",
-                project_id="proj-1", provider="docker",
-                cpu_cores=1, memory_mb=512, storage_gb=10,
+                instance_id="i-a",
+                instance_name="web-a",
+                org_id="org-1",
+                project_id="proj-1",
+                provider="docker",
+                cpu_cores=1,
+                memory_mb=512,
+                storage_gb=10,
                 collected_at=self.now,
             ),
             ResourceUsage(
-                instance_id="i-b", instance_name="web-b", org_id="org-1",
-                project_id="proj-1", provider="docker",
-                cpu_cores=2, memory_mb=1024, storage_gb=20,
+                instance_id="i-b",
+                instance_name="web-b",
+                org_id="org-1",
+                project_id="proj-1",
+                provider="docker",
+                cpu_cores=2,
+                memory_mb=1024,
+                storage_gb=20,
                 collected_at=self.now,
             ),
         ]
@@ -117,16 +139,26 @@ class TestBillingEngine:
         assert invoice.subtotal > 0
 
     def test_mark_paid(self):
-        inv = Invoice(id="inv-1", org_id="org-1", org_name="T",
-                       period_start=self.last_month, period_end=self.now)
+        inv = Invoice(
+            id="inv-1",
+            org_id="org-1",
+            org_name="T",
+            period_start=self.last_month,
+            period_end=self.now,
+        )
         self.engine._invoices["inv-1"] = inv
         assert self.engine.mark_paid("inv-1") is True
         assert inv.status == InvoiceStatus.PAID
         assert inv.paid_at is not None
 
     def test_mark_overdue(self):
-        inv = Invoice(id="inv-2", org_id="org-1", org_name="T",
-                       period_start=self.last_month, period_end=self.now)
+        inv = Invoice(
+            id="inv-2",
+            org_id="org-1",
+            org_name="T",
+            period_start=self.last_month,
+            period_end=self.now,
+        )
         self.engine._invoices["inv-2"] = inv
         assert self.engine.mark_overdue("inv-2") is True
         assert inv.status == InvoiceStatus.OVERDUE
@@ -134,8 +166,11 @@ class TestBillingEngine:
     def test_list_invoices(self):
         for i in range(3):
             self.engine._invoices[f"inv-{i}"] = Invoice(
-                id=f"inv-{i}", org_id="org-1", org_name="T",
-                period_start=self.last_month, period_end=self.now,
+                id=f"inv-{i}",
+                org_id="org-1",
+                org_name="T",
+                period_start=self.last_month,
+                period_end=self.now,
             )
         assert len(self.engine.list_invoices("org-1")) == 3
 

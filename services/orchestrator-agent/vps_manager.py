@@ -7,14 +7,13 @@ import os
 import random
 import re
 import subprocess
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
 
 import aiofiles
 import docker
-
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -97,13 +96,23 @@ class VPSManager:
         """Persist VPS instance metadata to PostgreSQL (primary) and JSON file (fallback)."""
         try:
             from db import get_pool
+
             pool = await get_pool()
             async with pool.acquire() as conn:
                 for cid, info in self.vps_instances.items():
-                    metadata = {k: v for k, v in info.items()
-                                if k not in ("container_id", "user_id",
-                                             "container_name", "ssh_command",
-                                             "status", "created_at")}
+                    metadata = {
+                        k: v
+                        for k, v in info.items()
+                        if k
+                        not in (
+                            "container_id",
+                            "user_id",
+                            "container_name",
+                            "ssh_command",
+                            "status",
+                            "created_at",
+                        )
+                    }
                     await conn.execute(
                         "INSERT INTO vps_containers "
                         "(container_id, user_id, container_name, ssh_command, status, metadata) "
@@ -150,9 +159,7 @@ class VPSManager:
         """
         return random.randint(PORT_MIN, PORT_MAX)
 
-    def add_to_database(
-        self, user_id: str, container_id: str, ssh_command: str
-    ):
+    def add_to_database(self, user_id: str, container_id: str, ssh_command: str):
         """Insert a VPS container record into the database.
 
         Args:
@@ -267,8 +274,7 @@ class VPSManager:
             conn = self._get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT ssh_command FROM vps_containers "
-                "WHERE container_id = %s",
+                "SELECT ssh_command FROM vps_containers " "WHERE container_id = %s",
                 (container_id,),
             )
             row = cursor.fetchone()
@@ -288,9 +294,7 @@ class VPSManager:
 
         return get_sync_connection()
 
-    async def create_vps(
-        self, user_id: str, cfg: VPSConfig
-    ) -> Optional[str]:
+    async def create_vps(self, user_id: str, cfg: VPSConfig) -> Optional[str]:
         """Create a new Docker container as a VPS.
 
         Args:
@@ -325,11 +329,7 @@ class VPSManager:
                     "ports": cfg.ports,
                 },
                 "status": "running",
-                "host": (
-                    os.uname().nodename
-                    if hasattr(os, "uname")
-                    else "localhost"
-                ),
+                "host": (os.uname().nodename if hasattr(os, "uname") else "localhost"),
             }
 
             self.vps_instances[container.id] = instance_info
@@ -425,9 +425,7 @@ class VPSManager:
             self.vps_instances[container_id]["status"] = status
             await self.save_instances()
 
-    async def get_vps_stats(
-        self, container_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_vps_stats(self, container_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve live CPU, memory, and network stats for a container.
 
         Args:
@@ -449,9 +447,7 @@ class VPSManager:
                 stats["cpu_stats"]["system_cpu_usage"]
                 - stats["precpu_stats"]["system_cpu_usage"]
             )
-            cpu_usage = (
-                (cpu_delta / system_delta) * 100.0 if system_delta > 0 else 0.0
-            )
+            cpu_usage = (cpu_delta / system_delta) * 100.0 if system_delta > 0 else 0.0
 
             memory_usage = stats["memory_stats"]["usage"]
             memory_limit = stats["memory_stats"]["limit"]
@@ -486,14 +482,10 @@ class VPSManager:
         for cid, info in self.vps_instances.items():
             if info["user_id"] == user_id:
                 stats = await self.get_vps_stats(cid)
-                results.append(
-                    {"container_id": cid, "info": info, "stats": stats}
-                )
+                results.append({"container_id": cid, "info": info, "stats": stats})
         return results
 
-    async def update_vps_config(
-        self, container_id: str, cfg: VPSConfig
-    ) -> bool:
+    async def update_vps_config(self, container_id: str, cfg: VPSConfig) -> bool:
         """Update a running VPS container's resource limits.
 
         Args:
@@ -512,11 +504,13 @@ class VPSManager:
                 mem_limit=f"{cfg.memory_limit}m",
             )
             if container_id in self.vps_instances:
-                self.vps_instances[container_id]["config"].update({
-                    "cpu_limit": cfg.cpu_limit,
-                    "memory_limit": cfg.memory_limit,
-                    "storage_limit": cfg.storage_limit,
-                })
+                self.vps_instances[container_id]["config"].update(
+                    {
+                        "cpu_limit": cfg.cpu_limit,
+                        "memory_limit": cfg.memory_limit,
+                        "storage_limit": cfg.storage_limit,
+                    }
+                )
                 await self.save_instances()
             container.start()
             return True
@@ -544,17 +538,17 @@ class VPSManager:
 
             if container_id in self.vps_instances:
                 self.vps_instances[container_id].setdefault("backups", [])
-                self.vps_instances[container_id]["backups"].append({
-                    "image_id": image.id,
-                    "created_at": timestamp,
-                    "name": backup_name,
-                    "retention_type": retention_type,
-                })
+                self.vps_instances[container_id]["backups"].append(
+                    {
+                        "image_id": image.id,
+                        "created_at": timestamp,
+                        "name": backup_name,
+                        "retention_type": retention_type,
+                    }
+                )
                 await self.save_instances()
 
-            self._record_backup(
-                container_id, image.id, backup_name, retention_type
-            )
+            self._record_backup(container_id, image.id, backup_name, retention_type)
             self._apply_retention_policy(container_id)
             return image.id
         except Exception as exc:
@@ -649,9 +643,7 @@ class VPSManager:
             logger.error("Error listing backups: %s", exc)
             return self.vps_instances.get(container_id, {}).get("backups", [])
 
-    async def restore_backup(
-        self, container_id: str, backup_image_id: str
-    ) -> bool:
+    async def restore_backup(self, container_id: str, backup_image_id: str) -> bool:
         """Restore a container from a backup image.
 
         Args:
@@ -707,11 +699,13 @@ class VPSManager:
 
             if container_id in self.vps_instances:
                 self.vps_instances[container_id].setdefault("snapshots", [])
-                self.vps_instances[container_id]["snapshots"].append({
-                    "image_id": image.id,
-                    "created_at": timestamp,
-                    "name": snapshot_name,
-                })
+                self.vps_instances[container_id]["snapshots"].append(
+                    {
+                        "image_id": image.id,
+                        "created_at": timestamp,
+                        "name": snapshot_name,
+                    }
+                )
                 await self.save_instances()
 
             self._record_snapshot(container_id, snapshot_name, image.id)
@@ -720,9 +714,7 @@ class VPSManager:
             logger.error("Error creating snapshot: %s", exc)
             return None
 
-    def _record_snapshot(
-        self, container_id: str, name: str, image_id: str
-    ):
+    def _record_snapshot(self, container_id: str, name: str, image_id: str):
         """Record a snapshot entry in the database.
 
         Args:
@@ -767,13 +759,9 @@ class VPSManager:
             return snapshots
         except Exception as exc:
             logger.error("Error listing snapshots: %s", exc)
-            return self.vps_instances.get(container_id, {}).get(
-                "snapshots", []
-            )
+            return self.vps_instances.get(container_id, {}).get("snapshots", [])
 
-    async def restore_snapshot(
-        self, container_id: str, snapshot_image_id: str
-    ) -> bool:
+    async def restore_snapshot(self, container_id: str, snapshot_image_id: str) -> bool:
         """Restore a container from a snapshot image.
 
         Args:
@@ -785,9 +773,7 @@ class VPSManager:
         """
         return await self.restore_backup(container_id, snapshot_image_id)
 
-    async def clone_vps(
-        self, container_id: str, new_name: str
-    ) -> Optional[str]:
+    async def clone_vps(self, container_id: str, new_name: str) -> Optional[str]:
         """Clone a VPS container into a new container.
 
         Args:
@@ -827,9 +813,7 @@ class VPSManager:
             logger.error("Error cloning VPS: %s", exc)
             return None
 
-    async def migrate_vps(
-        self, container_id: str, target_host: str
-    ) -> bool:
+    async def migrate_vps(self, container_id: str, target_host: str) -> bool:
         """Migrate a VPS container to another host by saving its image.
 
         Args:
@@ -840,17 +824,11 @@ class VPSManager:
             ``True`` on success.
         """
         try:
-            logger.info(
-                "Migrating container %s to %s", container_id, target_host
-            )
+            logger.info("Migrating container %s to %s", container_id, target_host)
             container = self.client.containers.get(container_id)
-            image = container.commit(
-                repository=f"migration_{container_id[:12]}"
-            )
+            image = container.commit(repository=f"migration_{container_id[:12]}")
 
-            save_path = os.path.join(
-                MIGRATION_TMP_DIR, f"{container_id}_migration.tar"
-            )
+            save_path = os.path.join(MIGRATION_TMP_DIR, f"{container_id}_migration.tar")
             with open(save_path, "wb") as f:
                 for chunk in self.client.images.get(image.id).save():
                     f.write(chunk)
@@ -904,15 +882,12 @@ class VPSManager:
                 host, port = (target or DEFAULT_PORT_CHECK).split(":")
                 success, _ = self._exec_in_container(
                     container,
-                    f"timeout 2 bash -c 'echo >/dev/tcp/{host}/{port}' "
-                    f"2>/dev/null",
+                    f"timeout 2 bash -c 'echo >/dev/tcp/{host}/{port}' " f"2>/dev/null",
                 )
                 result["status"] = "passed" if success else "failed"
             elif check_type == "process":
                 process = target or DEFAULT_PROCESS
-                success, _ = self._exec_in_container(
-                    container, f"pgrep -x {process}"
-                )
+                success, _ = self._exec_in_container(container, f"pgrep -x {process}")
                 result["status"] = "passed" if success else "failed"
             elif check_type == "api":
                 url = target or DEFAULT_HEALTH_URL
@@ -921,9 +896,7 @@ class VPSManager:
                     f"curl -s -o /dev/null -w '%{{http_code}}' {url}",
                 )
                 result["status"] = (
-                    "passed"
-                    if output.strip() in ("200", "201", "204")
-                    else "failed"
+                    "passed" if output.strip() in ("200", "201", "204") else "failed"
                 )
             else:
                 result["status"] = "unknown"
@@ -934,14 +907,10 @@ class VPSManager:
 
         elapsed = (datetime.now() - start).total_seconds() * 1000
         result["response_time_ms"] = int(elapsed)
-        self._record_health_check_result(
-            container_id, check_type, result
-        )
+        self._record_health_check_result(container_id, check_type, result)
         return result
 
-    def _exec_in_container(
-        self, container, command: str
-    ) -> Tuple[bool, str]:
+    def _exec_in_container(self, container, command: str) -> Tuple[bool, str]:
         """Execute a command inside a container.
 
         Args:
@@ -1043,9 +1012,7 @@ class VPSManager:
         except Exception as exc:
             return {"type": "disk", "score": 0, "error": str(exc)}
 
-    async def benchmark_network(
-        self, container_id: str
-    ) -> Dict[str, Any]:
+    async def benchmark_network(self, container_id: str) -> Dict[str, Any]:
         """Run a network throughput benchmark inside a container.
 
         Args:
@@ -1100,9 +1067,7 @@ class VPSManager:
             logger.error("Error getting usage history: %s", exc)
             return None
 
-    async def get_network_stats(
-        self, container_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_network_stats(self, container_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve aggregated network statistics for a container.
 
         Args:

@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import docker
 import yaml
-
 from compute.base import ComputeProvider, InstanceInfo, InstanceSpec, ProviderError
 from compute.registry import ProviderRegistry
 from manifest.schema import InfraFile, InfraInstance, InfraNetwork, InfraStorage
@@ -29,6 +28,7 @@ class DriftSeverity(str, Enum):
 @dataclass
 class DriftEntry:
     """A single drift item — a difference between desired and actual state."""
+
     instance_name: str
     field: str
     expected: Any
@@ -40,6 +40,7 @@ class DriftEntry:
 @dataclass
 class DriftReport:
     """Complete drift analysis for a manifest."""
+
     manifest_name: str
     total_instances: int
     drifted_instances: int
@@ -50,6 +51,7 @@ class DriftReport:
 @dataclass
 class ReconcileResult:
     """Outcome of a reconciliation run."""
+
     manifest_name: str
     instances_created: int = 0
     instances_updated: int = 0
@@ -244,9 +246,7 @@ class ManifestEngine:
     # ------------------------------------------------------------------
     # Reconciliation
     # ------------------------------------------------------------------
-    async def reconcile(
-        self, desired: InfraFile
-    ) -> ReconcileResult:
+    async def reconcile(self, desired: InfraFile) -> ReconcileResult:
         """Converge actual infrastructure toward the desired manifest."""
         result = ReconcileResult(
             manifest_name=desired.metadata.name,
@@ -260,7 +260,9 @@ class ManifestEngine:
         for inst in desired.spec.instances:
             prov = ProviderRegistry.get(inst.provider)
             if prov is None:
-                result.errors.append(f"Provider '{inst.provider}' not found for {inst.name}")
+                result.errors.append(
+                    f"Provider '{inst.provider}' not found for {inst.name}"
+                )
                 continue
             provider_map[inst.provider] = prov
             try:
@@ -268,7 +270,9 @@ class ManifestEngine:
                 for info in all_instances:
                     current[info.name] = info
             except Exception as exc:
-                logger.warning("Failed to list instances from %s: %s", inst.provider, exc)
+                logger.warning(
+                    "Failed to list instances from %s: %s", inst.provider, exc
+                )
 
         desired_names: Set[str] = {i.name for i in desired.spec.instances}
 
@@ -297,7 +301,11 @@ class ManifestEngine:
                     if not self.dry_run:
                         await prov.create(spec)
                     result.instances_created += 1
-                    logger.info("Would create%s instance: %s", " (dry-run)" if self.dry_run else "", inst.name)
+                    logger.info(
+                        "Would create%s instance: %s",
+                        " (dry-run)" if self.dry_run else "",
+                        inst.name,
+                    )
                 else:
                     # Update if drifted
                     needs_update = (
@@ -309,7 +317,11 @@ class ManifestEngine:
                         if not self.dry_run:
                             await prov.update(existing.id, spec)
                         result.instances_updated += 1
-                        logger.info("Would update%s instance: %s", " (dry-run)" if self.dry_run else "", inst.name)
+                        logger.info(
+                            "Would update%s instance: %s",
+                            " (dry-run)" if self.dry_run else "",
+                            inst.name,
+                        )
                     else:
                         result.instances_unchanged += 1
             except Exception as exc:
@@ -325,15 +337,22 @@ class ManifestEngine:
                     existing = docker_client.networks.list(names=[net.name])
                     if not existing:
                         if not self.dry_run:
-                            ipam = docker.types.IPAMConfig(
-                                driver="default",
-                                config=[{"subnet": net.cidr}],
-                            ) if net.cidr else None
+                            ipam = (
+                                docker.types.IPAMConfig(
+                                    driver="default",
+                                    config=[{"subnet": net.cidr}],
+                                )
+                                if net.cidr
+                                else None
+                            )
                             docker_client.networks.create(
                                 net.name,
                                 driver="bridge",
                                 ipam=ipam,
-                                labels={"region": net.region, "manifest": desired.metadata.name},
+                                labels={
+                                    "region": net.region,
+                                    "manifest": desired.metadata.name,
+                                },
                             )
                             logger.info("Created network: %s", net.name)
                     # else: network exists — could validate subnet but Docker doesn't easily expose IPAM config

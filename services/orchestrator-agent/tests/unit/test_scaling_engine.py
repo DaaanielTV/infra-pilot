@@ -4,8 +4,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
-
-from scaling import ScalingEngine, ScalingAction, ScalingRule, ScalingEvent
+from scaling import ScalingAction, ScalingEngine, ScalingEvent, ScalingRule
 
 
 @pytest.fixture
@@ -24,11 +23,13 @@ def mock_vps_manager():
             },
         }
     }
-    mgr.get_vps_stats = AsyncMock(return_value={
-        "status": "running",
-        "cpu_usage": 95.0,
-        "memory_usage": 80.0,
-    })
+    mgr.get_vps_stats = AsyncMock(
+        return_value={
+            "status": "running",
+            "cpu_usage": 95.0,
+            "memory_usage": 80.0,
+        }
+    )
     mgr.update_vps_config = AsyncMock(return_value=True)
     return mgr
 
@@ -68,14 +69,28 @@ class TestScalingRule:
 class TestScalingEngine:
     @pytest.mark.asyncio
     async def test_evaluate_no_breach(self, engine):
-        rule = ScalingRule(id=1, container_id="abc123", metric="cpu_usage", threshold=95.0, duration_minutes=2, action="scale_up")
+        rule = ScalingRule(
+            id=1,
+            container_id="abc123",
+            metric="cpu_usage",
+            threshold=95.0,
+            duration_minutes=2,
+            action="scale_up",
+        )
         stats = {"cpu_usage": 50.0}
         event = await engine.evaluate(rule, stats)
         assert event is None
 
     @pytest.mark.asyncio
     async def test_evaluate_breach_insufficient_duration(self, engine):
-        rule = ScalingRule(id=2, container_id="abc123", metric="cpu_usage", threshold=80.0, duration_minutes=5, action="scale_up")
+        rule = ScalingRule(
+            id=2,
+            container_id="abc123",
+            metric="cpu_usage",
+            threshold=80.0,
+            duration_minutes=5,
+            action="scale_up",
+        )
         stats = {"cpu_usage": 95.0}
         # First call, consecutive count is 1, needs 5
         event = await engine.evaluate(rule, stats)
@@ -84,7 +99,14 @@ class TestScalingEngine:
     @pytest.mark.asyncio
     async def test_evaluate_triggers_scale_up(self, engine, mock_vps_manager):
         engine._consecutive["abc123_3"] = 4  # Pre-seed 4 breaches
-        rule = ScalingRule(id=3, container_id="abc123", metric="cpu_usage", threshold=80.0, duration_minutes=5, action="scale_up")
+        rule = ScalingRule(
+            id=3,
+            container_id="abc123",
+            metric="cpu_usage",
+            threshold=80.0,
+            duration_minutes=5,
+            action="scale_up",
+        )
         stats = {"cpu_usage": 95.0}
         event = await engine.evaluate(rule, stats)
         assert event is not None
@@ -97,8 +119,12 @@ class TestScalingEngine:
     @pytest.mark.asyncio
     async def test_cooldown_respects_delay(self, engine):
         rule = ScalingRule(
-            id=4, container_id="abc123", metric="cpu_usage",
-            threshold=80.0, duration_minutes=1, action="scale_up",
+            id=4,
+            container_id="abc123",
+            metric="cpu_usage",
+            threshold=80.0,
+            duration_minutes=1,
+            action="scale_up",
             cooldown_until=datetime.now(timezone.utc) + timedelta(hours=1),
         )
         engine._consecutive["abc123_4"] = 5
@@ -107,16 +133,22 @@ class TestScalingEngine:
         assert event is None  # Blocked by cooldown
 
     def test_get_scale_step(self, engine):
-        new_cores, new_memory = engine._get_scale_step(1.0, 1024, ScalingAction.SCALE_UP)
+        new_cores, new_memory = engine._get_scale_step(
+            1.0, 1024, ScalingAction.SCALE_UP
+        )
         assert new_cores == 2.0
         assert new_memory == 2048
 
-        new_cores, new_memory = engine._get_scale_step(4.0, 8192, ScalingAction.SCALE_DOWN)
+        new_cores, new_memory = engine._get_scale_step(
+            4.0, 8192, ScalingAction.SCALE_DOWN
+        )
         assert new_cores == 3.5
         assert new_memory == 7680
 
     def test_get_scale_step_capped(self, engine):
-        new_cores, new_memory = engine._get_scale_step(100.0, 999999, ScalingAction.SCALE_UP)
+        new_cores, new_memory = engine._get_scale_step(
+            100.0, 999999, ScalingAction.SCALE_UP
+        )
         assert new_cores == 4.0  # max_cpu
         assert new_memory == 8192  # max_memory_mb
 
@@ -127,14 +159,30 @@ class TestScalingEngine:
 
     @pytest.mark.asyncio
     async def test_add_and_list_rules(self, engine):
-        rule = ScalingRule(id=10, container_id="abc123", metric="cpu_usage", threshold=80.0, duration_minutes=5, action="scale_up")
+        rule = ScalingRule(
+            id=10,
+            container_id="abc123",
+            metric="cpu_usage",
+            threshold=80.0,
+            duration_minutes=5,
+            action="scale_up",
+        )
         engine.add_rule(rule)
         assert len(engine.list_rules()) == 1
         assert engine.get_rule(10) is rule
 
     @pytest.mark.asyncio
     async def test_remove_rule(self, engine):
-        engine.add_rule(ScalingRule(id=20, container_id="abc123", metric="cpu_usage", threshold=80.0, duration_minutes=5, action="scale_up"))
+        engine.add_rule(
+            ScalingRule(
+                id=20,
+                container_id="abc123",
+                metric="cpu_usage",
+                threshold=80.0,
+                duration_minutes=5,
+                action="scale_up",
+            )
+        )
         assert engine.remove_rule(20) is True
         assert engine.remove_rule(99) is False
 

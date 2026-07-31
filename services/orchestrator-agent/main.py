@@ -7,10 +7,9 @@ import sys
 from typing import Optional
 
 import discord
-from discord.ext import commands
 from aiohttp import web
-
 from config import config
+from discord.ext import commands
 from integration import init_database_tables
 
 logger = logging.getLogger(__name__)
@@ -79,6 +78,7 @@ async def on_ready():
         vps_cog = bot.get_cog("VPSCommands")
         if vps_cog and hasattr(vps_cog, "vps_manager"):
             from scaling import ScalingEngine
+
             engine = ScalingEngine(vps_cog.vps_manager)
             bot.scaling_engine = engine
             # Set engine on AutoScaler cog if loaded
@@ -116,7 +116,10 @@ async def start_webhook_server(bot_instance: commands.Bot):
         if auth.startswith("Bearer ") and auth[7:] == FEDERATION_API_TOKEN:
             return None
         return web.json_response(
-            {"error": "unauthorized", "message": "Invalid or missing federation API token"},
+            {
+                "error": "unauthorized",
+                "message": "Invalid or missing federation API token",
+            },
             status=401,
         )
 
@@ -144,16 +147,19 @@ async def start_webhook_server(bot_instance: commands.Bot):
         except Exception:
             pass
 
-        return web.json_response({
-            "status": "ok" if db_ok else "degraded",
-            "service": "orchestrator-agent",
-            "postgresql": "up" if db_ok else "down",
-        })
+        return web.json_response(
+            {
+                "status": "ok" if db_ok else "degraded",
+                "service": "orchestrator-agent",
+                "postgresql": "up" if db_ok else "down",
+            }
+        )
 
     async def metrics(request: web.Request) -> web.Response:
         """Prometheus /metrics endpoint."""
         import os
         import sys
+
         import psutil
 
         pyver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -172,10 +178,14 @@ async def start_webhook_server(bot_instance: commands.Bot):
         proc = psutil.Process()
         with proc.oneshot():
             mem = proc.memory_info()
-            lines.append("# HELP process_virtual_memory_bytes Virtual memory size in bytes")
+            lines.append(
+                "# HELP process_virtual_memory_bytes Virtual memory size in bytes"
+            )
             lines.append("# TYPE process_virtual_memory_bytes gauge")
             lines.append(f"process_virtual_memory_bytes {mem.vss}")
-            lines.append("# HELP process_resident_memory_bytes Resident memory size in bytes")
+            lines.append(
+                "# HELP process_resident_memory_bytes Resident memory size in bytes"
+            )
             lines.append("# TYPE process_resident_memory_bytes gauge")
             lines.append(f"process_resident_memory_bytes {mem.rss}")
             cpu_percent = proc.cpu_percent(interval=0)
@@ -195,10 +205,14 @@ async def start_webhook_server(bot_instance: commands.Bot):
             lines.append("# HELP orchestrator_vps_instances_total Total VPS instances")
             lines.append("# TYPE orchestrator_vps_instances_total gauge")
             lines.append(f"orchestrator_vps_instances_total {total}")
-            lines.append("# HELP orchestrator_vps_instances_running Running VPS instances")
+            lines.append(
+                "# HELP orchestrator_vps_instances_running Running VPS instances"
+            )
             lines.append("# TYPE orchestrator_vps_instances_running gauge")
             lines.append(f"orchestrator_vps_instances_running {running}")
-            lines.append("# HELP orchestrator_vps_instances_stopped Stopped VPS instances")
+            lines.append(
+                "# HELP orchestrator_vps_instances_stopped Stopped VPS instances"
+            )
             lines.append("# TYPE orchestrator_vps_instances_stopped gauge")
             lines.append(f"orchestrator_vps_instances_stopped {stopped}")
             lines.append("")
@@ -210,12 +224,14 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     async def federation_status(request: web.Request) -> web.Response:
         """Federation peer status endpoint (requires valid token)."""
-        return web.json_response({
-            "status": "ok",
-            "service": "orchestrator-agent",
-            "federation": {"enabled": bool(FEDERATION_API_TOKEN)},
-            "version": "1.0.0",
-        })
+        return web.json_response(
+            {
+                "status": "ok",
+                "service": "orchestrator-agent",
+                "federation": {"enabled": bool(FEDERATION_API_TOKEN)},
+                "version": "1.0.0",
+            }
+        )
 
     app.router.add_get("/health", health)
     app.router.add_get("/api/health", health)
@@ -224,9 +240,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:
-        app.router.add_post(
-            "/webhook/github/{deploy_id}", cog.handle_webhook
-        )
+        app.router.add_post("/webhook/github/{deploy_id}", cog.handle_webhook)
         app.router.add_post("/webhook/github", cog.handle_webhook)
 
     gitops_cog = bot_instance.get_cog("GitOpsSync")
@@ -261,9 +275,7 @@ if __name__ == "__main__":
     disabled = os.getenv("ORCHESTRATOR_AGENT_DISABLED", "true").lower() == "true"
 
     if token_missing or disabled:
-        logger.warning(
-            "Discord bot disabled; starting health/webhook server only"
-        )
+        logger.warning("Discord bot disabled; starting health/webhook server only")
         try:
             asyncio.run(run_health_only())
         except KeyboardInterrupt:

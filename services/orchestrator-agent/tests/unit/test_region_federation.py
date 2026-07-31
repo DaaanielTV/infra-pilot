@@ -1,7 +1,6 @@
 """Tests for the region and federation modules."""
 
 import pytest
-
 from region.federation import Federation, FederationPeer, PeerStatus
 from region.region import Datacenter, Region, RegionStatus
 
@@ -15,10 +14,15 @@ class TestDatacenter:
 
     def test_utilization(self):
         dc = Datacenter(
-            id="dc-1", name="test", region_id="r1",
-            total_cpu_cores=100, used_cpu_cores=30,
-            total_memory_mb=102400, used_memory_mb=51200,
-            total_storage_gb=10000, used_storage_gb=2000,
+            id="dc-1",
+            name="test",
+            region_id="r1",
+            total_cpu_cores=100,
+            used_cpu_cores=30,
+            total_memory_mb=102400,
+            used_memory_mb=51200,
+            total_storage_gb=10000,
+            used_storage_gb=2000,
         )
         util = dc.utilization()
         assert util["cpu_percent"] == 30.0
@@ -27,10 +31,15 @@ class TestDatacenter:
 
     def test_available_resources(self):
         dc = Datacenter(
-            id="dc-1", name="test", region_id="r1",
-            total_cpu_cores=64, used_cpu_cores=16,
-            total_memory_mb=524288, used_memory_mb=131072,
-            total_storage_gb=50000, used_storage_gb=10000,
+            id="dc-1",
+            name="test",
+            region_id="r1",
+            total_cpu_cores=64,
+            used_cpu_cores=16,
+            total_memory_mb=524288,
+            used_memory_mb=131072,
+            total_storage_gb=50000,
+            used_storage_gb=10000,
         )
         assert dc.cpu_available == 48
         assert dc.memory_available == 393216
@@ -60,14 +69,26 @@ class TestRegion:
 
     def test_totals(self):
         r = Region(id="us-east", name="US East")
-        r.add_datacenter(Datacenter(
-            id="dc-1", name="a", region_id="us-east",
-            total_cpu_cores=32, total_memory_mb=262144, total_storage_gb=20000,
-        ))
-        r.add_datacenter(Datacenter(
-            id="dc-2", name="b", region_id="us-east",
-            total_cpu_cores=32, total_memory_mb=262144, total_storage_gb=20000,
-        ))
+        r.add_datacenter(
+            Datacenter(
+                id="dc-1",
+                name="a",
+                region_id="us-east",
+                total_cpu_cores=32,
+                total_memory_mb=262144,
+                total_storage_gb=20000,
+            )
+        )
+        r.add_datacenter(
+            Datacenter(
+                id="dc-2",
+                name="b",
+                region_id="us-east",
+                total_cpu_cores=32,
+                total_memory_mb=262144,
+                total_storage_gb=20000,
+            )
+        )
         assert r.total_cpu == 64
         assert r.total_memory == 524288
         assert r.total_storage == 40000
@@ -84,13 +105,17 @@ class TestRegion:
 class TestFederation:
     def test_register_peer(self):
         f = Federation()
-        peer = FederationPeer(id="p1", name="remote-us", api_url="https://us.infra-pilot.local")
+        peer = FederationPeer(
+            id="p1", name="remote-us", api_url="https://us.infra-pilot.local"
+        )
         f.register_peer(peer)
         assert f.get_peer("p1") is peer
 
     def test_unregister_peer(self):
         f = Federation()
-        f.register_peer(FederationPeer(id="p1", name="test", api_url="http://localhost"))
+        f.register_peer(
+            FederationPeer(id="p1", name="test", api_url="http://localhost")
+        )
         assert f.unregister_peer("p1") is True
         assert f.get_peer("p1") is None
 

@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Set
 # ---------------------------------------------------------------------------
 class Permission(str, Enum):
     """Every discrete action that can be permitted or denied."""
+
     # Instance lifecycle
     INSTANCE_CREATE = "instance:create"
     INSTANCE_READ = "instance:read"
@@ -128,6 +129,7 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
 @dataclass
 class Role:
     """A named set of permissions."""
+
     name: str
     permissions: Set[Permission]
     is_builtin: bool = False
@@ -137,6 +139,7 @@ class Role:
 @dataclass
 class Organization:
     """Top-level tenant — owns projects, billing, and members."""
+
     id: str
     name: str
     owner_user_id: str
@@ -149,6 +152,7 @@ class Organization:
 @dataclass
 class Project:
     """A logical grouping of infrastructure within an organization."""
+
     id: str
     org_id: str
     name: str
@@ -162,6 +166,7 @@ class Project:
 @dataclass
 class Team:
     """A group of users with a shared role within a project."""
+
     id: str
     org_id: str
     project_id: str
@@ -174,6 +179,7 @@ class Team:
 @dataclass
 class Membership:
     """A user's role binding within an organization or project."""
+
     user_id: str
     org_id: str
     project_id: str = ""

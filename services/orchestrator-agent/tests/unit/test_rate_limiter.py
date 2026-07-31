@@ -3,7 +3,6 @@
 import time
 
 import pytest
-
 from rate_limiter import (
     RateLimitConfig,
     RateLimiter,
@@ -16,15 +15,15 @@ from rate_limiter import (
 class TestTokenBucket:
     def test_burst_capacity_allows_initial_burst(self):
         limiter = RateLimiter(RateLimitConfig(strategy=RateLimitStrategy.TOKEN_BUCKET))
-        allowed = [
-            limiter.check_token_bucket("user-1") for _ in range(120)
-        ]
+        allowed = [limiter.check_token_bucket("user-1") for _ in range(120)]
         assert all(allowed)
 
     def test_exhaustion_after_burst_and_refill(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=2, window_seconds=60, burst_size=0,
+                requests=2,
+                window_seconds=60,
+                burst_size=0,
                 strategy=RateLimitStrategy.TOKEN_BUCKET,
             )
         )
@@ -39,7 +38,9 @@ class TestTokenBucket:
     def test_cost_greater_than_capacity_is_denied(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=1, window_seconds=60, burst_size=0,
+                requests=1,
+                window_seconds=60,
+                burst_size=0,
                 strategy=RateLimitStrategy.TOKEN_BUCKET,
             )
         )
@@ -48,7 +49,9 @@ class TestTokenBucket:
     def test_buckets_are_per_key(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=1, window_seconds=60, burst_size=0,
+                requests=1,
+                window_seconds=60,
+                burst_size=0,
                 strategy=RateLimitStrategy.TOKEN_BUCKET,
             )
         )
@@ -60,7 +63,8 @@ class TestSlidingWindow:
     def test_allows_up_to_limit(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=3, window_seconds=60,
+                requests=3,
+                window_seconds=60,
                 strategy=RateLimitStrategy.SLIDING_WINDOW,
             )
         )
@@ -72,7 +76,8 @@ class TestSlidingWindow:
     def test_old_entries_are_pruned(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=1, window_seconds=60,
+                requests=1,
+                window_seconds=60,
                 strategy=RateLimitStrategy.SLIDING_WINDOW,
             )
         )
@@ -85,7 +90,8 @@ class TestSlidingWindow:
     def test_remaining_reports_available_slots(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=3, window_seconds=60,
+                requests=3,
+                window_seconds=60,
                 strategy=RateLimitStrategy.SLIDING_WINDOW,
             )
         )
@@ -97,7 +103,8 @@ class TestFixedWindow:
     def test_enforces_limit_per_window(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=2, window_seconds=60,
+                requests=2,
+                window_seconds=60,
                 strategy=RateLimitStrategy.FIXED_WINDOW,
             )
         )
@@ -108,7 +115,8 @@ class TestFixedWindow:
     def test_new_window_resets_counter(self, monkeypatch):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=1, window_seconds=60,
+                requests=1,
+                window_seconds=60,
                 strategy=RateLimitStrategy.FIXED_WINDOW,
             )
         )
@@ -161,13 +169,17 @@ class TestRulesAndRegistry:
     def test_registry_returns_first_matching_rule(self):
         registry = RateLimitRegistry()
         registry.add_rule(RateLimitRule("/api/v1/auth*", 1, 60, methods=["POST"]))
-        allowed, _, _, strategy = registry.check_request("/api/v1/auth/login", "POST", "ip:1")
+        allowed, _, _, strategy = registry.check_request(
+            "/api/v1/auth/login", "POST", "ip:1"
+        )
         assert allowed is True
         assert strategy == "sliding_window"
 
     def test_registry_returns_no_rule_metadata_when_unmatched(self):
         registry = RateLimitRegistry()
-        allowed, remaining, reset, strategy = registry.check_request("/other", "GET", "ip:1")
+        allowed, remaining, reset, strategy = registry.check_request(
+            "/other", "GET", "ip:1"
+        )
         assert allowed is True
         assert remaining == -1
         assert reset == 0
@@ -176,14 +188,18 @@ class TestRulesAndRegistry:
     def test_default_rules_exist_and_cover_auth(self):
         registry = RateLimitRegistry()
         registry.add_rules(registry.get_default_rules())
-        allowed, remaining, _, _ = registry.check_request("/api/v1/auth/login", "POST", "ip:1")
+        allowed, remaining, _, _ = registry.check_request(
+            "/api/v1/auth/login", "POST", "ip:1"
+        )
         assert allowed is True
         assert remaining >= 0
 
     def test_reset_clears_state(self):
         limiter = RateLimiter(
             RateLimitConfig(
-                requests=1, window_seconds=60, burst_size=0,
+                requests=1,
+                window_seconds=60,
+                burst_size=0,
                 strategy=RateLimitStrategy.TOKEN_BUCKET,
             )
         )

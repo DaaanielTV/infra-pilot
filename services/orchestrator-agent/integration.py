@@ -4,9 +4,8 @@ import logging
 from typing import Any, Dict, Optional
 
 import asyncpg
-import requests
 import psycopg2
-
+import requests
 from config import config
 from db import get_pool, get_sync_connection
 
@@ -722,9 +721,7 @@ async def notify_integration(event_type: str, data: Dict[str, Any]) -> bool:
         "server_name": data.get("server_name"),
         "details": data,
     }
-    success, _ = _send_request(
-        "POST", "/api/notifications/server-event", payload
-    )
+    success, _ = _send_request("POST", "/api/notifications/server-event", payload)
     return success
 
 
@@ -796,9 +793,7 @@ async def get_unified_metrics() -> Dict[str, Any]:
     return response or {}
 
 
-async def broadcast_notification(
-    message: str, title: str = "Notification"
-) -> bool:
+async def broadcast_notification(message: str, title: str = "Notification") -> bool:
     """Broadcast a notification through the integration service.
 
     Args:

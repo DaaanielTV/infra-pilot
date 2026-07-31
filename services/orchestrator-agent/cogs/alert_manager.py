@@ -4,14 +4,14 @@ Users create alerts on CPU/memory/disk metrics. The monitoring loop
 evaluates them against live container stats and sends Discord DMs.
 """
 
-import discord
-from discord.ext import commands, tasks
-from discord import app_commands
+import logging
 from datetime import datetime
 from typing import Optional
-import logging
 
+import discord
 from config import config
+from discord import app_commands
+from discord.ext import commands, tasks
 from vps_manager import VPSManager
 
 
@@ -60,21 +60,54 @@ class AlertManager(commands.Cog):
         try:
             user = await self.bot.fetch_user(int(user_id))
             if user:
-                embed = discord.Embed(title=f"Alert: {alert['alert_type'].upper()}", color=discord.Color.red(), timestamp=datetime.now())
-                embed.add_field(name="Container", value=alert.get("container_id", "N/A")[:12], inline=True)
+                embed = discord.Embed(
+                    title=f"Alert: {alert['alert_type'].upper()}",
+                    color=discord.Color.red(),
+                    timestamp=datetime.now(),
+                )
+                embed.add_field(
+                    name="Container",
+                    value=alert.get("container_id", "N/A")[:12],
+                    inline=True,
+                )
                 embed.add_field(name="Metric", value=alert["alert_type"], inline=True)
-                embed.add_field(name="Current Value", value=f"{current_value:.1f}", inline=True)
-                embed.add_field(name="Threshold", value=str(alert["threshold"]), inline=True)
-                embed.add_field(name="Channel", value=alert.get("channel", "dm"), inline=True)
+                embed.add_field(
+                    name="Current Value", value=f"{current_value:.1f}", inline=True
+                )
+                embed.add_field(
+                    name="Threshold", value=str(alert["threshold"]), inline=True
+                )
+                embed.add_field(
+                    name="Channel", value=alert.get("channel", "dm"), inline=True
+                )
                 await user.send(embed=embed)
         except Exception as e:
             logging.error(f"Error sending alert: {e}")
 
-    @app_commands.command(name="alertcreate", description="Create a resource usage alert")
-    @app_commands.describe(threshold="Threshold percentage", alert_type="cpu_usage/memory_usage/disk_usage", vps_id="VPS ID (optional)", channel="dm/webhook")
-    async def alert_create(self, interaction: discord.Interaction, threshold: float, alert_type: str = "cpu_usage", vps_id: str = None, channel: str = "dm"):
+    @app_commands.command(
+        name="alertcreate", description="Create a resource usage alert"
+    )
+    @app_commands.describe(
+        threshold="Threshold percentage",
+        alert_type="cpu_usage/memory_usage/disk_usage",
+        vps_id="VPS ID (optional)",
+        channel="dm/webhook",
+    )
+    async def alert_create(
+        self,
+        interaction: discord.Interaction,
+        threshold: float,
+        alert_type: str = "cpu_usage",
+        vps_id: str = None,
+        channel: str = "dm",
+    ):
         if alert_type not in ("cpu_usage", "memory_usage", "disk_usage"):
-            await interaction.response.send_message(embed=discord.Embed(description="Type must be cpu_usage/memory_usage/disk_usage", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description="Type must be cpu_usage/memory_usage/disk_usage",
+                    color=0xFF0000,
+                )
+            )
             return
 
         try:
@@ -87,22 +120,36 @@ class AlertManager(commands.Cog):
             conn.commit()
             cursor.close()
             conn.close()
-            await interaction.response.send_message(embed=discord.Embed(description=f"Alert created: {alert_type} > {threshold}%", color=0x00FF00))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description=f"Alert created: {alert_type} > {threshold}%",
+                    color=0x00FF00,
+                )
+            )
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
     @app_commands.command(name="alertlist", description="List your alerts")
     async def alert_list(self, interaction: discord.Interaction):
         try:
             conn = self.vps_manager._get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM alerts WHERE user_id = %s ORDER BY created_at DESC", (str(interaction.user.id),))
+            cursor.execute(
+                "SELECT * FROM alerts WHERE user_id = %s ORDER BY created_at DESC",
+                (str(interaction.user.id),),
+            )
             alerts = cursor.fetchall()
             cursor.close()
             conn.close()
 
             if not alerts:
-                await interaction.response.send_message(embed=discord.Embed(description="No alerts configured.", color=0xFFFF00))
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        description="No alerts configured.", color=0xFFFF00
+                    )
+                )
                 return
 
             embed = discord.Embed(title="Your Alerts", color=discord.Color.blue())
@@ -114,7 +161,9 @@ class AlertManager(commands.Cog):
                 )
             await interaction.response.send_message(embed=embed)
         except Exception as e:
-            await interaction.response.send_message(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
+            await interaction.response.send_message(
+                embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000)
+            )
 
 
 async def setup(bot):

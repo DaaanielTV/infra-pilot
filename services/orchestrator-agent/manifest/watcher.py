@@ -27,6 +27,7 @@ MANIFEST_FILENAME = "infra.yaml"
 @dataclass
 class GitRepoWatch:
     """A Git repository being watched for manifest changes."""
+
     url: str
     branch: str = "main"
     manifest_path: str = MANIFEST_FILENAME
@@ -58,7 +59,12 @@ class ManifestWatcher:
     def add_watch(self, watch: GitRepoWatch) -> None:
         """Add a repository to watch."""
         self.watches.append(watch)
-        logger.info("Watching Git repo: %s (branch: %s, poll: %ds)", watch.url, watch.branch, watch.poll_interval_seconds)
+        logger.info(
+            "Watching Git repo: %s (branch: %s, poll: %ds)",
+            watch.url,
+            watch.branch,
+            watch.poll_interval_seconds,
+        )
 
     def remove_watch(self, repo_url: str) -> bool:
         """Stop watching a repository."""
@@ -140,8 +146,14 @@ class ManifestWatcher:
         repo_dir.mkdir(parents=True, exist_ok=True)
 
         proc = await asyncio.create_subprocess_exec(
-            "git", "clone", "--branch", watch.branch,
-            "--depth", "1", watch.url, str(repo_dir),
+            "git",
+            "clone",
+            "--branch",
+            watch.branch,
+            "--depth",
+            "1",
+            watch.url,
+            str(repo_dir),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -154,7 +166,11 @@ class ManifestWatcher:
     async def _pull_repo(self, watch: GitRepoWatch) -> None:
         """Pull latest changes for an existing clone."""
         proc = await asyncio.create_subprocess_exec(
-            "git", "-C", watch.local_dir, "pull", "--ff-only",
+            "git",
+            "-C",
+            watch.local_dir,
+            "pull",
+            "--ff-only",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

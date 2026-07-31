@@ -4,17 +4,17 @@ Manages scheduled tasks with cron expressions, supports one-off and
 recurring executions, tracks run history and status.
 """
 
-import discord
-from discord.ext import commands, tasks
-from discord import app_commands
-from datetime import datetime
-from typing import Optional, Dict, List
-import logging
 import json
+import logging
+from datetime import datetime
+from typing import Dict, List, Optional
 
+import discord
 from config import config
-from vps_manager import VPSManager
 from croniter import croniter
+from discord import app_commands
+from discord.ext import commands, tasks
+from vps_manager import VPSManager
 
 
 class TaskScheduler(commands.Cog):
@@ -73,7 +73,9 @@ class TaskScheduler(commands.Cog):
                 container_id = task.get("target_container_id")
                 command = task.get("command")
                 if container_id and command:
-                    result = await self.vps_manager.execute_command(container_id, command)
+                    result = await self.vps_manager.execute_command(
+                        container_id, command
+                    )
                     if not result.get("success"):
                         status = "failed"
                         error = result.get("error")
@@ -88,6 +90,7 @@ class TaskScheduler(commands.Cog):
                 if command:
                     import shlex
                     import subprocess
+
                     cmd_parts = shlex.split(command)
                     result = subprocess.run(cmd_parts, capture_output=True, text=True)
                     if result.returncode != 0:
@@ -143,19 +146,26 @@ class TaskScheduler(commands.Cog):
         if action == "create":
             if not all([name, task_type, cron_expr]):
                 await interaction.followup.send(
-                    embed=discord.Embed(description="Missing required fields: name, task_type, cron_expr", color=0xFF0000)
+                    embed=discord.Embed(
+                        description="Missing required fields: name, task_type, cron_expr",
+                        color=0xFF0000,
+                    )
                 )
                 return
 
             try:
                 if not croniter.is_valid(cron_expr):
                     await interaction.followup.send(
-                        embed=discord.Embed(description="Invalid cron expression", color=0xFF0000)
+                        embed=discord.Embed(
+                            description="Invalid cron expression", color=0xFF0000
+                        )
                     )
                     return
             except:
                 await interaction.followup.send(
-                    embed=discord.Embed(description="Invalid cron expression", color=0xFF0000)
+                    embed=discord.Embed(
+                        description="Invalid cron expression", color=0xFF0000
+                    )
                 )
                 return
 
@@ -165,13 +175,22 @@ class TaskScheduler(commands.Cog):
                 cursor.execute(
                     """INSERT INTO scheduled_tasks (name, task_type, target_container_id, cron_expression, command, created_by)
                        VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (name, task_type, target, cron_expr, command, str(interaction.user.id)),
+                    (
+                        name,
+                        task_type,
+                        target,
+                        cron_expr,
+                        command,
+                        str(interaction.user.id),
+                    ),
                 )
                 conn.commit()
                 cursor.close()
                 conn.close()
                 await interaction.followup.send(
-                    embed=discord.Embed(description=f"Scheduled task '{name}' created", color=0x00FF00)
+                    embed=discord.Embed(
+                        description=f"Scheduled task '{name}' created", color=0x00FF00
+                    )
                 )
             except Exception as e:
                 await interaction.followup.send(
@@ -189,11 +208,15 @@ class TaskScheduler(commands.Cog):
 
                 if not tasks:
                     await interaction.followup.send(
-                        embed=discord.Embed(description="No scheduled tasks configured.", color=0xFFFF00)
+                        embed=discord.Embed(
+                            description="No scheduled tasks configured.", color=0xFFFF00
+                        )
                     )
                     return
 
-                embed = discord.Embed(title="Scheduled Tasks", color=discord.Color.blue())
+                embed = discord.Embed(
+                    title="Scheduled Tasks", color=discord.Color.blue()
+                )
                 for t in tasks:
                     status_emoji = "✅" if t["enabled"] else "⏸️"
                     last_status = t.get("last_run_status", "never")
@@ -213,24 +236,33 @@ class TaskScheduler(commands.Cog):
         elif action == "delete":
             if not name and not target:
                 await interaction.followup.send(
-                    embed=discord.Embed(description="Provide task name or ID to delete", color=0xFF0000)
+                    embed=discord.Embed(
+                        description="Provide task name or ID to delete", color=0xFF0000
+                    )
                 )
                 return
             try:
                 conn = self.vps_manager._get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM scheduled_tasks WHERE name = %s OR id = %s", (name, name))
+                cursor.execute(
+                    "DELETE FROM scheduled_tasks WHERE name = %s OR id = %s",
+                    (name, name),
+                )
                 deleted = cursor.rowcount
                 conn.commit()
                 cursor.close()
                 conn.close()
                 if deleted:
                     await interaction.followup.send(
-                        embed=discord.Embed(description=f"Deleted {deleted} task(s)", color=0x00FF00)
+                        embed=discord.Embed(
+                            description=f"Deleted {deleted} task(s)", color=0x00FF00
+                        )
                     )
                 else:
                     await interaction.followup.send(
-                        embed=discord.Embed(description="Task not found", color=0xFFFF00)
+                        embed=discord.Embed(
+                            description="Task not found", color=0xFFFF00
+                        )
                     )
             except Exception as e:
                 await interaction.followup.send(
@@ -240,7 +272,9 @@ class TaskScheduler(commands.Cog):
         elif action == "toggle":
             if not name and not target:
                 await interaction.followup.send(
-                    embed=discord.Embed(description="Provide task name or ID to toggle", color=0xFF0000)
+                    embed=discord.Embed(
+                        description="Provide task name or ID to toggle", color=0xFF0000
+                    )
                 )
                 return
             try:
@@ -254,7 +288,9 @@ class TaskScheduler(commands.Cog):
                 cursor.close()
                 conn.close()
                 await interaction.followup.send(
-                    embed=discord.Embed(description=f"Task '{name}' toggled", color=0x00FF00)
+                    embed=discord.Embed(
+                        description=f"Task '{name}' toggled", color=0x00FF00
+                    )
                 )
             except Exception as e:
                 await interaction.followup.send(
@@ -263,7 +299,10 @@ class TaskScheduler(commands.Cog):
 
         else:
             await interaction.followup.send(
-                embed=discord.Embed(description="Action must be: create, list, delete, toggle", color=0xFF0000)
+                embed=discord.Embed(
+                    description="Action must be: create, list, delete, toggle",
+                    color=0xFF0000,
+                )
             )
 
 

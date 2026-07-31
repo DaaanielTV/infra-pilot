@@ -76,10 +76,12 @@ class RateLimiter:
     def __init__(self, config: Optional[RateLimitConfig] = None):
         self.config = config or RateLimitConfig()
         self._token_buckets: Dict[str, TokenBucket] = {}
-        self._sliding_windows: Dict[str, SlidingWindowEntry] = defaultdict(SlidingWindowEntry)
+        self._sliding_windows: Dict[str, SlidingWindowEntry] = defaultdict(
+            SlidingWindowEntry
+        )
         self._fixed_windows: Dict[str, Tuple[int, float]] = {}
         self._concurrency: Dict[str, int] = defaultdict(int)
-        self._lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
+        self._lock = asyncio.Lock() if hasattr(asyncio, "Lock") else None
 
     def _get_bucket(self, key: str) -> TokenBucket:
         if key not in self._token_buckets:
@@ -209,21 +211,36 @@ def rate_limit_middleware(config: Optional[RateLimitConfig] = None):
 
         key = f"ip:{client_ip}"
         if not limiter.check_rate_limit(key):
-            await send({
-                "type": "http.response.start",
-                "status": 429,
-                "headers": [
-                    (b"content-type", b"application/json"),
-                    (b"retry-after", str(int(limiter.get_reset_time(key) - time.time()) + 1).encode()),
-                    (b"x-ratelimit-limit", str(limiter.config.requests).encode()),
-                    (b"x-ratelimit-remaining", str(limiter.get_remaining(key)).encode()),
-                    (b"x-ratelimit-reset", str(int(limiter.get_reset_time(key))).encode()),
-                ],
-            })
-            await send({
-                "type": "http.response.body",
-                "body": b'{"error":"rate_limit_exceeded","message":"Too many requests"}',
-            })
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 429,
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (
+                            b"retry-after",
+                            str(
+                                int(limiter.get_reset_time(key) - time.time()) + 1
+                            ).encode(),
+                        ),
+                        (b"x-ratelimit-limit", str(limiter.config.requests).encode()),
+                        (
+                            b"x-ratelimit-remaining",
+                            str(limiter.get_remaining(key)).encode(),
+                        ),
+                        (
+                            b"x-ratelimit-reset",
+                            str(int(limiter.get_reset_time(key))).encode(),
+                        ),
+                    ],
+                }
+            )
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b'{"error":"rate_limit_exceeded","message":"Too many requests"}',
+                }
+            )
             return
 
         await send(scope, receive, send)
@@ -232,19 +249,28 @@ def rate_limit_middleware(config: Optional[RateLimitConfig] = None):
 
 
 class RateLimitRule:
-    def __init__(self, path: str, requests: int, window: int,
-                 methods: Optional[List[str]] = None, strategy: RateLimitStrategy = RateLimitStrategy.SLIDING_WINDOW):
+    def __init__(
+        self,
+        path: str,
+        requests: int,
+        window: int,
+        methods: Optional[List[str]] = None,
+        strategy: RateLimitStrategy = RateLimitStrategy.SLIDING_WINDOW,
+    ):
         self.path = path
         self.requests = requests
         self.window = window
         self.methods = methods or ["GET", "POST", "PUT", "DELETE", "PATCH"]
         self.strategy = strategy
-        self.limiter = RateLimiter(RateLimitConfig(requests=requests, window_seconds=window, strategy=strategy))
+        self.limiter = RateLimiter(
+            RateLimitConfig(requests=requests, window_seconds=window, strategy=strategy)
+        )
 
     def matches(self, path: str, method: str) -> bool:
         if method not in self.methods:
             return False
         import re
+
         pattern = self.path.replace("*", ".*")
         return bool(re.match(pattern, path))
 
@@ -265,7 +291,9 @@ class RateLimitRegistry:
     def add_rules(self, rules: List[RateLimitRule]):
         self.rules.extend(rules)
 
-    def check_request(self, path: str, method: str, client_key: str) -> Tuple[bool, int, float, str]:
+    def check_request(
+        self, path: str, method: str, client_key: str
+    ) -> Tuple[bool, int, float, str]:
         for rule in self.rules:
             if rule.matches(path, method):
                 allowed, remaining, reset = rule.check(client_key)
@@ -300,7 +328,13 @@ _default_registry = RateLimitRegistry()
 _default_registry.add_rules(_default_registry.get_default_rules())
 
 __all__ = [
-    "RateLimiter", "RateLimitConfig", "RateLimitStrategy",
-    "RateLimitRule", "RateLimitRegistry", "rate_limit_middleware",
-    "TokenBucket", "SlidingWindowEntry", "_default_registry",
+    "RateLimiter",
+    "RateLimitConfig",
+    "RateLimitStrategy",
+    "RateLimitRule",
+    "RateLimitRegistry",
+    "rate_limit_middleware",
+    "TokenBucket",
+    "SlidingWindowEntry",
+    "_default_registry",
 ]

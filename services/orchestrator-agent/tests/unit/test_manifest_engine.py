@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 
 import pytest
 import yaml
-
 from compute.base import (
     ComputeProvider,
     InstanceInfo,
@@ -142,7 +141,13 @@ class TestDriftDetection:
         ProviderRegistry.register(MemoryProvider)
         prov = ProviderRegistry.get("memory")
         infra = InfraFile.from_dict(SAMPLE_MANIFEST)
-        spec = InstanceSpec(name="web-01", image="nginx:latest", cpu_cores=1, memory_mb=512, storage_gb=10)
+        spec = InstanceSpec(
+            name="web-01",
+            image="nginx:latest",
+            cpu_cores=1,
+            memory_mb=512,
+            storage_gb=10,
+        )
         await prov.create(spec)
         current = await prov.list()
         current_map = {i.name: i for i in current}
@@ -165,7 +170,13 @@ class TestDriftDetection:
         ProviderRegistry.register(MemoryProvider)
         prov = ProviderRegistry.get("memory")
         infra = InfraFile.from_dict(SAMPLE_MANIFEST)
-        spec = InstanceSpec(name="web-01", image="nginx:latest", cpu_cores=4, memory_mb=512, storage_gb=10)
+        spec = InstanceSpec(
+            name="web-01",
+            image="nginx:latest",
+            cpu_cores=4,
+            memory_mb=512,
+            storage_gb=10,
+        )
         await prov.create(spec)
         current = await prov.list()
         current_map = {i.name: i for i in current}
@@ -200,7 +211,13 @@ class TestReconciliation:
         ProviderRegistry.register(MemoryProvider)
         prov = ProviderRegistry.get("memory")
         infra = InfraFile.from_dict(SAMPLE_MANIFEST)
-        spec = InstanceSpec(name="web-01", image="nginx:latest", cpu_cores=1, memory_mb=512, storage_gb=10)
+        spec = InstanceSpec(
+            name="web-01",
+            image="nginx:latest",
+            cpu_cores=1,
+            memory_mb=512,
+            storage_gb=10,
+        )
         await prov.create(spec)
 
         engine = ManifestEngine(dry_run=False)

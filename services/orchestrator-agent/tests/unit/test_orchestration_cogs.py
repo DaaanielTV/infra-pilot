@@ -66,11 +66,16 @@ class TestConfigDefaults:
 class TestPricing:
     @pytest.fixture
     def prices(self):
+        from unittest.mock import patch
+
         from cogs.vps_pricing import VPSPricing
+
         class FakeBot:
             logger = None
+
         bot = FakeBot()
-        return VPSPricing(bot)
+        with patch("cogs.vps_pricing.get_sync_connection"):
+            return VPSPricing(bot)
 
     def test_calculate_vps_cost(self, prices):
         cost = prices.calculate_vps_cost(cpu=2.0, memory=4096, storage=50)

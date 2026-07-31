@@ -87,6 +87,7 @@ class TestProviderRegistry:
         assert "stub" in providers
 
     def test_get(self):
+        ProviderRegistry.register(StubProvider)
         p = ProviderRegistry.get("stub")
         assert p is not None
         assert p.name == "stub"

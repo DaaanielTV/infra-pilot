@@ -48,9 +48,10 @@ class TestRemediation:
         result = await engine.remediate("nonexistent")
         assert result is None
 
-    def test_default_restart_handler(self, engine):
+    @pytest.mark.asyncio
+    async def test_default_restart_handler(self, engine):
         # Should not crash for nonexistent instance
-        result = engine._default_restart("i-1", RemediationAction.RESTART)
+        result = await engine._default_restart("i-1", RemediationAction.RESTART)
         # Will fail because docker provider not registered, but should not raise
         assert result is False
 

@@ -1494,339 +1494,302 @@ def build_parser() -> argparse.ArgumentParser:
     p_loyalty_redeem.add_argument('reward_id', help='Reward ID')
     p_loyalty_leaderboard = p_loyalty_sub.add_parser('leaderboard', help='Leaderboard')
 
-# === v4 Customer Experience Commands ===
-
-def cmd_cx_health_list(args):
-    result = get_client().cx_list_health_profiles(risk_level=args.risk_level, min_score=args.min_score)
-    data = result if isinstance(result, list) else result.get('profiles', result)
-    print_output(data, args.output)
-
-def cmd_cx_health_get(args):
-    result = get_client().cx_get_health_profile(args.customer_id)
-    print_output(result, args.output)
-
-def cmd_cx_health_compute(args):
-    data = json.loads(args.data) if args.data else {}
-    result = get_client().cx_compute_health(args.customer_id, data)
-    print_output(result, args.output)
-
-def cmd_cx_health_history(args):
-    result = get_client().cx_get_health_history(args.customer_id, args.days)
-    print_output(result, args.output)
-
-def cmd_cx_health_stats(args):
-    result = get_client().cx_get_health_stats()
-    print_output(result, args.output)
-
-def cmd_cx_ticket_list(args):
-    result = get_client().cx_list_tickets(
-        status=args.status, priority=args.priority, customer_id=args.customer_id,
-        assigned_to=args.assigned_to, search=args.search,
-        limit=args.limit, offset=args.offset,
-    )
-    data = result if isinstance(result, list) else result.get('tickets', result)
-    print_output(data, args.output)
-
-def cmd_cx_ticket_create(args):
-    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
-    result = get_client().cx_create_ticket(
-        args.subject, args.description, args.customer_id,
-        args.customer_name, args.customer_email, args.priority,
-        args.channel, args.category, tags,
-    )
-    print_output(result, args.output)
-
-def cmd_cx_ticket_get(args):
-    result = get_client().cx_get_ticket(args.ticket_id)
-    print_output(result, args.output)
-
-def cmd_cx_ticket_status(args):
-    result = get_client().cx_update_ticket_status(args.ticket_id, args.status, args.agent_id)
-    print_output(result, args.output)
-
-def cmd_cx_ticket_comment(args):
-    result = get_client().cx_add_comment(args.ticket_id, args.author_id, args.body, args.author_name, args.internal)
-    print_output(result, args.output)
-
-def cmd_cx_ticket_assign(args):
-    result = get_client().cx_assign_ticket(args.ticket_id, args.agent_id, args.team)
-    print_output(result, args.output)
-
-def cmd_cx_ticket_stats(args):
-    result = get_client().cx_get_ticket_stats()
-    print_output(result, args.output)
-
-def cmd_cx_sla_list(args):
-    result = get_client().cx_list_slas()
-    data = result if isinstance(result, list) else result.get('slas', result)
-    print_output(data, args.output)
-
-def cmd_cx_sla_create(args):
-    result = get_client().cx_create_sla(args.name, args.priority, args.response_time, args.resolution_time, not args.no_business_hours)
-    print_output(result, args.output)
-
-def cmd_cx_canned_list(args):
-    result = get_client().cx_list_canned_responses(args.category)
-    data = result if isinstance(result, list) else result.get('responses', result)
-    print_output(data, args.output)
-
-def cmd_cx_canned_create(args):
-    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
-    result = get_client().cx_create_canned_response(args.title, args.body, args.category, tags, args.created_by)
-    print_output(result, args.output)
-
-def cmd_cx_sentiment_analyze(args):
-    result = get_client().cx_analyze_sentiment(args.text, args.source_type, args.source_id, args.customer_id, args.customer_name)
-    print_output(result, args.output)
-
-def cmd_cx_sentiment_profile(args):
-    result = get_client().cx_get_sentiment_profile(args.customer_id)
-    print_output(result, args.output)
-
-def cmd_cx_sentiment_interactions(args):
-    result = get_client().cx_list_sentiment_interactions(
-        args.customer_id, args.source_type, args.min_score, args.max_score,
-        args.escalated_only, args.limit,
-    )
-    data = result if isinstance(result, list) else result.get('interactions', result)
-    print_output(data, args.output)
-
-def cmd_cx_sentiment_trends(args):
-    result = get_client().cx_get_sentiment_trends(args.period, args.days)
-    print_output(result, args.output)
-
-def cmd_cx_sentiment_alerts(args):
-    result = get_client().cx_get_sentiment_alerts()
-    data = result if isinstance(result, list) else result.get('alerts', result)
-    print_output(data, args.output)
-
-def cmd_cx_adoption_summary(args):
-    result = get_client().cx_get_adoption_summary(args.customer_id)
-    print_output(result, args.output)
-
-def cmd_cx_adoption_features(args):
-    result = get_client().cx_get_feature_adoption(args.customer_id, args.days)
-    print_output(result, args.output)
-
-def cmd_cx_adoption_track(args):
-    result = get_client().cx_track_event(args.event_type, args.customer_id, args.user_id, args.feature_id, args.feature_name)
-    print_output(result, args.output)
-
-def cmd_cx_adoption_recommendations(args):
-    result = get_client().cx_get_adoption_recommendations(args.customer_id)
-    print_output(result, args.output)
-
-def cmd_cx_adoption_stats(args):
-    result = get_client().cx_get_adoption_stats()
-    print_output(result, args.output)
-
-def cmd_cx_onboarding_start(args):
-    result = get_client().cx_start_onboarding(args.customer_id, args.customer_name, args.product_tier)
-    print_output(result, args.output)
-
-def cmd_cx_onboarding_get(args):
-    result = get_client().cx_get_onboarding_session(args.customer_id)
-    print_output(result, args.output)
-
-def cmd_cx_onboarding_step(args):
-    meta = json.loads(args.metadata) if args.metadata else None
-    result = get_client().cx_update_onboarding_step(args.session_id, args.step_id, args.status, meta)
-    print_output(result, args.output)
-
-def cmd_cx_onboarding_stats(args):
-    result = get_client().cx_get_onboarding_stats()
-    print_output(result, args.output)
-
-def cmd_cx_kb_list(args):
-    result = get_client().cx_list_articles(args.category, args.article_type, args.status, args.limit)
-    data = result if isinstance(result, list) else result.get('articles', result)
-    print_output(data, args.output)
-
-def cmd_cx_kb_create(args):
-    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
-    result = get_client().cx_create_article(args.title, args.content, args.category, args.article_type, tags, args.author, args.language)
-    print_output(result, args.output)
-
-def cmd_cx_kb_get(args):
-    result = get_client().cx_get_article(args.article_id)
-    print_output(result, args.output)
-
-def cmd_cx_kb_update(args):
-    data = json.loads(args.data) if args.data else {}
-    result = get_client().cx_update_article(args.article_id, data)
-    print_output(result, args.output)
-
-def cmd_cx_kb_search(args):
-    result = get_client().cx_search_articles(args.query, args.category, args.limit)
-    data = result if isinstance(result, list) else result.get('results', result)
-    print_output(data, args.output)
-
-def cmd_cx_kb_categories(args):
-    result = get_client().cx_list_categories()
-    data = result if isinstance(result, list) else result.get('categories', result)
-    print_output(data, args.output)
-
-def cmd_cx_kb_feedback(args):
-    result = get_client().cx_add_article_feedback(args.article_id, args.helpful, args.comment, args.user_id)
-    print_output(result, args.output)
-
-def cmd_cx_community_posts(args):
-    result = get_client().cx_list_posts(args.category_id, args.post_type, args.sort, args.limit, args.offset)
-    print_output(result, args.output)
-
-def cmd_cx_community_create(args):
-    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
-    result = get_client().cx_create_post(args.title, args.content, args.category_id, args.post_type, args.author_id, args.author_name, tags)
-    print_output(result, args.output)
-
-def cmd_cx_community_get(args):
-    result = get_client().cx_get_post(args.post_id)
-    print_output(result, args.output)
-
-def cmd_cx_community_vote(args):
-    result = get_client().cx_vote_post(args.post_id, args.user_id, args.vote_type)
-    print_output(result, args.output)
-
-def cmd_cx_community_comment(args):
-    result = get_client().cx_add_community_comment(args.post_id, args.author_id, args.body, args.author_name, args.parent_comment_id)
-    print_output(result, args.output)
-
-def cmd_cx_community_comments(args):
-    result = get_client().cx_get_post_comments(args.post_id)
-    data = result if isinstance(result, list) else result.get('comments', result)
-    print_output(data, args.output)
-
-def cmd_cx_community_requests(args):
-    result = get_client().cx_get_feature_requests(args.sort, args.limit)
-    data = result if isinstance(result, list) else result.get('feature_requests', result)
-    print_output(data, args.output)
-
-def cmd_cx_community_categories(args):
-    result = get_client().cx_get_community_categories()
-    data = result if isinstance(result, list) else result.get('categories', result)
-    print_output(data, args.output)
-
-def cmd_cx_community_leaderboard(args):
-    result = get_client().cx_get_leaderboard(args.limit)
-    data = result if isinstance(result, list) else result.get('leaderboard', result)
-    print_output(data, args.output)
-
-def cmd_cx_community_stats(args):
-    result = get_client().cx_get_community_stats()
-    print_output(result, args.output)
-
-def cmd_cx_comm_send(args):
-    channels = [c.strip() for c in args.channels.split(',')]
-    result = get_client().cx_send_notification(
-        args.type, args.subject, args.body, channels, args.priority,
-        args.target_segment, args.created_by,
-    )
-    print_output(result, args.output)
-
-def cmd_cx_comm_batches(args):
-    result = get_client().cx_list_batches(args.limit)
-    data = result if isinstance(result, list) else result.get('batches', result)
-    print_output(data, args.output)
-
-def cmd_cx_comm_batch(args):
-    result = get_client().cx_get_batch_stats(args.batch_id)
-    print_output(result, args.output)
-
-def cmd_cx_comm_maintenance_schedule(args):
-    services = [s.strip() for s in args.affected_services.split(',')]
-    result = get_client().cx_schedule_maintenance(args.title, args.description, services, args.start, args.end, args.expected_downtime, args.created_by)
-    print_output(result, args.output)
-
-def cmd_cx_comm_maintenance_list(args):
-    result = get_client().cx_list_maintenance(args.status)
-    data = result if isinstance(result, list) else result.get('maintenance_windows', result)
-    print_output(data, args.output)
-
-def cmd_cx_comm_maintenance_complete(args):
-    result = get_client().cx_complete_maintenance(args.maintenance_id, args.actual_downtime, args.post_mortem)
-    print_output(result, args.output)
-
-def cmd_cx_comm_templates(args):
-    result = get_client().cx_list_templates(args.channel)
-    data = result if isinstance(result, list) else result.get('templates', result)
-    print_output(data, args.output)
-
-def cmd_cx_comm_template_create(args):
-    variables = [v.strip() for v in args.variables.split(',')] if args.variables else None
-    result = get_client().cx_create_template(args.name, args.subject, args.body, args.channel, args.category, variables)
-    print_output(result, args.output)
-
-def cmd_cx_nps_create(args):
-    questions = json.loads(args.questions_json)
-    result = get_client().cx_create_survey(args.title, args.description, args.survey_type, args.trigger, questions, args.target_segment, args.frequency_days)
-    print_output(result, args.output)
-
-def cmd_cx_nps_list(args):
-    result = get_client().cx_get_surveys(args.trigger, args.survey_type)
-    data = result if isinstance(result, list) else result.get('surveys', result)
-    print_output(data, args.output)
-
-def cmd_cx_nps_get(args):
-    result = get_client().cx_get_survey(args.survey_id)
-    print_output(result, args.output)
-
-def cmd_cx_nps_send(args):
-    result = get_client().cx_send_survey(args.survey_id, args.customer_id, args.customer_name)
-    print_output(result, args.output)
-
-def cmd_cx_nps_respond(args):
-    answers = json.loads(args.answers_json) if args.answers_json else {}
-    result = get_client().cx_submit_response(args.response_id, answers, args.comments)
-    print_output(result, args.output)
-
-def cmd_cx_nps_score(args):
-    result = get_client().cx_get_nps_score()
-    print_output(result, args.output)
-
-def cmd_cx_nps_trend(args):
-    result = get_client().cx_get_nps_trend(args.days)
-    print_output(result, args.output)
-
-def cmd_cx_nps_detractors(args):
-    result = get_client().cx_get_detractor_feedback(args.limit)
-    data = result if isinstance(result, list) else result.get('detractors', result)
-    print_output(data, args.output)
-
-def cmd_cx_nps_stats(args):
-    result = get_client().cx_get_nps_stats()
-    print_output(result, args.output)
-
-def cmd_cx_success_plays(args):
-    result = get_client().cx_list_plays(args.trigger_event, args.status)
-    data = result if isinstance(result, list) else result.get('plays', result)
-    print_output(data, args.output)
-
-def cmd_cx_success_create(args):
-    actions = json.loads(args.actions_json) if args.actions_json else []
-    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
-    conditions = json.loads(args.conditions_json) if args.conditions_json else None
-    result = get_client().cx_create_play(args.name, args.description, args.trigger_event, actions, tags, conditions, args.cooldown_days)
-    print_output(result, args.output)
-
-def cmd_cx_success_status(args):
-    result = get_client().cx_update_play_status(args.play_id, args.status)
-    print_output(result, args.output)
-
-def cmd_cx_success_trigger(args):
-    data = json.loads(args.event_data) if args.event_data else {}
-    result = get_client().cx_evaluate_trigger(args.event, args.customer_id, data)
-    print_output(result, args.output)
-
-def cmd_cx_success_executions(args):
-    result = get_client().cx_get_executions(args.play_id, args.customer_id, args.limit)
-    data = result if isinstance(result, list) else result.get('executions', result)
-    print_output(data, args.output)
-
-def cmd_cx_success_stats(args):
-    result = get_client().cx_get_success_stats()
-    print_output(result, args.output)
-
-# === v4 Platform Engineering Commands ===
+    # === v4 Customer Experience Commands ===
+    p_cx = sub.add_parser('cx', help='Customer experience & support platform')
+    p_cx_sub = p_cx.add_subparsers(dest='subcommand')
+
+    p_cx_health = p_cx_sub.add_parser('health', help='Customer health scoring')
+    p_cx_health_sub = p_cx_health.add_subparsers(dest='action')
+    p_cx_health_list = p_cx_health_sub.add_parser('list', help='List health profiles')
+    p_cx_health_list.add_argument('--risk-level', help='Filter by risk level')
+    p_cx_health_list.add_argument('--min-score', type=float, help='Minimum health score')
+    p_cx_health_get = p_cx_health_sub.add_parser('get', help='Get health profile')
+    p_cx_health_get.add_argument('customer_id', help='Customer ID')
+    p_cx_health_compute = p_cx_health_sub.add_parser('compute', help='Compute health score')
+    p_cx_health_compute.add_argument('customer_id', help='Customer ID')
+    p_cx_health_compute.add_argument('--data', help='JSON data payload')
+    p_cx_health_history = p_cx_health_sub.add_parser('history', help='Get health history')
+    p_cx_health_history.add_argument('customer_id', help='Customer ID')
+    p_cx_health_history.add_argument('--days', type=int, default=30, help='Days of history')
+    p_cx_health_stats = p_cx_health_sub.add_parser('stats', help='Health segment summary')
+
+    p_cx_ticket = p_cx_sub.add_parser('ticket', help='Support ticket system')
+    p_cx_ticket_sub = p_cx_ticket.add_subparsers(dest='action')
+    p_cx_ticket_list = p_cx_ticket_sub.add_parser('list', help='List tickets')
+    p_cx_ticket_list.add_argument('--status', help='Filter by status')
+    p_cx_ticket_list.add_argument('--priority', help='Filter by priority')
+    p_cx_ticket_list.add_argument('--customer-id', help='Filter by customer')
+    p_cx_ticket_list.add_argument('--assigned-to', help='Filter by assignee')
+    p_cx_ticket_list.add_argument('--search', help='Search text')
+    p_cx_ticket_list.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_ticket_list.add_argument('--offset', type=int, default=0, help='Offset')
+    p_cx_ticket_create = p_cx_ticket_sub.add_parser('create', help='Create ticket')
+    p_cx_ticket_create.add_argument('subject', help='Ticket subject')
+    p_cx_ticket_create.add_argument('description', help='Ticket description')
+    p_cx_ticket_create.add_argument('customer_id', help='Customer ID')
+    p_cx_ticket_create.add_argument('--customer-name', default='', help='Customer name')
+    p_cx_ticket_create.add_argument('--customer-email', default='', help='Customer email')
+    p_cx_ticket_create.add_argument('--priority', default='medium', choices=['low', 'medium', 'high', 'critical'], help='Priority')
+    p_cx_ticket_create.add_argument('--channel', default='web', help='Channel')
+    p_cx_ticket_create.add_argument('--category', help='Category')
+    p_cx_ticket_create.add_argument('--tags', help='Comma-separated tags')
+    p_cx_ticket_get = p_cx_ticket_sub.add_parser('get', help='Get ticket')
+    p_cx_ticket_get.add_argument('ticket_id', help='Ticket ID')
+    p_cx_ticket_status = p_cx_ticket_sub.add_parser('status', help='Update ticket status')
+    p_cx_ticket_status.add_argument('ticket_id', help='Ticket ID')
+    p_cx_ticket_status.add_argument('status', help='New status')
+    p_cx_ticket_status.add_argument('--agent-id', help='Agent ID')
+    p_cx_ticket_comment = p_cx_ticket_sub.add_parser('comment', help='Add comment to ticket')
+    p_cx_ticket_comment.add_argument('ticket_id', help='Ticket ID')
+    p_cx_ticket_comment.add_argument('author_id', help='Author ID')
+    p_cx_ticket_comment.add_argument('body', help='Comment body')
+    p_cx_ticket_comment.add_argument('--author-name', default='', help='Author name')
+    p_cx_ticket_comment.add_argument('--internal', action='store_true', help='Internal note')
+    p_cx_ticket_assign = p_cx_ticket_sub.add_parser('assign', help='Assign ticket')
+    p_cx_ticket_assign.add_argument('ticket_id', help='Ticket ID')
+    p_cx_ticket_assign.add_argument('agent_id', help='Agent ID')
+    p_cx_ticket_assign.add_argument('--team', help='Team name')
+    p_cx_ticket_stats = p_cx_ticket_sub.add_parser('stats', help='Ticket statistics')
+
+    p_cx_sla = p_cx_sub.add_parser('sla', help='SLA management')
+    p_cx_sla_sub = p_cx_sla.add_subparsers(dest='action')
+    p_cx_sla_list = p_cx_sla_sub.add_parser('list', help='List SLAs')
+    p_cx_sla_create = p_cx_sla_sub.add_parser('create', help='Create SLA')
+    p_cx_sla_create.add_argument('name', help='SLA name')
+    p_cx_sla_create.add_argument('priority', choices=['low', 'medium', 'high', 'critical'], help='Priority')
+    p_cx_sla_create.add_argument('response_time', type=int, help='Response time in minutes')
+    p_cx_sla_create.add_argument('resolution_time', type=int, help='Resolution time in minutes')
+    p_cx_sla_create.add_argument('--no-business-hours', action='store_true', help='24/7 SLA')
+
+    p_cx_canned = p_cx_sub.add_parser('canned', help='Canned responses')
+    p_cx_canned_sub = p_cx_canned.add_subparsers(dest='action')
+    p_cx_canned_list = p_cx_canned_sub.add_parser('list', help='List canned responses')
+    p_cx_canned_list.add_argument('--category', help='Filter by category')
+    p_cx_canned_create = p_cx_canned_sub.add_parser('create', help='Create canned response')
+    p_cx_canned_create.add_argument('title', help='Title')
+    p_cx_canned_create.add_argument('body', help='Response body')
+    p_cx_canned_create.add_argument('category', help='Category')
+    p_cx_canned_create.add_argument('--tags', help='Comma-separated tags')
+    p_cx_canned_create.add_argument('--created-by', default='', help='Creator')
+
+    p_cx_sentiment = p_cx_sub.add_parser('sentiment', help='Customer sentiment analysis')
+    p_cx_sentiment_sub = p_cx_sentiment.add_subparsers(dest='action')
+    p_cx_sentiment_analyze = p_cx_sentiment_sub.add_parser('analyze', help='Analyze text sentiment')
+    p_cx_sentiment_analyze.add_argument('text', help='Text to analyze')
+    p_cx_sentiment_analyze.add_argument('--source-type', default='support_ticket', help='Source type')
+    p_cx_sentiment_analyze.add_argument('--source-id', default='', help='Source ID')
+    p_cx_sentiment_analyze.add_argument('--customer-id', default='', help='Customer ID')
+    p_cx_sentiment_analyze.add_argument('--customer-name', default='', help='Customer name')
+    p_cx_sentiment_profile = p_cx_sentiment_sub.add_parser('profile', help='Get customer sentiment profile')
+    p_cx_sentiment_profile.add_argument('customer_id', help='Customer ID')
+    p_cx_sentiment_interactions = p_cx_sentiment_sub.add_parser('interactions', help='List sentiment interactions')
+    p_cx_sentiment_interactions.add_argument('--customer-id', help='Filter by customer')
+    p_cx_sentiment_interactions.add_argument('--source-type', help='Filter by source type')
+    p_cx_sentiment_interactions.add_argument('--min-score', type=float, help='Min sentiment score')
+    p_cx_sentiment_interactions.add_argument('--max-score', type=float, help='Max sentiment score')
+    p_cx_sentiment_interactions.add_argument('--escalated-only', action='store_true', help='Escalated only')
+    p_cx_sentiment_interactions.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_sentiment_trends = p_cx_sentiment_sub.add_parser('trends', help='Get sentiment trends')
+    p_cx_sentiment_trends.add_argument('--period', default='daily', choices=['daily', 'weekly', 'monthly'], help='Period')
+    p_cx_sentiment_trends.add_argument('--days', type=int, default=30, help='Days')
+    p_cx_sentiment_alerts = p_cx_sentiment_sub.add_parser('alerts', help='List sentiment alerts')
+
+    p_cx_adoption = p_cx_sub.add_parser('adoption', help='Product adoption analytics')
+    p_cx_adoption_sub = p_cx_adoption.add_subparsers(dest='action')
+    p_cx_adoption_summary = p_cx_adoption_sub.add_parser('summary', help='Customer adoption summary')
+    p_cx_adoption_summary.add_argument('customer_id', help='Customer ID')
+    p_cx_adoption_features = p_cx_adoption_sub.add_parser('features', help='Feature adoption')
+    p_cx_adoption_features.add_argument('customer_id', help='Customer ID')
+    p_cx_adoption_features.add_argument('--days', type=int, default=30, help='Days')
+    p_cx_adoption_track = p_cx_adoption_sub.add_parser('track', help='Track adoption event')
+    p_cx_adoption_track.add_argument('event_type', help='Event type')
+    p_cx_adoption_track.add_argument('customer_id', help='Customer ID')
+    p_cx_adoption_track.add_argument('user_id', help='User ID')
+    p_cx_adoption_track.add_argument('--feature-id', help='Feature ID')
+    p_cx_adoption_track.add_argument('--feature-name', help='Feature name')
+    p_cx_adoption_recommendations = p_cx_adoption_sub.add_parser('recommendations', help='Adoption recommendations')
+    p_cx_adoption_recommendations.add_argument('customer_id', help='Customer ID')
+    p_cx_adoption_stats = p_cx_adoption_sub.add_parser('stats', help='Global adoption stats')
+
+    p_cx_onboarding = p_cx_sub.add_parser('onboarding', help='Customer onboarding wizard')
+    p_cx_onboarding_sub = p_cx_onboarding.add_subparsers(dest='action')
+    p_cx_onboarding_start = p_cx_onboarding_sub.add_parser('start', help='Start onboarding')
+    p_cx_onboarding_start.add_argument('customer_id', help='Customer ID')
+    p_cx_onboarding_start.add_argument('--customer-name', default='', help='Customer name')
+    p_cx_onboarding_start.add_argument('--product-tier', default='standard', help='Product tier')
+    p_cx_onboarding_get = p_cx_onboarding_sub.add_parser('get', help='Get onboarding session')
+    p_cx_onboarding_get.add_argument('customer_id', help='Customer ID')
+    p_cx_onboarding_step = p_cx_onboarding_sub.add_parser('step', help='Update onboarding step')
+    p_cx_onboarding_step.add_argument('session_id', help='Session ID')
+    p_cx_onboarding_step.add_argument('step_id', help='Step ID')
+    p_cx_onboarding_step.add_argument('status', choices=['pending', 'in_progress', 'completed', 'skipped'], help='Status')
+    p_cx_onboarding_step.add_argument('--metadata', help='JSON metadata')
+    p_cx_onboarding_stats = p_cx_onboarding_sub.add_parser('stats', help='Onboarding statistics')
+
+    p_cx_kb = p_cx_sub.add_parser('kb', help='Knowledge base & help center')
+    p_cx_kb_sub = p_cx_kb.add_subparsers(dest='action')
+    p_cx_kb_list = p_cx_kb_sub.add_parser('list', help='List articles')
+    p_cx_kb_list.add_argument('--category', help='Filter by category')
+    p_cx_kb_list.add_argument('--article-type', help='Filter by type')
+    p_cx_kb_list.add_argument('--status', help='Filter by status')
+    p_cx_kb_list.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_kb_create = p_cx_kb_sub.add_parser('create', help='Create article')
+    p_cx_kb_create.add_argument('title', help='Article title')
+    p_cx_kb_create.add_argument('content', help='Article content (file path or raw)')
+    p_cx_kb_create.add_argument('category', help='Category')
+    p_cx_kb_create.add_argument('--article-type', default='guide', help='Article type')
+    p_cx_kb_create.add_argument('--tags', help='Comma-separated tags')
+    p_cx_kb_create.add_argument('--author', default='', help='Author')
+    p_cx_kb_create.add_argument('--language', default='en', help='Language')
+    p_cx_kb_get = p_cx_kb_sub.add_parser('get', help='Get article')
+    p_cx_kb_get.add_argument('article_id', help='Article ID')
+    p_cx_kb_update = p_cx_kb_sub.add_parser('update', help='Update article')
+    p_cx_kb_update.add_argument('article_id', help='Article ID')
+    p_cx_kb_update.add_argument('--data', help='JSON data payload')
+    p_cx_kb_search = p_cx_kb_sub.add_parser('search', help='Search articles')
+    p_cx_kb_search.add_argument('query', help='Search query')
+    p_cx_kb_search.add_argument('--category', help='Filter by category')
+    p_cx_kb_search.add_argument('--limit', type=int, default=20, help='Max results')
+    p_cx_kb_categories = p_cx_kb_sub.add_parser('categories', help='List categories')
+    p_cx_kb_feedback = p_cx_kb_sub.add_parser('feedback', help='Add article feedback')
+    p_cx_kb_feedback.add_argument('article_id', help='Article ID')
+    p_cx_kb_feedback.add_argument('--helpful', action='store_true', default=True, help='Was helpful')
+    p_cx_kb_feedback.add_argument('--comment', help='Feedback comment')
+    p_cx_kb_feedback.add_argument('--user-id', help='User ID')
+
+    p_cx_community = p_cx_sub.add_parser('community', help='Community platform')
+    p_cx_community_sub = p_cx_community.add_subparsers(dest='action')
+    p_cx_community_posts = p_cx_community_sub.add_parser('posts', help='List posts')
+    p_cx_community_posts.add_argument('--category-id', help='Filter by category')
+    p_cx_community_posts.add_argument('--post-type', help='Filter by type')
+    p_cx_community_posts.add_argument('--sort', default='hot', choices=['hot', 'new', 'top', 'votes'], help='Sort')
+    p_cx_community_posts.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_community_posts.add_argument('--offset', type=int, default=0, help='Offset')
+    p_cx_community_create = p_cx_community_sub.add_parser('create', help='Create post')
+    p_cx_community_create.add_argument('title', help='Post title')
+    p_cx_community_create.add_argument('content', help='Post content')
+    p_cx_community_create.add_argument('category_id', help='Category ID')
+    p_cx_community_create.add_argument('--post-type', default='discussion', help='Post type')
+    p_cx_community_create.add_argument('--author-id', default='', help='Author ID')
+    p_cx_community_create.add_argument('--author-name', default='', help='Author name')
+    p_cx_community_create.add_argument('--tags', help='Comma-separated tags')
+    p_cx_community_get = p_cx_community_sub.add_parser('get', help='Get post')
+    p_cx_community_get.add_argument('post_id', help='Post ID')
+    p_cx_community_vote = p_cx_community_sub.add_parser('vote', help='Vote on post')
+    p_cx_community_vote.add_argument('post_id', help='Post ID')
+    p_cx_community_vote.add_argument('user_id', help='User ID')
+    p_cx_community_vote.add_argument('vote_type', choices=['upvote', 'downvote'], help='Vote type')
+    p_cx_community_comment = p_cx_community_sub.add_parser('comment', help='Add comment')
+    p_cx_community_comment.add_argument('post_id', help='Post ID')
+    p_cx_community_comment.add_argument('author_id', help='Author ID')
+    p_cx_community_comment.add_argument('body', help='Comment body')
+    p_cx_community_comment.add_argument('--author-name', default='', help='Author name')
+    p_cx_community_comment.add_argument('--parent-comment-id', help='Parent comment ID')
+    p_cx_community_comments = p_cx_community_sub.add_parser('comments', help='Get post comments')
+    p_cx_community_comments.add_argument('post_id', help='Post ID')
+    p_cx_community_requests = p_cx_community_sub.add_parser('requests', help='Feature requests')
+    p_cx_community_requests.add_argument('--sort', default='votes', help='Sort by')
+    p_cx_community_requests.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_community_categories = p_cx_community_sub.add_parser('categories', help='List categories')
+    p_cx_community_leaderboard = p_cx_community_sub.add_parser('leaderboard', help='Leaderboard')
+    p_cx_community_leaderboard.add_argument('--limit', type=int, default=20, help='Max results')
+    p_cx_community_stats = p_cx_community_sub.add_parser('stats', help='Community statistics')
+
+    p_cx_comm = p_cx_sub.add_parser('comm', help='Customer communication hub')
+    p_cx_comm_sub = p_cx_comm.add_subparsers(dest='action')
+    p_cx_comm_send = p_cx_comm_sub.add_parser('send', help='Send notification')
+    p_cx_comm_send.add_argument('type', choices=['announcement', 'maintenance', 'update', 'promotional', 'transactional'], help='Notification type')
+    p_cx_comm_send.add_argument('subject', help='Subject')
+    p_cx_comm_send.add_argument('body', help='Body text')
+    p_cx_comm_send.add_argument('channels', help='Comma-separated channels (email,in_app,slack,discord)')
+    p_cx_comm_send.add_argument('--priority', default='normal', choices=['low', 'normal', 'high', 'urgent'], help='Priority')
+    p_cx_comm_send.add_argument('--target-segment', default='all', help='Target segment')
+    p_cx_comm_send.add_argument('--created-by', default='', help='Creator')
+    p_cx_comm_batches = p_cx_comm_sub.add_parser('batches', help='List notification batches')
+    p_cx_comm_batches.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_comm_batch = p_cx_comm_sub.add_parser('batch', help='Get batch stats')
+    p_cx_comm_batch.add_argument('batch_id', help='Batch ID')
+    p_cx_comm_maintenance = p_cx_comm_sub.add_parser('maintenance', help='Maintenance notifications')
+    p_cx_comm_maintenance_sub = p_cx_comm_maintenance.add_subparsers(dest='maint_action')
+    p_cx_comm_maint_schedule = p_cx_comm_maintenance_sub.add_parser('schedule', help='Schedule maintenance')
+    p_cx_comm_maint_schedule.add_argument('title', help='Title')
+    p_cx_comm_maint_schedule.add_argument('description', help='Description')
+    p_cx_comm_maint_schedule.add_argument('affected_services', help='Comma-separated services')
+    p_cx_comm_maint_schedule.add_argument('start', help='Start time (ISO)')
+    p_cx_comm_maint_schedule.add_argument('end', help='End time (ISO)')
+    p_cx_comm_maint_schedule.add_argument('expected_downtime', help='Expected downtime')
+    p_cx_comm_maint_schedule.add_argument('--created-by', default='', help='Creator')
+    p_cx_comm_maint_list = p_cx_comm_maintenance_sub.add_parser('list', help='List maintenance')
+    p_cx_comm_maint_list.add_argument('--status', help='Filter by status')
+    p_cx_comm_maint_complete = p_cx_comm_maintenance_sub.add_parser('complete', help='Complete maintenance')
+    p_cx_comm_maint_complete.add_argument('maintenance_id', help='Maintenance ID')
+    p_cx_comm_maint_complete.add_argument('--actual-downtime', help='Actual downtime')
+    p_cx_comm_maint_complete.add_argument('--post-mortem', help='Post-mortem notes')
+    p_cx_comm_templates = p_cx_comm_sub.add_parser('templates', help='List templates')
+    p_cx_comm_templates.add_argument('--channel', help='Filter by channel')
+    p_cx_comm_template_create = p_cx_comm_sub.add_parser('template-create', help='Create template')
+    p_cx_comm_template_create.add_argument('name', help='Template name')
+    p_cx_comm_template_create.add_argument('subject', help='Subject template')
+    p_cx_comm_template_create.add_argument('body', help='Body template')
+    p_cx_comm_template_create.add_argument('channel', choices=['email', 'in_app', 'slack', 'discord'], help='Channel')
+    p_cx_comm_template_create.add_argument('--category', default='general', help='Category')
+    p_cx_comm_template_create.add_argument('--variables', help='Comma-separated variable names')
+
+    p_cx_nps = p_cx_sub.add_parser('nps', help='NPS survey engine')
+    p_cx_nps_sub = p_cx_nps.add_subparsers(dest='action')
+    p_cx_nps_create = p_cx_nps_sub.add_parser('create', help='Create survey')
+    p_cx_nps_create.add_argument('title', help='Survey title')
+    p_cx_nps_create.add_argument('description', help='Survey description')
+    p_cx_nps_create.add_argument('--survey-type', default='nps', choices=['nps', 'csat', 'ces', 'custom'], help='Survey type')
+    p_cx_nps_create.add_argument('--trigger', default='manual', choices=['manual', 'after_ticket', 'after_onboarding', 'periodic', 'after_renewal'], help='Trigger')
+    p_cx_nps_create.add_argument('--questions-json', required=True, help='JSON array of questions')
+    p_cx_nps_create.add_argument('--target-segment', default='all', help='Target segment')
+    p_cx_nps_create.add_argument('--frequency-days', type=int, help='Frequency in days')
+    p_cx_nps_list = p_cx_nps_sub.add_parser('list', help='List surveys')
+    p_cx_nps_list.add_argument('--trigger', help='Filter by trigger')
+    p_cx_nps_list.add_argument('--survey-type', help='Filter by type')
+    p_cx_nps_get = p_cx_nps_sub.add_parser('get', help='Get survey')
+    p_cx_nps_get.add_argument('survey_id', help='Survey ID')
+    p_cx_nps_send = p_cx_nps_sub.add_parser('send', help='Send survey to customer')
+    p_cx_nps_send.add_argument('survey_id', help='Survey ID')
+    p_cx_nps_send.add_argument('customer_id', help='Customer ID')
+    p_cx_nps_send.add_argument('--customer-name', default='', help='Customer name')
+    p_cx_nps_respond = p_cx_nps_sub.add_parser('respond', help='Submit survey response')
+    p_cx_nps_respond.add_argument('response_id', help='Response ID')
+    p_cx_nps_respond.add_argument('--answers-json', help='JSON answers object')
+    p_cx_nps_respond.add_argument('--comments', help='Additional comments')
+    p_cx_nps_score = p_cx_nps_sub.add_parser('score', help='Get NPS score')
+    p_cx_nps_trend = p_cx_nps_sub.add_parser('trend', help='Get NPS trend')
+    p_cx_nps_trend.add_argument('--days', type=int, default=90, help='Days')
+    p_cx_nps_detractors = p_cx_nps_sub.add_parser('detractors', help='Detractor feedback')
+    p_cx_nps_detractors.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_nps_stats = p_cx_nps_sub.add_parser('stats', help='NPS statistics')
+
+    p_cx_success = p_cx_sub.add_parser('success', help='Customer success automation')
+    p_cx_success_sub = p_cx_success.add_subparsers(dest='action')
+    p_cx_success_plays = p_cx_success_sub.add_parser('plays', help='List success plays')
+    p_cx_success_plays.add_argument('--trigger-event', help='Filter by trigger event')
+    p_cx_success_plays.add_argument('--status', help='Filter by status')
+    p_cx_success_create = p_cx_success_sub.add_parser('create', help='Create success play')
+    p_cx_success_create.add_argument('name', help='Play name')
+    p_cx_success_create.add_argument('description', help='Play description')
+    p_cx_success_create.add_argument('trigger_event', help='Trigger event')
+    p_cx_success_create.add_argument('--actions-json', required=True, help='JSON array of actions')
+    p_cx_success_create.add_argument('--tags', help='Comma-separated tags')
+    p_cx_success_create.add_argument('--conditions-json', help='JSON trigger conditions')
+    p_cx_success_create.add_argument('--cooldown-days', type=int, default=30, help='Cooldown in days')
+    p_cx_success_status = p_cx_success_sub.add_parser('status', help='Update play status')
+    p_cx_success_status.add_argument('play_id', help='Play ID')
+    p_cx_success_status.add_argument('status', choices=['active', 'paused', 'archived'], help='Status')
+    p_cx_success_trigger = p_cx_success_sub.add_parser('trigger', help='Evaluate trigger event')
+    p_cx_success_trigger.add_argument('event', help='Event name')
+    p_cx_success_trigger.add_argument('customer_id', help='Customer ID')
+    p_cx_success_trigger.add_argument('--event-data', help='JSON event data')
+    p_cx_success_executions = p_cx_success_sub.add_parser('executions', help='List executions')
+    p_cx_success_executions.add_argument('--play-id', help='Filter by play')
+    p_cx_success_executions.add_argument('--customer-id', help='Filter by customer')
+    p_cx_success_executions.add_argument('--limit', type=int, default=50, help='Max results')
+    p_cx_success_stats = p_cx_success_sub.add_parser('stats', help='Success automation stats')
 
     p_devportal = sub.add_parser('devportal', help='Developer portal')
     p_devportal_sub = p_devportal.add_subparsers(dest='subcommand')
@@ -2581,6 +2544,340 @@ def cmd_cx_success_stats(args):
     return parser
 
 
+# === v4 Customer Experience Commands ===
+
+def cmd_cx_health_list(args):
+    result = get_client().cx_list_health_profiles(risk_level=args.risk_level, min_score=args.min_score)
+    data = result if isinstance(result, list) else result.get('profiles', result)
+    print_output(data, args.output)
+
+def cmd_cx_health_get(args):
+    result = get_client().cx_get_health_profile(args.customer_id)
+    print_output(result, args.output)
+
+def cmd_cx_health_compute(args):
+    data = json.loads(args.data) if args.data else {}
+    result = get_client().cx_compute_health(args.customer_id, data)
+    print_output(result, args.output)
+
+def cmd_cx_health_history(args):
+    result = get_client().cx_get_health_history(args.customer_id, args.days)
+    print_output(result, args.output)
+
+def cmd_cx_health_stats(args):
+    result = get_client().cx_get_health_stats()
+    print_output(result, args.output)
+
+def cmd_cx_ticket_list(args):
+    result = get_client().cx_list_tickets(
+        status=args.status, priority=args.priority, customer_id=args.customer_id,
+        assigned_to=args.assigned_to, search=args.search,
+        limit=args.limit, offset=args.offset,
+    )
+    data = result if isinstance(result, list) else result.get('tickets', result)
+    print_output(data, args.output)
+
+def cmd_cx_ticket_create(args):
+    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
+    result = get_client().cx_create_ticket(
+        args.subject, args.description, args.customer_id,
+        args.customer_name, args.customer_email, args.priority,
+        args.channel, args.category, tags,
+    )
+    print_output(result, args.output)
+
+def cmd_cx_ticket_get(args):
+    result = get_client().cx_get_ticket(args.ticket_id)
+    print_output(result, args.output)
+
+def cmd_cx_ticket_status(args):
+    result = get_client().cx_update_ticket_status(args.ticket_id, args.status, args.agent_id)
+    print_output(result, args.output)
+
+def cmd_cx_ticket_comment(args):
+    result = get_client().cx_add_comment(args.ticket_id, args.author_id, args.body, args.author_name, args.internal)
+    print_output(result, args.output)
+
+def cmd_cx_ticket_assign(args):
+    result = get_client().cx_assign_ticket(args.ticket_id, args.agent_id, args.team)
+    print_output(result, args.output)
+
+def cmd_cx_ticket_stats(args):
+    result = get_client().cx_get_ticket_stats()
+    print_output(result, args.output)
+
+def cmd_cx_sla_list(args):
+    result = get_client().cx_list_slas()
+    data = result if isinstance(result, list) else result.get('slas', result)
+    print_output(data, args.output)
+
+def cmd_cx_sla_create(args):
+    result = get_client().cx_create_sla(args.name, args.priority, args.response_time, args.resolution_time, not args.no_business_hours)
+    print_output(result, args.output)
+
+def cmd_cx_canned_list(args):
+    result = get_client().cx_list_canned_responses(args.category)
+    data = result if isinstance(result, list) else result.get('responses', result)
+    print_output(data, args.output)
+
+def cmd_cx_canned_create(args):
+    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
+    result = get_client().cx_create_canned_response(args.title, args.body, args.category, tags, args.created_by)
+    print_output(result, args.output)
+
+def cmd_cx_sentiment_analyze(args):
+    result = get_client().cx_analyze_sentiment(args.text, args.source_type, args.source_id, args.customer_id, args.customer_name)
+    print_output(result, args.output)
+
+def cmd_cx_sentiment_profile(args):
+    result = get_client().cx_get_sentiment_profile(args.customer_id)
+    print_output(result, args.output)
+
+def cmd_cx_sentiment_interactions(args):
+    result = get_client().cx_list_sentiment_interactions(
+        args.customer_id, args.source_type, args.min_score, args.max_score,
+        args.escalated_only, args.limit,
+    )
+    data = result if isinstance(result, list) else result.get('interactions', result)
+    print_output(data, args.output)
+
+def cmd_cx_sentiment_trends(args):
+    result = get_client().cx_get_sentiment_trends(args.period, args.days)
+    print_output(result, args.output)
+
+def cmd_cx_sentiment_alerts(args):
+    result = get_client().cx_get_sentiment_alerts()
+    data = result if isinstance(result, list) else result.get('alerts', result)
+    print_output(data, args.output)
+
+def cmd_cx_adoption_summary(args):
+    result = get_client().cx_get_adoption_summary(args.customer_id)
+    print_output(result, args.output)
+
+def cmd_cx_adoption_features(args):
+    result = get_client().cx_get_feature_adoption(args.customer_id, args.days)
+    print_output(result, args.output)
+
+def cmd_cx_adoption_track(args):
+    result = get_client().cx_track_event(args.event_type, args.customer_id, args.user_id, args.feature_id, args.feature_name)
+    print_output(result, args.output)
+
+def cmd_cx_adoption_recommendations(args):
+    result = get_client().cx_get_adoption_recommendations(args.customer_id)
+    print_output(result, args.output)
+
+def cmd_cx_adoption_stats(args):
+    result = get_client().cx_get_adoption_stats()
+    print_output(result, args.output)
+
+def cmd_cx_onboarding_start(args):
+    result = get_client().cx_start_onboarding(args.customer_id, args.customer_name, args.product_tier)
+    print_output(result, args.output)
+
+def cmd_cx_onboarding_get(args):
+    result = get_client().cx_get_onboarding_session(args.customer_id)
+    print_output(result, args.output)
+
+def cmd_cx_onboarding_step(args):
+    meta = json.loads(args.metadata) if args.metadata else None
+    result = get_client().cx_update_onboarding_step(args.session_id, args.step_id, args.status, meta)
+    print_output(result, args.output)
+
+def cmd_cx_onboarding_stats(args):
+    result = get_client().cx_get_onboarding_stats()
+    print_output(result, args.output)
+
+def cmd_cx_kb_list(args):
+    result = get_client().cx_list_articles(args.category, args.article_type, args.status, args.limit)
+    data = result if isinstance(result, list) else result.get('articles', result)
+    print_output(data, args.output)
+
+def cmd_cx_kb_create(args):
+    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
+    result = get_client().cx_create_article(args.title, args.content, args.category, args.article_type, tags, args.author, args.language)
+    print_output(result, args.output)
+
+def cmd_cx_kb_get(args):
+    result = get_client().cx_get_article(args.article_id)
+    print_output(result, args.output)
+
+def cmd_cx_kb_update(args):
+    data = json.loads(args.data) if args.data else {}
+    result = get_client().cx_update_article(args.article_id, data)
+    print_output(result, args.output)
+
+def cmd_cx_kb_search(args):
+    result = get_client().cx_search_articles(args.query, args.category, args.limit)
+    data = result if isinstance(result, list) else result.get('results', result)
+    print_output(data, args.output)
+
+def cmd_cx_kb_categories(args):
+    result = get_client().cx_list_categories()
+    data = result if isinstance(result, list) else result.get('categories', result)
+    print_output(data, args.output)
+
+def cmd_cx_kb_feedback(args):
+    result = get_client().cx_add_article_feedback(args.article_id, args.helpful, args.comment, args.user_id)
+    print_output(result, args.output)
+
+def cmd_cx_community_posts(args):
+    result = get_client().cx_list_posts(args.category_id, args.post_type, args.sort, args.limit, args.offset)
+    print_output(result, args.output)
+
+def cmd_cx_community_create(args):
+    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
+    result = get_client().cx_create_post(args.title, args.content, args.category_id, args.post_type, args.author_id, args.author_name, tags)
+    print_output(result, args.output)
+
+def cmd_cx_community_get(args):
+    result = get_client().cx_get_post(args.post_id)
+    print_output(result, args.output)
+
+def cmd_cx_community_vote(args):
+    result = get_client().cx_vote_post(args.post_id, args.user_id, args.vote_type)
+    print_output(result, args.output)
+
+def cmd_cx_community_comment(args):
+    result = get_client().cx_add_community_comment(args.post_id, args.author_id, args.body, args.author_name, args.parent_comment_id)
+    print_output(result, args.output)
+
+def cmd_cx_community_comments(args):
+    result = get_client().cx_get_post_comments(args.post_id)
+    data = result if isinstance(result, list) else result.get('comments', result)
+    print_output(data, args.output)
+
+def cmd_cx_community_requests(args):
+    result = get_client().cx_get_feature_requests(args.sort, args.limit)
+    data = result if isinstance(result, list) else result.get('feature_requests', result)
+    print_output(data, args.output)
+
+def cmd_cx_community_categories(args):
+    result = get_client().cx_get_community_categories()
+    data = result if isinstance(result, list) else result.get('categories', result)
+    print_output(data, args.output)
+
+def cmd_cx_community_leaderboard(args):
+    result = get_client().cx_get_leaderboard(args.limit)
+    data = result if isinstance(result, list) else result.get('leaderboard', result)
+    print_output(data, args.output)
+
+def cmd_cx_community_stats(args):
+    result = get_client().cx_get_community_stats()
+    print_output(result, args.output)
+
+def cmd_cx_comm_send(args):
+    channels = [c.strip() for c in args.channels.split(',')]
+    result = get_client().cx_send_notification(
+        args.type, args.subject, args.body, channels, args.priority,
+        args.target_segment, args.created_by,
+    )
+    print_output(result, args.output)
+
+def cmd_cx_comm_batches(args):
+    result = get_client().cx_list_batches(args.limit)
+    data = result if isinstance(result, list) else result.get('batches', result)
+    print_output(data, args.output)
+
+def cmd_cx_comm_batch(args):
+    result = get_client().cx_get_batch_stats(args.batch_id)
+    print_output(result, args.output)
+
+def cmd_cx_comm_maintenance_schedule(args):
+    services = [s.strip() for s in args.affected_services.split(',')]
+    result = get_client().cx_schedule_maintenance(args.title, args.description, services, args.start, args.end, args.expected_downtime, args.created_by)
+    print_output(result, args.output)
+
+def cmd_cx_comm_maintenance_list(args):
+    result = get_client().cx_list_maintenance(args.status)
+    data = result if isinstance(result, list) else result.get('maintenance_windows', result)
+    print_output(data, args.output)
+
+def cmd_cx_comm_maintenance_complete(args):
+    result = get_client().cx_complete_maintenance(args.maintenance_id, args.actual_downtime, args.post_mortem)
+    print_output(result, args.output)
+
+def cmd_cx_comm_templates(args):
+    result = get_client().cx_list_templates(args.channel)
+    data = result if isinstance(result, list) else result.get('templates', result)
+    print_output(data, args.output)
+
+def cmd_cx_comm_template_create(args):
+    variables = [v.strip() for v in args.variables.split(',')] if args.variables else None
+    result = get_client().cx_create_template(args.name, args.subject, args.body, args.channel, args.category, variables)
+    print_output(result, args.output)
+
+def cmd_cx_nps_create(args):
+    questions = json.loads(args.questions_json)
+    result = get_client().cx_create_survey(args.title, args.description, args.survey_type, args.trigger, questions, args.target_segment, args.frequency_days)
+    print_output(result, args.output)
+
+def cmd_cx_nps_list(args):
+    result = get_client().cx_get_surveys(args.trigger, args.survey_type)
+    data = result if isinstance(result, list) else result.get('surveys', result)
+    print_output(data, args.output)
+
+def cmd_cx_nps_get(args):
+    result = get_client().cx_get_survey(args.survey_id)
+    print_output(result, args.output)
+
+def cmd_cx_nps_send(args):
+    result = get_client().cx_send_survey(args.survey_id, args.customer_id, args.customer_name)
+    print_output(result, args.output)
+
+def cmd_cx_nps_respond(args):
+    answers = json.loads(args.answers_json) if args.answers_json else {}
+    result = get_client().cx_submit_response(args.response_id, answers, args.comments)
+    print_output(result, args.output)
+
+def cmd_cx_nps_score(args):
+    result = get_client().cx_get_nps_score()
+    print_output(result, args.output)
+
+def cmd_cx_nps_trend(args):
+    result = get_client().cx_get_nps_trend(args.days)
+    print_output(result, args.output)
+
+def cmd_cx_nps_detractors(args):
+    result = get_client().cx_get_detractor_feedback(args.limit)
+    data = result if isinstance(result, list) else result.get('detractors', result)
+    print_output(data, args.output)
+
+def cmd_cx_nps_stats(args):
+    result = get_client().cx_get_nps_stats()
+    print_output(result, args.output)
+
+def cmd_cx_success_plays(args):
+    result = get_client().cx_list_plays(args.trigger_event, args.status)
+    data = result if isinstance(result, list) else result.get('plays', result)
+    print_output(data, args.output)
+
+def cmd_cx_success_create(args):
+    actions = json.loads(args.actions_json) if args.actions_json else []
+    tags = [t.strip() for t in args.tags.split(',')] if args.tags else None
+    conditions = json.loads(args.conditions_json) if args.conditions_json else None
+    result = get_client().cx_create_play(args.name, args.description, args.trigger_event, actions, tags, conditions, args.cooldown_days)
+    print_output(result, args.output)
+
+def cmd_cx_success_status(args):
+    result = get_client().cx_update_play_status(args.play_id, args.status)
+    print_output(result, args.output)
+
+def cmd_cx_success_trigger(args):
+    data = json.loads(args.event_data) if args.event_data else {}
+    result = get_client().cx_evaluate_trigger(args.event, args.customer_id, data)
+    print_output(result, args.output)
+
+def cmd_cx_success_executions(args):
+    result = get_client().cx_get_executions(args.play_id, args.customer_id, args.limit)
+    data = result if isinstance(result, list) else result.get('executions', result)
+    print_output(data, args.output)
+
+def cmd_cx_success_stats(args):
+    result = get_client().cx_get_success_stats()
+    print_output(result, args.output)
+
+
+
 # === v3 Identity & Governance Commands ===
 
 def cmd_oidc_clients(args):
@@ -2589,8 +2886,7 @@ def cmd_oidc_clients(args):
     print_output(data, args.output)
 
 def cmd_oidc_register(args):
-    redirects = [u.strip() for u in args.redirect_uris.split(',')]
-    result = get_client().oidc_register_client(args.name, redirects, args.type)
+    result = get_client().oidc_register_client(args.name, args.redirect_uris, args.type)
     print_output(result, args.output)
 
 def cmd_oidc_delete(args):
@@ -2638,12 +2934,11 @@ def cmd_breach_list(args):
     print_output(data, args.output)
 
 def cmd_breach_report(args):
-    data_types = [t.strip() for t in args.data_types.split(',')]
-    result = get_client().breach_report(args.description, data_types, args.affected_users)
+    result = get_client().breach_report(args.description, args.data_types, args.affected_users)
     print_output(result, args.output)
 
 def cmd_policy_list(args):
-    result = get_client().policy_list(category=args.category)
+    result = get_client().policy_list(args.category)
     data = result if isinstance(result, list) else result.get('policies', result)
     print_output(data, args.output)
 
@@ -2742,8 +3037,8 @@ def cmd_quota_list(args):
 
 def cmd_quota_check(args):
     resources = {}
-    if args.cpu: resources['cpu_cores'] = args.cpu
-    if args.memory: resources['memory_gb'] = args.memory
+    if args.cpu: resources['cpu'] = args.cpu
+    if args.memory: resources['memory'] = args.memory
     result = get_client().quota_check(args.entity_type, args.entity_id, resources)
     print_output(result, args.output)
 
@@ -2814,302 +3109,6 @@ def cmd_heal_retrain(args):
     print_output(result, args.output)
 
 
-    # === v4 Customer Experience Commands ===
-    p_cx = sub.add_parser('cx', help='Customer experience & support platform')
-    p_cx_sub = p_cx.add_subparsers(dest='subcommand')
-
-    p_cx_health = p_cx_sub.add_parser('health', help='Customer health scoring')
-    p_cx_health_sub = p_cx_health.add_subparsers(dest='action')
-    p_cx_health_list = p_cx_health_sub.add_parser('list', help='List health profiles')
-    p_cx_health_list.add_argument('--risk-level', help='Filter by risk level')
-    p_cx_health_list.add_argument('--min-score', type=float, help='Minimum health score')
-    p_cx_health_get = p_cx_health_sub.add_parser('get', help='Get health profile')
-    p_cx_health_get.add_argument('customer_id', help='Customer ID')
-    p_cx_health_compute = p_cx_health_sub.add_parser('compute', help='Compute health score')
-    p_cx_health_compute.add_argument('customer_id', help='Customer ID')
-    p_cx_health_compute.add_argument('--data', help='JSON data payload')
-    p_cx_health_history = p_cx_health_sub.add_parser('history', help='Get health history')
-    p_cx_health_history.add_argument('customer_id', help='Customer ID')
-    p_cx_health_history.add_argument('--days', type=int, default=30, help='Days of history')
-    p_cx_health_stats = p_cx_health_sub.add_parser('stats', help='Health segment summary')
-
-    p_cx_ticket = p_cx_sub.add_parser('ticket', help='Support ticket system')
-    p_cx_ticket_sub = p_cx_ticket.add_subparsers(dest='action')
-    p_cx_ticket_list = p_cx_ticket_sub.add_parser('list', help='List tickets')
-    p_cx_ticket_list.add_argument('--status', help='Filter by status')
-    p_cx_ticket_list.add_argument('--priority', help='Filter by priority')
-    p_cx_ticket_list.add_argument('--customer-id', help='Filter by customer')
-    p_cx_ticket_list.add_argument('--assigned-to', help='Filter by assignee')
-    p_cx_ticket_list.add_argument('--search', help='Search text')
-    p_cx_ticket_list.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_ticket_list.add_argument('--offset', type=int, default=0, help='Offset')
-    p_cx_ticket_create = p_cx_ticket_sub.add_parser('create', help='Create ticket')
-    p_cx_ticket_create.add_argument('subject', help='Ticket subject')
-    p_cx_ticket_create.add_argument('description', help='Ticket description')
-    p_cx_ticket_create.add_argument('customer_id', help='Customer ID')
-    p_cx_ticket_create.add_argument('--customer-name', default='', help='Customer name')
-    p_cx_ticket_create.add_argument('--customer-email', default='', help='Customer email')
-    p_cx_ticket_create.add_argument('--priority', default='medium', choices=['low', 'medium', 'high', 'critical'], help='Priority')
-    p_cx_ticket_create.add_argument('--channel', default='web', help='Channel')
-    p_cx_ticket_create.add_argument('--category', help='Category')
-    p_cx_ticket_create.add_argument('--tags', help='Comma-separated tags')
-    p_cx_ticket_get = p_cx_ticket_sub.add_parser('get', help='Get ticket')
-    p_cx_ticket_get.add_argument('ticket_id', help='Ticket ID')
-    p_cx_ticket_status = p_cx_ticket_sub.add_parser('status', help='Update ticket status')
-    p_cx_ticket_status.add_argument('ticket_id', help='Ticket ID')
-    p_cx_ticket_status.add_argument('status', help='New status')
-    p_cx_ticket_status.add_argument('--agent-id', help='Agent ID')
-    p_cx_ticket_comment = p_cx_ticket_sub.add_parser('comment', help='Add comment to ticket')
-    p_cx_ticket_comment.add_argument('ticket_id', help='Ticket ID')
-    p_cx_ticket_comment.add_argument('author_id', help='Author ID')
-    p_cx_ticket_comment.add_argument('body', help='Comment body')
-    p_cx_ticket_comment.add_argument('--author-name', default='', help='Author name')
-    p_cx_ticket_comment.add_argument('--internal', action='store_true', help='Internal note')
-    p_cx_ticket_assign = p_cx_ticket_sub.add_parser('assign', help='Assign ticket')
-    p_cx_ticket_assign.add_argument('ticket_id', help='Ticket ID')
-    p_cx_ticket_assign.add_argument('agent_id', help='Agent ID')
-    p_cx_ticket_assign.add_argument('--team', help='Team name')
-    p_cx_ticket_stats = p_cx_ticket_sub.add_parser('stats', help='Ticket statistics')
-
-    p_cx_sla = p_cx_sub.add_parser('sla', help='SLA management')
-    p_cx_sla_sub = p_cx_sla.add_subparsers(dest='action')
-    p_cx_sla_list = p_cx_sla_sub.add_parser('list', help='List SLAs')
-    p_cx_sla_create = p_cx_sla_sub.add_parser('create', help='Create SLA')
-    p_cx_sla_create.add_argument('name', help='SLA name')
-    p_cx_sla_create.add_argument('priority', choices=['low', 'medium', 'high', 'critical'], help='Priority')
-    p_cx_sla_create.add_argument('response_time', type=int, help='Response time in minutes')
-    p_cx_sla_create.add_argument('resolution_time', type=int, help='Resolution time in minutes')
-    p_cx_sla_create.add_argument('--no-business-hours', action='store_true', help='24/7 SLA')
-
-    p_cx_canned = p_cx_sub.add_parser('canned', help='Canned responses')
-    p_cx_canned_sub = p_cx_canned.add_subparsers(dest='action')
-    p_cx_canned_list = p_cx_canned_sub.add_parser('list', help='List canned responses')
-    p_cx_canned_list.add_argument('--category', help='Filter by category')
-    p_cx_canned_create = p_cx_canned_sub.add_parser('create', help='Create canned response')
-    p_cx_canned_create.add_argument('title', help='Title')
-    p_cx_canned_create.add_argument('body', help='Response body')
-    p_cx_canned_create.add_argument('category', help='Category')
-    p_cx_canned_create.add_argument('--tags', help='Comma-separated tags')
-    p_cx_canned_create.add_argument('--created-by', default='', help='Creator')
-
-    p_cx_sentiment = p_cx_sub.add_parser('sentiment', help='Customer sentiment analysis')
-    p_cx_sentiment_sub = p_cx_sentiment.add_subparsers(dest='action')
-    p_cx_sentiment_analyze = p_cx_sentiment_sub.add_parser('analyze', help='Analyze text sentiment')
-    p_cx_sentiment_analyze.add_argument('text', help='Text to analyze')
-    p_cx_sentiment_analyze.add_argument('--source-type', default='support_ticket', help='Source type')
-    p_cx_sentiment_analyze.add_argument('--source-id', default='', help='Source ID')
-    p_cx_sentiment_analyze.add_argument('--customer-id', default='', help='Customer ID')
-    p_cx_sentiment_analyze.add_argument('--customer-name', default='', help='Customer name')
-    p_cx_sentiment_profile = p_cx_sentiment_sub.add_parser('profile', help='Get customer sentiment profile')
-    p_cx_sentiment_profile.add_argument('customer_id', help='Customer ID')
-    p_cx_sentiment_interactions = p_cx_sentiment_sub.add_parser('interactions', help='List sentiment interactions')
-    p_cx_sentiment_interactions.add_argument('--customer-id', help='Filter by customer')
-    p_cx_sentiment_interactions.add_argument('--source-type', help='Filter by source type')
-    p_cx_sentiment_interactions.add_argument('--min-score', type=float, help='Min sentiment score')
-    p_cx_sentiment_interactions.add_argument('--max-score', type=float, help='Max sentiment score')
-    p_cx_sentiment_interactions.add_argument('--escalated-only', action='store_true', help='Escalated only')
-    p_cx_sentiment_interactions.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_sentiment_trends = p_cx_sentiment_sub.add_parser('trends', help='Get sentiment trends')
-    p_cx_sentiment_trends.add_argument('--period', default='daily', choices=['daily', 'weekly', 'monthly'], help='Period')
-    p_cx_sentiment_trends.add_argument('--days', type=int, default=30, help='Days')
-    p_cx_sentiment_alerts = p_cx_sentiment_sub.add_parser('alerts', help='List sentiment alerts')
-
-    p_cx_adoption = p_cx_sub.add_parser('adoption', help='Product adoption analytics')
-    p_cx_adoption_sub = p_cx_adoption.add_subparsers(dest='action')
-    p_cx_adoption_summary = p_cx_adoption_sub.add_parser('summary', help='Customer adoption summary')
-    p_cx_adoption_summary.add_argument('customer_id', help='Customer ID')
-    p_cx_adoption_features = p_cx_adoption_sub.add_parser('features', help='Feature adoption')
-    p_cx_adoption_features.add_argument('customer_id', help='Customer ID')
-    p_cx_adoption_features.add_argument('--days', type=int, default=30, help='Days')
-    p_cx_adoption_track = p_cx_adoption_sub.add_parser('track', help='Track adoption event')
-    p_cx_adoption_track.add_argument('event_type', help='Event type')
-    p_cx_adoption_track.add_argument('customer_id', help='Customer ID')
-    p_cx_adoption_track.add_argument('user_id', help='User ID')
-    p_cx_adoption_track.add_argument('--feature-id', help='Feature ID')
-    p_cx_adoption_track.add_argument('--feature-name', help='Feature name')
-    p_cx_adoption_recommendations = p_cx_adoption_sub.add_parser('recommendations', help='Adoption recommendations')
-    p_cx_adoption_recommendations.add_argument('customer_id', help='Customer ID')
-    p_cx_adoption_stats = p_cx_adoption_sub.add_parser('stats', help='Global adoption stats')
-
-    p_cx_onboarding = p_cx_sub.add_parser('onboarding', help='Customer onboarding wizard')
-    p_cx_onboarding_sub = p_cx_onboarding.add_subparsers(dest='action')
-    p_cx_onboarding_start = p_cx_onboarding_sub.add_parser('start', help='Start onboarding')
-    p_cx_onboarding_start.add_argument('customer_id', help='Customer ID')
-    p_cx_onboarding_start.add_argument('--customer-name', default='', help='Customer name')
-    p_cx_onboarding_start.add_argument('--product-tier', default='standard', help='Product tier')
-    p_cx_onboarding_get = p_cx_onboarding_sub.add_parser('get', help='Get onboarding session')
-    p_cx_onboarding_get.add_argument('customer_id', help='Customer ID')
-    p_cx_onboarding_step = p_cx_onboarding_sub.add_parser('step', help='Update onboarding step')
-    p_cx_onboarding_step.add_argument('session_id', help='Session ID')
-    p_cx_onboarding_step.add_argument('step_id', help='Step ID')
-    p_cx_onboarding_step.add_argument('status', choices=['pending', 'in_progress', 'completed', 'skipped'], help='Status')
-    p_cx_onboarding_step.add_argument('--metadata', help='JSON metadata')
-    p_cx_onboarding_stats = p_cx_onboarding_sub.add_parser('stats', help='Onboarding statistics')
-
-    p_cx_kb = p_cx_sub.add_parser('kb', help='Knowledge base & help center')
-    p_cx_kb_sub = p_cx_kb.add_subparsers(dest='action')
-    p_cx_kb_list = p_cx_kb_sub.add_parser('list', help='List articles')
-    p_cx_kb_list.add_argument('--category', help='Filter by category')
-    p_cx_kb_list.add_argument('--article-type', help='Filter by type')
-    p_cx_kb_list.add_argument('--status', help='Filter by status')
-    p_cx_kb_list.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_kb_create = p_cx_kb_sub.add_parser('create', help='Create article')
-    p_cx_kb_create.add_argument('title', help='Article title')
-    p_cx_kb_create.add_argument('content', help='Article content (file path or raw)')
-    p_cx_kb_create.add_argument('category', help='Category')
-    p_cx_kb_create.add_argument('--article-type', default='guide', help='Article type')
-    p_cx_kb_create.add_argument('--tags', help='Comma-separated tags')
-    p_cx_kb_create.add_argument('--author', default='', help='Author')
-    p_cx_kb_create.add_argument('--language', default='en', help='Language')
-    p_cx_kb_get = p_cx_kb_sub.add_parser('get', help='Get article')
-    p_cx_kb_get.add_argument('article_id', help='Article ID')
-    p_cx_kb_update = p_cx_kb_sub.add_parser('update', help='Update article')
-    p_cx_kb_update.add_argument('article_id', help='Article ID')
-    p_cx_kb_update.add_argument('--data', help='JSON data payload')
-    p_cx_kb_search = p_cx_kb_sub.add_parser('search', help='Search articles')
-    p_cx_kb_search.add_argument('query', help='Search query')
-    p_cx_kb_search.add_argument('--category', help='Filter by category')
-    p_cx_kb_search.add_argument('--limit', type=int, default=20, help='Max results')
-    p_cx_kb_categories = p_cx_kb_sub.add_parser('categories', help='List categories')
-    p_cx_kb_feedback = p_cx_kb_sub.add_parser('feedback', help='Add article feedback')
-    p_cx_kb_feedback.add_argument('article_id', help='Article ID')
-    p_cx_kb_feedback.add_argument('--helpful', action='store_true', default=True, help='Was helpful')
-    p_cx_kb_feedback.add_argument('--comment', help='Feedback comment')
-    p_cx_kb_feedback.add_argument('--user-id', help='User ID')
-
-    p_cx_community = p_cx_sub.add_parser('community', help='Community platform')
-    p_cx_community_sub = p_cx_community.add_subparsers(dest='action')
-    p_cx_community_posts = p_cx_community_sub.add_parser('posts', help='List posts')
-    p_cx_community_posts.add_argument('--category-id', help='Filter by category')
-    p_cx_community_posts.add_argument('--post-type', help='Filter by type')
-    p_cx_community_posts.add_argument('--sort', default='hot', choices=['hot', 'new', 'top', 'votes'], help='Sort')
-    p_cx_community_posts.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_community_posts.add_argument('--offset', type=int, default=0, help='Offset')
-    p_cx_community_create = p_cx_community_sub.add_parser('create', help='Create post')
-    p_cx_community_create.add_argument('title', help='Post title')
-    p_cx_community_create.add_argument('content', help='Post content')
-    p_cx_community_create.add_argument('category_id', help='Category ID')
-    p_cx_community_create.add_argument('--post-type', default='discussion', help='Post type')
-    p_cx_community_create.add_argument('--author-id', default='', help='Author ID')
-    p_cx_community_create.add_argument('--author-name', default='', help='Author name')
-    p_cx_community_create.add_argument('--tags', help='Comma-separated tags')
-    p_cx_community_get = p_cx_community_sub.add_parser('get', help='Get post')
-    p_cx_community_get.add_argument('post_id', help='Post ID')
-    p_cx_community_vote = p_cx_community_sub.add_parser('vote', help='Vote on post')
-    p_cx_community_vote.add_argument('post_id', help='Post ID')
-    p_cx_community_vote.add_argument('user_id', help='User ID')
-    p_cx_community_vote.add_argument('vote_type', choices=['upvote', 'downvote'], help='Vote type')
-    p_cx_community_comment = p_cx_community_sub.add_parser('comment', help='Add comment')
-    p_cx_community_comment.add_argument('post_id', help='Post ID')
-    p_cx_community_comment.add_argument('author_id', help='Author ID')
-    p_cx_community_comment.add_argument('body', help='Comment body')
-    p_cx_community_comment.add_argument('--author-name', default='', help='Author name')
-    p_cx_community_comment.add_argument('--parent-comment-id', help='Parent comment ID')
-    p_cx_community_comments = p_cx_community_sub.add_parser('comments', help='Get post comments')
-    p_cx_community_comments.add_argument('post_id', help='Post ID')
-    p_cx_community_requests = p_cx_community_sub.add_parser('requests', help='Feature requests')
-    p_cx_community_requests.add_argument('--sort', default='votes', help='Sort by')
-    p_cx_community_requests.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_community_categories = p_cx_community_sub.add_parser('categories', help='List categories')
-    p_cx_community_leaderboard = p_cx_community_sub.add_parser('leaderboard', help='Leaderboard')
-    p_cx_community_leaderboard.add_argument('--limit', type=int, default=20, help='Max results')
-    p_cx_community_stats = p_cx_community_sub.add_parser('stats', help='Community statistics')
-
-    p_cx_comm = p_cx_sub.add_parser('comm', help='Customer communication hub')
-    p_cx_comm_sub = p_cx_comm.add_subparsers(dest='action')
-    p_cx_comm_send = p_cx_comm_sub.add_parser('send', help='Send notification')
-    p_cx_comm_send.add_argument('type', choices=['announcement', 'maintenance', 'update', 'promotional', 'transactional'], help='Notification type')
-    p_cx_comm_send.add_argument('subject', help='Subject')
-    p_cx_comm_send.add_argument('body', help='Body text')
-    p_cx_comm_send.add_argument('channels', help='Comma-separated channels (email,in_app,slack,discord)')
-    p_cx_comm_send.add_argument('--priority', default='normal', choices=['low', 'normal', 'high', 'urgent'], help='Priority')
-    p_cx_comm_send.add_argument('--target-segment', default='all', help='Target segment')
-    p_cx_comm_send.add_argument('--created-by', default='', help='Creator')
-    p_cx_comm_batches = p_cx_comm_sub.add_parser('batches', help='List notification batches')
-    p_cx_comm_batches.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_comm_batch = p_cx_comm_sub.add_parser('batch', help='Get batch stats')
-    p_cx_comm_batch.add_argument('batch_id', help='Batch ID')
-    p_cx_comm_maintenance = p_cx_comm_sub.add_parser('maintenance', help='Maintenance notifications')
-    p_cx_comm_maintenance_sub = p_cx_comm_maintenance.add_subparsers(dest='maint_action')
-    p_cx_comm_maint_schedule = p_cx_comm_maintenance_sub.add_parser('schedule', help='Schedule maintenance')
-    p_cx_comm_maint_schedule.add_argument('title', help='Title')
-    p_cx_comm_maint_schedule.add_argument('description', help='Description')
-    p_cx_comm_maint_schedule.add_argument('affected_services', help='Comma-separated services')
-    p_cx_comm_maint_schedule.add_argument('start', help='Start time (ISO)')
-    p_cx_comm_maint_schedule.add_argument('end', help='End time (ISO)')
-    p_cx_comm_maint_schedule.add_argument('expected_downtime', help='Expected downtime')
-    p_cx_comm_maint_schedule.add_argument('--created-by', default='', help='Creator')
-    p_cx_comm_maint_list = p_cx_comm_maintenance_sub.add_parser('list', help='List maintenance')
-    p_cx_comm_maint_list.add_argument('--status', help='Filter by status')
-    p_cx_comm_maint_complete = p_cx_comm_maintenance_sub.add_parser('complete', help='Complete maintenance')
-    p_cx_comm_maint_complete.add_argument('maintenance_id', help='Maintenance ID')
-    p_cx_comm_maint_complete.add_argument('--actual-downtime', help='Actual downtime')
-    p_cx_comm_maint_complete.add_argument('--post-mortem', help='Post-mortem notes')
-    p_cx_comm_templates = p_cx_comm_sub.add_parser('templates', help='List templates')
-    p_cx_comm_templates.add_argument('--channel', help='Filter by channel')
-    p_cx_comm_template_create = p_cx_comm_sub.add_parser('template-create', help='Create template')
-    p_cx_comm_template_create.add_argument('name', help='Template name')
-    p_cx_comm_template_create.add_argument('subject', help='Subject template')
-    p_cx_comm_template_create.add_argument('body', help='Body template')
-    p_cx_comm_template_create.add_argument('channel', choices=['email', 'in_app', 'slack', 'discord'], help='Channel')
-    p_cx_comm_template_create.add_argument('--category', default='general', help='Category')
-    p_cx_comm_template_create.add_argument('--variables', help='Comma-separated variable names')
-
-    p_cx_nps = p_cx_sub.add_parser('nps', help='NPS survey engine')
-    p_cx_nps_sub = p_cx_nps.add_subparsers(dest='action')
-    p_cx_nps_create = p_cx_nps_sub.add_parser('create', help='Create survey')
-    p_cx_nps_create.add_argument('title', help='Survey title')
-    p_cx_nps_create.add_argument('description', help='Survey description')
-    p_cx_nps_create.add_argument('--survey-type', default='nps', choices=['nps', 'csat', 'ces', 'custom'], help='Survey type')
-    p_cx_nps_create.add_argument('--trigger', default='manual', choices=['manual', 'after_ticket', 'after_onboarding', 'periodic', 'after_renewal'], help='Trigger')
-    p_cx_nps_create.add_argument('--questions-json', required=True, help='JSON array of questions')
-    p_cx_nps_create.add_argument('--target-segment', default='all', help='Target segment')
-    p_cx_nps_create.add_argument('--frequency-days', type=int, help='Frequency in days')
-    p_cx_nps_list = p_cx_nps_sub.add_parser('list', help='List surveys')
-    p_cx_nps_list.add_argument('--trigger', help='Filter by trigger')
-    p_cx_nps_list.add_argument('--survey-type', help='Filter by type')
-    p_cx_nps_get = p_cx_nps_sub.add_parser('get', help='Get survey')
-    p_cx_nps_get.add_argument('survey_id', help='Survey ID')
-    p_cx_nps_send = p_cx_nps_sub.add_parser('send', help='Send survey to customer')
-    p_cx_nps_send.add_argument('survey_id', help='Survey ID')
-    p_cx_nps_send.add_argument('customer_id', help='Customer ID')
-    p_cx_nps_send.add_argument('--customer-name', default='', help='Customer name')
-    p_cx_nps_respond = p_cx_nps_sub.add_parser('respond', help='Submit survey response')
-    p_cx_nps_respond.add_argument('response_id', help='Response ID')
-    p_cx_nps_respond.add_argument('--answers-json', help='JSON answers object')
-    p_cx_nps_respond.add_argument('--comments', help='Additional comments')
-    p_cx_nps_score = p_cx_nps_sub.add_parser('score', help='Get NPS score')
-    p_cx_nps_trend = p_cx_nps_sub.add_parser('trend', help='Get NPS trend')
-    p_cx_nps_trend.add_argument('--days', type=int, default=90, help='Days')
-    p_cx_nps_detractors = p_cx_nps_sub.add_parser('detractors', help='Detractor feedback')
-    p_cx_nps_detractors.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_nps_stats = p_cx_nps_sub.add_parser('stats', help='NPS statistics')
-
-    p_cx_success = p_cx_sub.add_parser('success', help='Customer success automation')
-    p_cx_success_sub = p_cx_success.add_subparsers(dest='action')
-    p_cx_success_plays = p_cx_success_sub.add_parser('plays', help='List success plays')
-    p_cx_success_plays.add_argument('--trigger-event', help='Filter by trigger event')
-    p_cx_success_plays.add_argument('--status', help='Filter by status')
-    p_cx_success_create = p_cx_success_sub.add_parser('create', help='Create success play')
-    p_cx_success_create.add_argument('name', help='Play name')
-    p_cx_success_create.add_argument('description', help='Play description')
-    p_cx_success_create.add_argument('trigger_event', help='Trigger event')
-    p_cx_success_create.add_argument('--actions-json', required=True, help='JSON array of actions')
-    p_cx_success_create.add_argument('--tags', help='Comma-separated tags')
-    p_cx_success_create.add_argument('--conditions-json', help='JSON trigger conditions')
-    p_cx_success_create.add_argument('--cooldown-days', type=int, default=30, help='Cooldown in days')
-    p_cx_success_status = p_cx_success_sub.add_parser('status', help='Update play status')
-    p_cx_success_status.add_argument('play_id', help='Play ID')
-    p_cx_success_status.add_argument('status', choices=['active', 'paused', 'archived'], help='Status')
-    p_cx_success_trigger = p_cx_success_sub.add_parser('trigger', help='Evaluate trigger event')
-    p_cx_success_trigger.add_argument('event', help='Event name')
-    p_cx_success_trigger.add_argument('customer_id', help='Customer ID')
-    p_cx_success_trigger.add_argument('--event-data', help='JSON event data')
-    p_cx_success_executions = p_cx_success_sub.add_parser('executions', help='List executions')
-    p_cx_success_executions.add_argument('--play-id', help='Filter by play')
-    p_cx_success_executions.add_argument('--customer-id', help='Filter by customer')
-    p_cx_success_executions.add_argument('--limit', type=int, default=50, help='Max results')
-    p_cx_success_stats = p_cx_success_sub.add_parser('stats', help='Success automation stats')
 
     # === v4 Platform Engineering Commands ===
 

@@ -46,7 +46,7 @@
     "express-rate-limit": "^8.5.2",
     "jdenticon": "^3.3.0",
     "pg": "^8.22.0",
-    "react": "^19.0.0",
+    "react": "^19.2.8",
     "react-dom": "^19.2.7",
     "react-intl": "^10.1.18",
     "react-router-dom": "^7.18.2",

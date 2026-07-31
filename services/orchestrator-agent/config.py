@@ -6,11 +6,56 @@ from typing import Any, Dict, List, Set
 
 logger = logging.getLogger(__name__)
 
+# Values that indicate a placeholder secret was never replaced. Running with
+# any of these in production is a security risk, so we refuse to start.
+PLACEHOLDER_SECRETS = frozenset(
+    {
+        "CHANGE_ME",
+        "infra_pilot_dev_password",
+        "your_discord_bot_token_here",
+        "your_jwt_secret_key_here",
+        "local-dev-anon-key",
+    }
+)
+
+
+def validate_secrets(
+    environment: str,
+    db_password: str,
+    discord_bot_token: str,
+) -> list:
+    """Reject placeholder or missing secrets.
+
+    In production this raises so the process fails fast instead of
+    starting with an insecure configuration. In other environments it
+    logs a warning and returns the list of insecure settings.
+    """
+    insecure = [
+        name
+        for name, value in (
+            ("DB_PASSWORD", db_password),
+            ("DISCORD_BOT_TOKEN", discord_bot_token),
+        )
+        if not value or value in PLACEHOLDER_SECRETS
+    ]
+    if insecure:
+        message = (
+            "Insecure or missing secrets, refusing to start: "
+            + ", ".join(insecure)
+            + ". Set them via environment variables or a secrets backend "
+            "(see secrets_manager.py)."
+        )
+        if environment == "production":
+            raise RuntimeError(message)
+        logger.warning(message)
+    return insecure
+
 
 class Config:
     """Application configuration loaded from environment variables."""
 
     # Discord
+    ENVIRONMENT: str = os.getenv("NODE_ENV", os.getenv("ENVIRONMENT", "development"))
     DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN", "")
     CUTTLY_API_KEY: str = os.getenv("CUTTLY_API_KEY", "")
     PUBLIC_IP: str = os.getenv("PUBLIC_IP", "")
@@ -238,4 +283,14 @@ class Config:
         "SCAN_POLICY_DEFAULT_ACTION", "block"
     )
 
+    def validate(self) -> list:
+        """Fail fast on insecure configuration; returns insecure settings."""
+        return validate_secrets(
+            environment=self.ENVIRONMENT,
+            db_password=self.DB_PASSWORD,
+            discord_bot_token=self.DISCORD_BOT_TOKEN,
+        )
+
+
 config = Config()
+config.validate()

@@ -76,7 +76,11 @@ async function dockerAction(appId: string, action: 'start' | 'stop' | 'restart')
     .single();
   if (error || !app) throw new Error('App not found');
   if (!app.container_id) throw new Error('No container associated with this app');
-  const { stdout, stderr } = await execAsync(`docker ${action} ${app.container_id}`);
+  const containerId = String(app.container_id);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(containerId)) {
+    throw new Error('Invalid container_id format');
+  }
+  const { stdout, stderr } = await runCommand('docker', [action, containerId]);
   return { success: true, output: stdout || stderr };
 }
 
@@ -312,6 +316,16 @@ app.post('/api/setup/init', loginLimiter, async (req: Request, res: Response) =>
   }
 
   try {
+    // Refuse re-initialization once an admin account already exists
+    const { data: existingSetup, error: setupCheckError } = await supabase
+      .from('setup_config')
+      .select('initialized')
+      .single();
+
+    if (!setupCheckError && existingSetup?.initialized) {
+      return res.status(409).json({ error: 'Setup already initialized' });
+    }
+
     // Create user via Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -519,8 +533,26 @@ app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =>
   const { appId } = req.params;
   const { javaVersion, ...otherFields } = req.body;
 
+  const ALLOWED_UPDATE_FIELDS = [
+    'name',
+    'image',
+    'ports',
+    'environment_vars',
+    'volumes',
+    'restart_policy',
+    'memory_limit',
+    'cpu_shares',
+    'description',
+    'labels',
+  ];
+
   try {
-    let updateData = { ...otherFields };
+    const updateData: Record<string, unknown> = {};
+    for (const field of ALLOWED_UPDATE_FIELDS) {
+      if (otherFields[field] !== undefined) {
+        updateData[field] = otherFields[field];
+      }
+    }
 
     if (javaVersion) {
       const { data: current } = await supabase
@@ -1561,7 +1593,7 @@ app.get('/api/metrics/realtime', verifyAuth, generalLimiter, async (req: Request
         .single();
       if (error || !app) return res.status(404).json({ error: 'App not found' });
       if (app.container_id) {
-        const { stdout } = await execAsync(`docker stats ${app.container_id} --no-stream --format "{{json .}}"`).catch(() => ({ stdout: '' }));
+        const { stdout } = await runCommand('docker', ['stats', app.container_id, '--no-stream', '--format', '{{json .}}']).catch(() => ({ stdout: '', stderr: '' }));
         if (stdout) {
           const stats = JSON.parse(stdout);
           const cpuPct = parseFloat(stats.CPUPerc) || 0;
@@ -3023,7 +3055,7 @@ app.get('/api/config/:appId/advice', verifyAuth, generalLimiter, async (req: Req
       const configPaths = ['/server.properties', '/bukkit.yml', '/spigot.yml', '/paper.yml', '/config.yml', '/application.yml', '/application.properties'];
       for (const fp of configPaths) {
         try {
-          const { stdout } = await execAsync(`docker exec ${app.container_id} cat ${fp} 2>/dev/null`).catch(() => ({ stdout: '' }));
+          const { stdout } = await runCommand('docker', ['exec', app.container_id, 'cat', fp]).catch(() => ({ stdout: '', stderr: '' }));
           if (stdout) files[fp] = stdout;
         } catch {}
       }
@@ -3064,7 +3096,7 @@ app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, generalLim
       const configPaths = ['/server.properties', '/bukkit.yml', '/spigot.yml', '/paper.yml', '/config.yml', '/application.yml', '/application.properties'];
       for (const fp of configPaths) {
         try {
-          const { stdout } = await execAsync(`docker exec ${app.container_id} cat ${fp} 2>/dev/null`).catch(() => ({ stdout: '' }));
+          const { stdout } = await runCommand('docker', ['exec', app.container_id, 'cat', fp]).catch(() => ({ stdout: '', stderr: '' }));
           if (stdout) files[fp] = stdout;
         } catch {}
       }
@@ -3212,7 +3244,7 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'subscribe:metrics' && msg.appId) {
         const interval = setInterval(async () => {
           try {
-            const { stdout } = await execAsync(`docker stats ${msg.appId} --no-stream --format "{{json .}}"`);
+            const { stdout } = await runCommand('docker', ['stats', msg.appId, '--no-stream', '--format', '{{json .}}']);
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'metrics', appId: msg.appId, data: JSON.parse(stdout) }));
             }

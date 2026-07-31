@@ -764,12 +764,6 @@ if __name__ == "__main__":
     init_database()
     logging.warning("DEPRECATED: b2.py is legacy. Use main.py instead. This file will be removed in a future release.")
     bot.run(TOKEN)
-    except subprocess.CalledProcessError as e:
-        await interaction.response.send_message(
-            embed=discord.Embed(
-                description=f"Error stopping instance: {e}",
-                color=0xff0000)
-        )
 
 async def restart_server(interaction: discord.Interaction, container_name: str):
     """
@@ -1180,5 +1174,3 @@ async def node_admin(interaction: discord.Interaction):
 
 logging.warning("DEPRECATED: b2.py is legacy. Use main.py instead. This file will be removed in a future release.")
 bot.run(TOKEN)
-    # Gibt die Anzahl der Server zurück
-    return len(get_user_servers(userid)) """

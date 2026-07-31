@@ -41,10 +41,11 @@ CREATE TABLE IF NOT EXISTS docker_apps (
   labels JSONB, -- {tier: 'production', team: 'web', ...}
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  started_at TIMESTAMP WITH TIME ZONE,
-  INDEX idx_user_id (user_id),
-  INDEX idx_status (status)
+  started_at TIMESTAMP WITH TIME ZONE
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_id ON docker_apps (user_id);
+CREATE INDEX IF NOT EXISTS idx_status ON docker_apps (status);
 
 -- App Logs (optional: for log streaming)
 CREATE TABLE IF NOT EXISTS app_logs (
@@ -52,9 +53,10 @@ CREATE TABLE IF NOT EXISTS app_logs (
   app_id UUID NOT NULL REFERENCES docker_apps(id) ON DELETE CASCADE,
   level VARCHAR(20) DEFAULT 'info' CHECK (level IN ('debug', 'info', 'warn', 'error')),
   message TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_app_id_created (app_id, created_at DESC)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_app_id_created ON app_logs (app_id, created_at DESC);
 
 -- Pterodactyl Configuration (for optional remote panel support)
 CREATE TABLE IF NOT EXISTS pterodactyl_config (

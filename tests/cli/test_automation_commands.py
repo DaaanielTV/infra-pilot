@@ -573,6 +573,7 @@ class TestCLIHealingCommands:
             mock_client.healing_retrain.side_effect = [
                 {"status": "retraining", "model_version": 1},
                 {"status": "retraining", "model_version": 2},
+                {"status": "retraining", "model_version": 3},
             ]
             mock_get.return_value = mock_client
             from cli.ipilot.cli import cmd_heal_retrain
@@ -611,13 +612,17 @@ class TestCLIAllAutomationCommands:
             ("heal_status", {}),
             ("heal_history", {}),
         ]
+        import cli.ipilot.cli as cli_module
         for cmd_name, kwargs in commands:
+            cmd_func = getattr(cli_module, f"cmd_{cmd_name}", None)
+            assert callable(cmd_func), f"cli command {cmd_name} is not implemented"
             with patch("cli.ipilot.cli.get_client") as mock_get:
                 mock_client = MagicMock()
                 getattr(mock_client, cmd_name).return_value = {"status": "ok"}
                 mock_get.return_value = mock_client
-                from cli.ipilot.cli import cmd_map
-                assert cmd_name in cmd_map or True
+                args = argparse.Namespace(output="json", **kwargs)
+                cmd_func(args)
+                assert mock_client.mock_calls, f"{cmd_name} did not call the API client"
 
     def test_output_format_handling(self):
         with patch("cli.ipilot.cli.get_client") as mock_get:

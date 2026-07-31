@@ -1,4 +1,5 @@
 import typer
+
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
@@ -8,7 +9,9 @@ app = typer.Typer(help="Server management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
@@ -17,10 +20,10 @@ def list(
     output: str = typer.Option(None, "--output", "-o", help="Output format"),
 ) -> None:
     """List all servers
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """
@@ -38,10 +41,10 @@ def create(
     memory: int = typer.Option(None, "--memory", "-m", help="Memory in MB"),
 ) -> None:
     """Create a new server
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """
@@ -56,10 +59,10 @@ def delete(
     server: str = typer.Argument(..., help="Server ID or name"),
 ) -> None:
     """Delete a server
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """
@@ -74,10 +77,10 @@ def status(
     server: str = typer.Argument(..., help="Server ID or name"),
 ) -> None:
     """Get server status
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """

@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from typing import Dict, Optional, Callable
+from typing import Callable, Dict, Optional
 
 import typer
 
@@ -31,15 +31,20 @@ def create_app() -> typer.Typer:
     def main_options(
         ctx: typer.Context,
         output: Optional[str] = typer.Option(
-            None, "--output", "-o",
+            None,
+            "--output",
+            "-o",
             help="Output format: json, table, yaml, or plain",
         ),
         profile: Optional[str] = typer.Option(
-            None, "--profile", "-p",
+            None,
+            "--profile",
+            "-p",
             help="Which config profile to use",
         ),
         no_color: bool = typer.Option(
-            False, "--no-color",
+            False,
+            "--no-color",
             help="Turn off colored output",
         ),
     ):

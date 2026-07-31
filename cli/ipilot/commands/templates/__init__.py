@@ -24,13 +24,17 @@ TEMPLATE_TYPES = {
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
 def list(
     ctx: typer.Context,
-    template_type: Optional[str] = typer.Option(None, "--type", "-t", help=f"Template type: {', '.join(TEMPLATE_TYPES.keys())}"),
+    template_type: Optional[str] = typer.Option(
+        None, "--type", "-t", help=f"Template type: {', '.join(TEMPLATE_TYPES.keys())}"
+    ),
 ):
     """List available deployment templates."""
     client = _get_client(ctx)
@@ -56,8 +60,12 @@ def deploy(
     template: str = typer.Argument(..., help="Template name"),
     name: str = typer.Argument(..., help="Deployment name"),
     server: Optional[str] = typer.Option(None, "--server", "-s", help="Target server"),
-    variables: Optional[str] = typer.Option(None, "--vars", help="Template variables as JSON"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deployed"),
+    variables: Optional[str] = typer.Option(
+        None, "--vars", help="Template variables as JSON"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be deployed"
+    ),
 ):
     """Deploy a template."""
     import json
@@ -72,14 +80,18 @@ def deploy(
         with open("ipilot-vars.json") as f:
             variables_dict = json.load(f)
 
-    result = client.deploy_template(template, name, server=server, variables=variables_dict, dry_run=dry_run)
+    result = client.deploy_template(
+        template, name, server=server, variables=variables_dict, dry_run=dry_run
+    )
     print_output(result, ctx.obj.get("output", "table"))
 
 
 @app.command()
 def init(
     ctx: typer.Context,
-    template: str = typer.Argument(..., help=f"Template type: {', '.join(TEMPLATE_TYPES.keys())}"),
+    template: str = typer.Argument(
+        ..., help=f"Template type: {', '.join(TEMPLATE_TYPES.keys())}"
+    ),
     name: str = typer.Argument(..., help="Project name"),
     output_dir: str = typer.Option(".", "--output", "-o", help="Output directory"),
 ):

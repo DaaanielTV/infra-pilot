@@ -1,7 +1,7 @@
 """Infrastructure as Code (GitOps) - YAML configs, apply, plan, drift detection."""
 
-import os
 import json
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -17,14 +17,20 @@ app = typer.Typer(help="Infrastructure as Code (GitOps) commands")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
 def export(
     ctx: typer.Context,
-    output: str = typer.Option("ipilot-config.yaml", "--output", "-o", help="Output YAML file"),
-    server: Optional[str] = typer.Option(None, "--server", "-s", help="Export specific server"),
+    output: str = typer.Option(
+        "ipilot-config.yaml", "--output", "-o", help="Output YAML file"
+    ),
+    server: Optional[str] = typer.Option(
+        None, "--server", "-s", help="Export specific server"
+    ),
 ):
     """Export all infrastructure config as YAML (GitOps)."""
     client = _get_client(ctx)
@@ -77,13 +83,22 @@ def export(
     with open(output, "w", encoding="utf-8") as f:
         yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
 
-    print_output({"status": "exported", "file": output, "servers": len(config_data["spec"]["servers"])}, ctx.obj.get("output", "table"))
+    print_output(
+        {
+            "status": "exported",
+            "file": output,
+            "servers": len(config_data["spec"]["servers"]),
+        },
+        ctx.obj.get("output", "table"),
+    )
 
 
 @app.command()
 def plan(
     ctx: typer.Context,
-    file: str = typer.Option("ipilot-config.yaml", "--file", "-f", help="YAML config file"),
+    file: str = typer.Option(
+        "ipilot-config.yaml", "--file", "-f", help="YAML config file"
+    ),
 ):
     """Show diff between current infra and YAML config (plan)."""
     client = _get_client(ctx)
@@ -119,7 +134,14 @@ def plan(
                         if k in ds and ds[k] != cs.get(k):
                             diff_keys.append(k)
                     if diff_keys:
-                        changes.append({"action": "update", "resource": "server", "name": name, "fields": ",".join(diff_keys)})
+                        changes.append(
+                            {
+                                "action": "update",
+                                "resource": "server",
+                                "name": name,
+                                "fields": ",".join(diff_keys),
+                            }
+                        )
                     break
 
     for cs in current_servers:
@@ -128,7 +150,9 @@ def plan(
             changes.append({"action": "delete", "resource": "server", "name": name})
 
     if not changes:
-        print_output({"message": "No changes detected. Infrastructure is up-to-date."}, "plain")
+        print_output(
+            {"message": "No changes detected. Infrastructure is up-to-date."}, "plain"
+        )
         return
 
     print_output(changes, "table")
@@ -137,9 +161,15 @@ def plan(
 @app.command()
 def apply(
     ctx: typer.Context,
-    file: str = typer.Option("ipilot-config.yaml", "--file", "-f", help="YAML config file"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would change without applying"),
-    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation prompt"),
+    file: str = typer.Option(
+        "ipilot-config.yaml", "--file", "-f", help="YAML config file"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would change without applying"
+    ),
+    auto_approve: bool = typer.Option(
+        False, "--auto-approve", "-y", help="Skip confirmation prompt"
+    ),
 ):
     """Apply YAML config to infrastructure (GitOps)."""
     client = _get_client(ctx)
@@ -178,9 +208,13 @@ def apply(
                 server_type=ds.get("type", "standard"),
                 memory=ds.get("memory"),
             )
-            results.append({"server": ds.get("name"), "status": "created", "result": str(result)})
+            results.append(
+                {"server": ds.get("name"), "status": "created", "result": str(result)}
+            )
         except Exception as e:
-            results.append({"server": ds.get("name"), "status": "error", "error": str(e)})
+            results.append(
+                {"server": ds.get("name"), "status": "error", "error": str(e)}
+            )
 
     drift_result = client.drift_scan()
     if isinstance(drift_result, dict) and "error" not in drift_result:
@@ -210,7 +244,9 @@ def drift(
 def import_config(
     ctx: typer.Context,
     file: str = typer.Argument(..., help="YAML file to import"),
-    plan_only: bool = typer.Option(False, "--plan-only", help="Only show plan, don't apply"),
+    plan_only: bool = typer.Option(
+        False, "--plan-only", help="Only show plan, don't apply"
+    ),
 ):
     """Import infrastructure config from a YAML file."""
     return export(ctx, output=file)

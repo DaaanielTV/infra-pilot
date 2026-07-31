@@ -1,4 +1,5 @@
 import typer
+
 from ...client import ApiClient
 from ...config import load_config
 from ...output.formatters import print_output
@@ -8,7 +9,9 @@ app = typer.Typer(help="Backup management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
@@ -17,10 +20,10 @@ def list(
     server: str = typer.Argument(None, help="Server ID (optional)"),
 ) -> None:
     """List backups
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """
@@ -34,13 +37,15 @@ def list(
 def create(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
-    s3_target: str = typer.Option(None, "--s3", help="S3/Backblaze target (bucket:path)"),
+    s3_target: str = typer.Option(
+        None, "--s3", help="S3/Backblaze target (bucket:path)"
+    ),
 ) -> None:
     """Create a backup
-    
+
     Args:
         ctx: Typer context for accessing config and output format.
-    
+
     Returns:
         None (output is printed via print_output).
     """
@@ -53,15 +58,28 @@ def create(
 def schedule(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
-    interval: str = typer.Option("daily", "--interval", "-i", help="Interval: hourly, daily, weekly"),
-    retention: int = typer.Option(7, "--retention", "-r", help="Number of backups to retain"),
-    s3_target: str = typer.Option(None, "--s3", help="S3/Backblaze target for offsite storage"),
+    interval: str = typer.Option(
+        "daily", "--interval", "-i", help="Interval: hourly, daily, weekly"
+    ),
+    retention: int = typer.Option(
+        7, "--retention", "-r", help="Number of backups to retain"
+    ),
+    s3_target: str = typer.Option(
+        None, "--s3", help="S3/Backblaze target for offsite storage"
+    ),
 ):
     """Schedule automated backups"""
     client = _get_client(ctx)
-    result = client._post("/backup-jobs", {
-        "app_id": server, "name": f"auto-{server}", "schedule_type": interval, "retention_count": retention, "s3_target": s3_target,
-    })
+    result = client._post(
+        "/backup-jobs",
+        {
+            "app_id": server,
+            "name": f"auto-{server}",
+            "schedule_type": interval,
+            "retention_count": retention,
+            "s3_target": s3_target,
+        },
+    )
     print_output(result, ctx.obj.get("output", "table"))
 
 
@@ -91,11 +109,15 @@ def snapshots(
 def restore(
     ctx: typer.Context,
     backup_id: str = typer.Argument(..., help="Backup ID or name"),
-    target: str = typer.Option(None, "--target", "-t", help="Target server for restore"),
+    target: str = typer.Option(
+        None, "--target", "-t", help="Target server for restore"
+    ),
 ):
     """Restore from a backup"""
     client = _get_client(ctx)
-    result = client._post(f"/backups/{backup_id}/restore", {"target": target} if target else {})
+    result = client._post(
+        f"/backups/{backup_id}/restore", {"target": target} if target else {}
+    )
     print_output(result, ctx.obj.get("output", "table"))
 
 
@@ -105,11 +127,19 @@ def config(
     s3_bucket: str = typer.Option(None, "--s3-bucket", help="S3/Backblaze bucket name"),
     s3_key: str = typer.Option(None, "--s3-key", help="S3/Backblaze access key"),
     s3_secret: str = typer.Option(None, "--s3-secret", help="S3/Backblaze secret key"),
-    s3_endpoint: str = typer.Option(None, "--s3-endpoint", help="S3-compatible endpoint URL"),
+    s3_endpoint: str = typer.Option(
+        None, "--s3-endpoint", help="S3-compatible endpoint URL"
+    ),
 ):
     """Configure backup storage (S3/Backblaze)"""
     client = _get_client(ctx)
-    result = client._post("/backup/config", {
-        "s3_bucket": s3_bucket, "s3_key": s3_key, "s3_secret": s3_secret, "s3_endpoint": s3_endpoint,
-    })
+    result = client._post(
+        "/backup/config",
+        {
+            "s3_bucket": s3_bucket,
+            "s3_key": s3_key,
+            "s3_secret": s3_secret,
+            "s3_endpoint": s3_endpoint,
+        },
+    )
     print_output(result, ctx.obj.get("output", "table"))

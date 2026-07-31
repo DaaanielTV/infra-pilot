@@ -31,10 +31,12 @@ class ApiClient:
     def __init__(self, base_url: str, token: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        })
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+        )
         if token:
             self.session.headers["Authorization"] = f"Bearer {token}"
 
@@ -64,9 +66,7 @@ class ApiClient:
         """
         url = f"{self.base_url}{API_PREFIX}{path}"
         try:
-            resp = self.session.request(
-                method, url, json=data, timeout=DEFAULT_TIMEOUT
-            )
+            resp = self.session.request(method, url, json=data, timeout=DEFAULT_TIMEOUT)
             resp.raise_for_status()
             if resp.content:
                 return resp.json()
@@ -78,10 +78,18 @@ class ApiClient:
             except (json.JSONDecodeError, AttributeError):
                 msg = str(exc)
             if status == 404:
-                logger.warning("Endpoint not found (404): %s – this endpoint may not be implemented yet", path)
-                msg = f"Not found: {path} – the backend does not implement this endpoint"
+                logger.warning(
+                    "Endpoint not found (404): %s – this endpoint may not be implemented yet",
+                    path,
+                )
+                msg = (
+                    f"Not found: {path} – the backend does not implement this endpoint"
+                )
             elif status == 501:
-                logger.warning("Not implemented (501): %s – the backend received your request but does not support it", path)
+                logger.warning(
+                    "Not implemented (501): %s – the backend received your request but does not support it",
+                    path,
+                )
                 msg = f"Not implemented: {path} – the backend does not support this operation"
             else:
                 logger.warning("HTTP error %s on %s: %s", status, path, msg)
@@ -104,9 +112,7 @@ class ApiClient:
         """
         return self._request("GET", path)
 
-    def _post(
-        self, path: str, data: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def _post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """Send a POST request.
 
         Args:
@@ -118,9 +124,7 @@ class ApiClient:
         """
         return self._request("POST", path, data)
 
-    def _put(
-        self, path: str, data: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def _put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """Send a PUT request.
 
         Args:
@@ -223,9 +227,7 @@ class ApiClient:
         """
         return self._request("GET", f"/apps/{server_id}/status")
 
-    def get_logs(
-        self, server_id: str, lines: int = 50, follow: bool = False
-    ) -> Any:
+    def get_logs(self, server_id: str, lines: int = 50, follow: bool = False) -> Any:
         """Fetch server logs.
 
         Args:
@@ -253,7 +255,15 @@ class ApiClient:
         Args:
             server_id: The server ID.
         """
-        return self._request("POST", "/backup-jobs", {"app_id": server_id, "name": f"backup-{server_id}", "schedule_type": "manual"})
+        return self._request(
+            "POST",
+            "/backup-jobs",
+            {
+                "app_id": server_id,
+                "name": f"backup-{server_id}",
+                "schedule_type": "manual",
+            },
+        )
 
     def deploy(self, server_id: str, branch: str) -> Any:
         """Deploy a branch to a server.
@@ -265,7 +275,12 @@ class ApiClient:
         return self._request(
             "POST",
             "/deployments",
-            {"name": f"deploy-{server_id}", "repoUrl": branch, "branch": branch, "containerId": server_id},
+            {
+                "name": f"deploy-{server_id}",
+                "repoUrl": branch,
+                "branch": branch,
+                "containerId": server_id,
+            },
         )  # TODO: backend expects name + repoUrl (git URL); branch alone is insufficient – verify
 
     def health_check(self) -> Any:
@@ -283,7 +298,13 @@ class ApiClient:
             path += f"?status={status}"
         return self._request("GET", path)
 
-    def ssh_connect(self, server: str, user: str = "root", jump_host: Optional[str] = None, port: int = 22) -> Any:
+    def ssh_connect(
+        self,
+        server: str,
+        user: str = "root",
+        jump_host: Optional[str] = None,
+        port: int = 22,
+    ) -> Any:
         """Connect to a server via SSH."""
         data = {"server": server, "user": user, "port": port}
         if jump_host:
@@ -296,7 +317,9 @@ class ApiClient:
 
     def create_jump_host(self, name: str, host: str, user: str) -> Any:
         """Create a jump host entry."""
-        return self._request("POST", "/ssh/jump-hosts", {"name": name, "host": host, "user": user})
+        return self._request(
+            "POST", "/ssh/jump-hosts", {"name": name, "host": host, "user": user}
+        )
 
     def list_ssh_keys(self) -> Any:
         """List SSH keys."""
@@ -320,7 +343,9 @@ class ApiClient:
 
     def save_ssh_host(self, name: str, host: str, port: int = 22) -> Any:
         """Save an SSH host."""
-        return self._request("POST", "/ssh/saved-hosts", {"name": name, "host": host, "port": port})
+        return self._request(
+            "POST", "/ssh/saved-hosts", {"name": name, "host": host, "port": port}
+        )
 
     def delete_saved_host(self, host_id: str) -> Any:
         """Delete a saved SSH host."""
@@ -376,9 +401,20 @@ class ApiClient:
             p += f"?version={version}"
         return self._request("GET", p)
 
-    def set_secret(self, key: str, value: str, rotate: bool = False, rotation_days: int = 90) -> Any:
+    def set_secret(
+        self, key: str, value: str, rotate: bool = False, rotation_days: int = 90
+    ) -> Any:
         """Set a secret value."""
-        return self._request("POST", "/secrets", {"key": key, "value": value, "rotate": rotate, "rotation_days": rotation_days})
+        return self._request(
+            "POST",
+            "/secrets",
+            {
+                "key": key,
+                "value": value,
+                "rotate": rotate,
+                "rotation_days": rotation_days,
+            },
+        )
 
     def delete_secret(self, key: str) -> Any:
         """Delete a secret."""
@@ -420,7 +456,9 @@ class ApiClient:
         """List webhooks."""
         return self._request("GET", "/webhooks")
 
-    def create_webhook(self, name: str, url: str, events: List[str], secret: Optional[str] = None) -> Any:
+    def create_webhook(
+        self, name: str, url: str, events: List[str], secret: Optional[str] = None
+    ) -> Any:
         """Create a webhook."""
         data = {"name": name, "url": url, "events": events}
         if secret:
@@ -431,7 +469,9 @@ class ApiClient:
         """Delete a webhook."""
         return self._request("DELETE", f"/webhooks/{webhook_id}")
 
-    def test_webhook(self, webhook_id: Optional[str] = None, event: str = "test") -> Any:
+    def test_webhook(
+        self, webhook_id: Optional[str] = None, event: str = "test"
+    ) -> Any:
         """Test a webhook."""
         path = f"/webhooks/{webhook_id}/test" if webhook_id else "/webhooks/test"
         return self._request("POST", path, {"event": event})
@@ -449,7 +489,9 @@ class ApiClient:
         """List API keys."""
         return self._request("GET", "/api-keys")
 
-    def create_api_key(self, name: str, role: str = "user", expire_days: Optional[int] = None) -> Any:
+    def create_api_key(
+        self, name: str, role: str = "user", expire_days: Optional[int] = None
+    ) -> Any:
         """Create an API key."""
         data = {"name": name, "role": role}
         if expire_days:
@@ -469,11 +511,15 @@ class ApiClient:
         path = "/plugins?installed=true" if installed_only else "/plugins"
         return self._request("GET", path)
 
-    def install_plugin(self, name: str, source: Optional[str] = None, version: Optional[str] = None) -> Any:
+    def install_plugin(
+        self, name: str, source: Optional[str] = None, version: Optional[str] = None
+    ) -> Any:
         """Install a plugin."""
         data = {"name": name}
-        if source: data["source"] = source
-        if version: data["version"] = version
+        if source:
+            data["source"] = source
+        if version:
+            data["version"] = version
         return self._request("POST", "/plugins/install", data)
 
     def uninstall_plugin(self, name: str) -> Any:
@@ -509,17 +555,31 @@ class ApiClient:
         """Get template details."""
         return self._request("GET", f"/templates/{template}")
 
-    def deploy_template(self, template: str, name: str, server: Optional[str] = None, variables: Optional[Dict[str, Any]] = None, dry_run: bool = False) -> Any:
+    def deploy_template(
+        self,
+        template: str,
+        name: str,
+        server: Optional[str] = None,
+        variables: Optional[Dict[str, Any]] = None,
+        dry_run: bool = False,
+    ) -> Any:
         """Deploy a template."""
         data = {"template": template, "name": name}
-        if server: data["server"] = server
-        if variables: data["variables"] = variables
-        if dry_run: data["dry_run"] = True
+        if server:
+            data["server"] = server
+        if variables:
+            data["variables"] = variables
+        if dry_run:
+            data["dry_run"] = True
         return self._request("POST", "/templates/deploy", data)
 
     def init_template(self, template: str, name: str, output_dir: str = ".") -> Any:
         """Initialize a project from a template."""
-        return self._request("POST", "/templates/init", {"template": template, "name": name, "output_dir": output_dir})
+        return self._request(
+            "POST",
+            "/templates/init",
+            {"template": template, "name": name, "output_dir": output_dir},
+        )
 
     # ------------------------------------------------------------------
     # Doctor / Benchmark / Diagnose
@@ -527,7 +587,9 @@ class ApiClient:
 
     def benchmark_server(self, server: str, duration: int = 10) -> Any:
         """Benchmark a server."""
-        return self._request("POST", f"/doctor/benchmark/{server}", {"duration": duration})
+        return self._request(
+            "POST", f"/doctor/benchmark/{server}", {"duration": duration}
+        )
 
     def benchmark_system(self, duration: int = 10) -> Any:
         """Benchmark the local system."""
@@ -536,13 +598,15 @@ class ApiClient:
     def diagnose_server(self, server: str, issue: Optional[str] = None) -> Any:
         """Diagnose a server."""
         data = {}
-        if issue: data["issue"] = issue
+        if issue:
+            data["issue"] = issue
         return self._request("POST", f"/doctor/diagnose/{server}", data)
 
     def diagnose_system(self, issue: Optional[str] = None) -> Any:
         """Diagnose the local system."""
         data = {}
-        if issue: data["issue"] = issue
+        if issue:
+            data["issue"] = issue
         return self._request("POST", "/doctor/diagnose", data)
 
     # ------------------------------------------------------------------
@@ -552,25 +616,32 @@ class ApiClient:
     def list_changes(self, resource: Optional[str] = None, limit: int = 20) -> Any:
         """List recent changes."""
         params = f"?limit={limit}"
-        if resource: params += f"&resource={resource}"
+        if resource:
+            params += f"&resource={resource}"
         return self._request("GET", f"/changes{params}")
 
     def undo_change(self, change_id: str, dry_run: bool = False) -> Any:
         """Undo a change."""
         return self._request("POST", f"/changes/{change_id}/undo", {"dry_run": dry_run})
 
-    def rollback_resource(self, resource_type: str, resource_id: str, version: Optional[str] = None) -> Any:
+    def rollback_resource(
+        self, resource_type: str, resource_id: str, version: Optional[str] = None
+    ) -> Any:
         """Rollback a resource."""
         data = {"resource_type": resource_type, "resource_id": resource_id}
-        if version: data["version"] = version
+        if version:
+            data["version"] = version
         return self._request("POST", "/rollback", data)
 
-    def get_change_history(self, resource_type: Optional[str] = None, resource_id: Optional[str] = None) -> Any:
+    def get_change_history(
+        self, resource_type: Optional[str] = None, resource_id: Optional[str] = None
+    ) -> Any:
         """Get change history."""
         params = []
-        if resource_type: params.append(f"resource_type={resource_type}")
-        if resource_id: params.append(f"resource_id={resource_id}")
+        if resource_type:
+            params.append(f"resource_type={resource_type}")
+        if resource_id:
+            params.append(f"resource_id={resource_id}")
         qs = "&".join(params)
         path = f"/changes/history?{qs}" if qs else "/changes/history"
         return self._request("GET", path)
-

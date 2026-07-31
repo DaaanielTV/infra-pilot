@@ -4,13 +4,14 @@ This module provides backward compatibility by wrapping the legacy argparse
 CLI (cli.py) so that callers can dispatch old-style commands programmatically.
 New code should use the Typer-based interface from ipilot.main instead.
 """
+
 import argparse
 import sys
 import warnings
 
 from .. import __version__
-from ..config import load_config
 from ..client import ApiClient
+from ..config import load_config
 
 _legacy_module = None
 
@@ -30,7 +31,8 @@ def build_legacy_parser():
 def dispatch_legacy(cmd_name: str, subcmd_name: str = None, **kwargs):
     warnings.warn(
         "bridge.dispatch_legacy() is deprecated. Use the Typer CLI directly via `ipilot`.",
-        DeprecationWarning, stacklevel=2,
+        DeprecationWarning,
+        stacklevel=2,
     )
     leg = _get_legacy()
     parser = leg.build_parser()
@@ -51,6 +53,6 @@ def dispatch_legacy(cmd_name: str, subcmd_name: str = None, **kwargs):
 def get_client():
     """Return an ApiClient using the shared config (bridge-friendly, no Typer context needed)."""
     config = load_config()
-    return ApiClient(config.get('api_url', 'http://localhost:8080'), config.get('token'))
-
-
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )

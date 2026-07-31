@@ -13,7 +13,9 @@ app = typer.Typer(help="API key management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
@@ -31,8 +33,12 @@ def list(
 def create(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Key name"),
-    role: str = typer.Option("user", "--role", "-r", help="Role (admin, user, readonly)"),
-    expire_days: Optional[int] = typer.Option(None, "--expire", "-e", help="Expiration in days"),
+    role: str = typer.Option(
+        "user", "--role", "-r", help="Role (admin, user, readonly)"
+    ),
+    expire_days: Optional[int] = typer.Option(
+        None, "--expire", "-e", help="Expiration in days"
+    ),
 ):
     """Create a new API key."""
     client = _get_client(ctx)

@@ -13,13 +13,17 @@ app = typer.Typer(help="SSH session management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
 def list(
     ctx: typer.Context,
-    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status (active, closed)"),
+    status: Optional[str] = typer.Option(
+        None, "--status", "-s", help="Filter by status (active, closed)"
+    ),
 ):
     """List SSH sessions."""
     client = _get_client(ctx)
@@ -45,9 +49,13 @@ def connect(
 @app.command()
 def jump_hosts(
     ctx: typer.Context,
-    create: Optional[str] = typer.Option(None, "--create", help="Create a jump host entry (name)"),
+    create: Optional[str] = typer.Option(
+        None, "--create", help="Create a jump host entry (name)"
+    ),
     host: Optional[str] = typer.Option(None, "--host", help="Jump host address"),
-    user: Optional[str] = typer.Option(None, "--user", "-u", help="SSH user for jump host"),
+    user: Optional[str] = typer.Option(
+        None, "--user", "-u", help="SSH user for jump host"
+    ),
 ):
     """Manage SSH jump hosts."""
     client = _get_client(ctx)
@@ -62,14 +70,19 @@ def jump_hosts(
 @app.command()
 def keys(
     ctx: typer.Context,
-    add: Optional[str] = typer.Option(None, "--add", help="Add SSH public key (path or string)"),
+    add: Optional[str] = typer.Option(
+        None, "--add", help="Add SSH public key (path or string)"
+    ),
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Key name"),
-    delete: Optional[str] = typer.Option(None, "--delete", help="Delete key by name or ID"),
+    delete: Optional[str] = typer.Option(
+        None, "--delete", help="Delete key by name or ID"
+    ),
 ):
     """Manage SSH keys."""
     client = _get_client(ctx)
     if add:
         import os
+
         key_path = os.path.expanduser(add)
         if os.path.exists(key_path):
             with open(key_path) as f:
@@ -102,7 +115,9 @@ def record(
 def saved(
     ctx: typer.Context,
     list: bool = typer.Option(False, "--list", "-l", help="List saved hosts"),
-    add: Optional[str] = typer.Option(None, "--add", help="Save a new host (name@host:port)"),
+    add: Optional[str] = typer.Option(
+        None, "--add", help="Save a new host (name@host:port)"
+    ),
     delete: Optional[str] = typer.Option(None, "--delete", help="Delete saved host"),
 ):
     """Manage saved SSH hosts."""

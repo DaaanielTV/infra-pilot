@@ -13,13 +13,17 @@ app = typer.Typer(help="Plugin management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
 def list(
     ctx: typer.Context,
-    installed: bool = typer.Option(False, "--installed", help="Show only installed plugins"),
+    installed: bool = typer.Option(
+        False, "--installed", help="Show only installed plugins"
+    ),
 ):
     """List available and installed plugins."""
     client = _get_client(ctx)
@@ -32,8 +36,12 @@ def list(
 def install(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Plugin name"),
-    source: Optional[str] = typer.Option(None, "--source", "-s", help="Plugin source (URL or path)"),
-    version: Optional[str] = typer.Option(None, "--version", "-v", help="Plugin version"),
+    source: Optional[str] = typer.Option(
+        None, "--source", "-s", help="Plugin source (URL or path)"
+    ),
+    version: Optional[str] = typer.Option(
+        None, "--version", "-v", help="Plugin version"
+    ),
 ):
     """Install a plugin."""
     client = _get_client(ctx)
@@ -55,7 +63,9 @@ def uninstall(
 @app.command()
 def update(
     ctx: typer.Context,
-    name: Optional[str] = typer.Option(None, "--name", "-n", help="Plugin name to update"),
+    name: Optional[str] = typer.Option(
+        None, "--name", "-n", help="Plugin name to update"
+    ),
     all: bool = typer.Option(False, "--all", help="Update all plugins"),
 ):
     """Update plugins."""

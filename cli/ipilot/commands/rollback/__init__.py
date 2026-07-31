@@ -13,13 +13,17 @@ app = typer.Typer(help="Undo/rollback infrastructure changes")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
 def list(
     ctx: typer.Context,
-    resource: Optional[str] = typer.Option(None, "--resource", "-r", help="Resource type (server, deploy, config)"),
+    resource: Optional[str] = typer.Option(
+        None, "--resource", "-r", help="Resource type (server, deploy, config)"
+    ),
     limit: int = typer.Option(20, "--limit", "-l", help="Number of changes to show"),
 ):
     """List recent changes available for rollback."""
@@ -33,7 +37,9 @@ def list(
 def undo(
     ctx: typer.Context,
     change_id: str = typer.Argument(..., help="Change ID to undo"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be undone without executing"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be undone without executing"
+    ),
 ):
     """Undo a specific change."""
     client = _get_client(ctx)
@@ -44,9 +50,13 @@ def undo(
 @app.command()
 def rollback(
     ctx: typer.Context,
-    resource_type: str = typer.Argument(..., help="Resource type to rollback (server, deploy, config)"),
+    resource_type: str = typer.Argument(
+        ..., help="Resource type to rollback (server, deploy, config)"
+    ),
     resource_id: str = typer.Argument(..., help="Resource ID"),
-    version: Optional[str] = typer.Option(None, "--version", "-v", help="Version/timestamp to rollback to"),
+    version: Optional[str] = typer.Option(
+        None, "--version", "-v", help="Version/timestamp to rollback to"
+    ),
 ):
     """Rollback a resource to a previous version."""
     client = _get_client(ctx)
@@ -57,11 +67,15 @@ def rollback(
 @app.command()
 def history(
     ctx: typer.Context,
-    resource_type: Optional[str] = typer.Option(None, "--resource", "-r", help="Resource type"),
+    resource_type: Optional[str] = typer.Option(
+        None, "--resource", "-r", help="Resource type"
+    ),
     resource_id: Optional[str] = typer.Option(None, "--id", help="Resource ID"),
 ):
     """View change history."""
     client = _get_client(ctx)
-    result = client.get_change_history(resource_type=resource_type, resource_id=resource_id)
+    result = client.get_change_history(
+        resource_type=resource_type, resource_id=resource_id
+    )
     data = result if isinstance(result, list) else result.get("history", result)
     print_output(data, ctx.obj.get("output", "table"))

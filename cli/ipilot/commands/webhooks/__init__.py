@@ -13,7 +13,9 @@ app = typer.Typer(help="Webhook management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
@@ -32,8 +34,15 @@ def create(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Webhook name"),
     url: str = typer.Argument(..., help="Webhook target URL"),
-    events: str = typer.Option("deploy,backup,alert", "--events", "-e", help="Comma-separated events to trigger on"),
-    secret: Optional[str] = typer.Option(None, "--secret", "-s", help="Webhook secret for signature"),
+    events: str = typer.Option(
+        "deploy,backup,alert",
+        "--events",
+        "-e",
+        help="Comma-separated events to trigger on",
+    ),
+    secret: Optional[str] = typer.Option(
+        None, "--secret", "-s", help="Webhook secret for signature"
+    ),
 ):
     """Create a new webhook."""
     client = _get_client(ctx)

@@ -22,9 +22,11 @@ def register(name: str, help_text: str = ""):
     Returns:
         A decorator that registers the app and returns it.
     """
+
     def decorator(app: typer.Typer):
         _registry[name] = (app, help_text)
         return app
+
     return decorator
 
 

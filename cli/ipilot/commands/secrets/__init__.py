@@ -13,7 +13,9 @@ app = typer.Typer(help="Secret management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", "http://localhost:8080"), config.get("token"))
+    return ApiClient(
+        config.get("api_url", "http://localhost:8080"), config.get("token")
+    )
 
 
 @app.command()
@@ -32,7 +34,9 @@ def list(
 def get(
     ctx: typer.Context,
     key: str = typer.Argument(..., help="Secret key"),
-    version: Optional[int] = typer.Option(None, "--version", "-v", help="Specific version"),
+    version: Optional[int] = typer.Option(
+        None, "--version", "-v", help="Specific version"
+    ),
 ):
     """Get a secret value."""
     client = _get_client(ctx)
@@ -46,7 +50,9 @@ def set(
     key: str = typer.Argument(..., help="Secret key"),
     value: str = typer.Argument(..., help="Secret value"),
     rotate: bool = typer.Option(False, "--rotate", help="Mark for automatic rotation"),
-    rotation_days: int = typer.Option(90, "--rotation-days", help="Rotation interval in days"),
+    rotation_days: int = typer.Option(
+        90, "--rotation-days", help="Rotation interval in days"
+    ),
 ):
     """Set a secret value (creates new version)."""
     client = _get_client(ctx)
@@ -80,8 +86,12 @@ def versions(
 @app.command()
 def rotate(
     ctx: typer.Context,
-    key: Optional[str] = typer.Option(None, "--key", "-k", help="Rotate a specific secret"),
-    all: bool = typer.Option(False, "--all", help="Rotate all secrets due for rotation"),
+    key: Optional[str] = typer.Option(
+        None, "--key", "-k", help="Rotate a specific secret"
+    ),
+    all: bool = typer.Option(
+        False, "--all", help="Rotate all secrets due for rotation"
+    ),
 ):
     """Rotate secrets."""
     client = _get_client(ctx)
@@ -102,8 +112,12 @@ def rotate(
 def roles(
     ctx: typer.Context,
     key: str = typer.Argument(..., help="Secret key"),
-    grant: Optional[str] = typer.Option(None, "--grant", "-g", help="Grant access to role"),
-    revoke: Optional[str] = typer.Option(None, "--revoke", help="Revoke access from role"),
+    grant: Optional[str] = typer.Option(
+        None, "--grant", "-g", help="Grant access to role"
+    ),
+    revoke: Optional[str] = typer.Option(
+        None, "--revoke", help="Revoke access from role"
+    ),
 ):
     """Manage role-based access to secrets."""
     client = _get_client(ctx)

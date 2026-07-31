@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from .command_registry import register, discover_commands, attach_to_app, get_registry
+from .command_registry import attach_to_app, discover_commands, get_registry, register
 from .exceptions import (
-    CLIError,
     APIError,
-    ConfigError,
-    CommandNotFoundError,
     AuthenticationError,
+    CLIError,
+    CommandNotFoundError,
+    ConfigError,
     ConnectionError,
     ValidationError,
 )
@@ -20,6 +20,7 @@ def __getattr__(name: str) -> Any:
 
         return getattr(cli, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "create_app",

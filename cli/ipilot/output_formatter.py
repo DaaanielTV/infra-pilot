@@ -109,9 +109,7 @@ def _dict_table(items: List[Dict]) -> str:
     sep = "-+-".join("-" * col_widths[k] for k in keys)
     rows = [header, sep]
     for item in items:
-        rows.append(
-            " | ".join(str(item.get(k, "")).ljust(col_widths[k]) for k in keys)
-        )
+        rows.append(" | ".join(str(item.get(k, "")).ljust(col_widths[k]) for k in keys))
     return "\n".join(rows)
 
 

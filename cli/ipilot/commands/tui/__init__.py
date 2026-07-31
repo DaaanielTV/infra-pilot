@@ -1,6 +1,7 @@
 """TUI mode - Textual-based interactive terminal UI."""
 
 import typer
+
 from ...output.formatters import print_output
 
 app = typer.Typer(help="Text-based terminal UI mode")
@@ -12,11 +13,12 @@ def dashboard(
 ):
     """Open the interactive TUI dashboard."""
     try:
-        from textual.app import App, ComposeResult
-        from textual.widgets import Header, Footer, Static, DataTable, RichLog
-        from textual.screen import Screen
-        from textual.containers import Horizontal, Vertical
         import asyncio
+
+        from textual.app import App, ComposeResult
+        from textual.containers import Horizontal, Vertical
+        from textual.screen import Screen
+        from textual.widgets import DataTable, Footer, Header, RichLog, Static
 
         class DashboardApp(App):
             TITLE = "Infra Pilot TUI"
@@ -65,7 +67,10 @@ def dashboard(
         app.run()
 
     except ImportError:
-        print_output({"error": "Textual is not installed. Install with: pip install textual"}, "plain")
+        print_output(
+            {"error": "Textual is not installed. Install with: pip install textual"},
+            "plain",
+        )
 
 
 @app.command()
@@ -85,7 +90,7 @@ def logs(
     """Open a log viewer TUI."""
     try:
         from textual.app import App, ComposeResult
-        from textual.widgets import Header, Footer, RichLog
+        from textual.widgets import Footer, Header, RichLog
 
         class LogViewer(App):
             TITLE = "Infra Pilot Log Viewer"

@@ -8,14 +8,16 @@ import typer
 import yaml
 
 from .core.cli import create_app, legacy_bridge
-from .core.command_registry import discover_commands, attach_to_app
+from .core.command_registry import attach_to_app, discover_commands
 
 logger = logging.getLogger(__name__)
 
 app = create_app()
 
 import ipilot.commands  # noqa: E402, F811
+
 from .core.command_registry import attach_to_app  # noqa: E402
+
 attach_to_app(app)
 
 
@@ -37,6 +39,7 @@ def login(
     result = client.login(api_key)
     if "token" in result:
         from .config import set_key
+
         set_key("token", result["token"], profile=ctx.obj.get("profile"))
     print_output(result, ctx.obj.get("output", "table"))
 
@@ -45,8 +48,10 @@ def login(
 def logout(ctx: typer.Context):
     """Log out and clear your authentication token."""
     from .config import unset_key
+
     unset_key("token", profile=ctx.obj.get("profile"))
     from .output.formatters import print_output
+
     print_output({"status": "Logged out"}, ctx.obj.get("output", "table"))
 
 
@@ -54,6 +59,7 @@ def logout(ctx: typer.Context):
 def version():
     """Show the CLI version."""
     from . import __version__
+
     typer.echo(f"ipilot v{__version__}")
 
 
@@ -71,10 +77,12 @@ def completion(
     """Set up shell completion for the CLI."""
     if install:
         from typer._completion import install as install_completion
+
         install_completion()
         typer.echo(f"Completion installed for {shell}")
     else:
         from typer._completion import show_callback
+
         show_callback(shell)
 
 
@@ -104,8 +112,10 @@ def doctor(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
     """Run system diagnostics (alias for 'ipilot doctor doctor')."""
-    from .commands.doctor import doctor as doctor_cmd
     from typer.testing import CliRunner
+
+    from .commands.doctor import doctor as doctor_cmd
+
     runner = CliRunner()
     args = ["--fix" if fix else "", "--verbose" if verbose else ""]
     args = [a for a in args if a]
@@ -119,11 +129,14 @@ def benchmark(
     server: str = typer.Option(None, "--server", "-s", help="Server to benchmark"),
 ):
     """Run performance benchmarks (alias for 'ipilot doctor benchmark')."""
-    from .commands.doctor import benchmark as benchmark_cmd
     from typer.testing import CliRunner
+
+    from .commands.doctor import benchmark as benchmark_cmd
+
     runner = CliRunner()
     args = []
-    if server: args.extend(["--server", server])
+    if server:
+        args.extend(["--server", server])
     result = runner.invoke(benchmark_cmd, args)
     typer.echo(result.output)
 
@@ -132,15 +145,21 @@ def benchmark(
 def diagnose(
     ctx: typer.Context,
     server: str = typer.Option(None, "--server", "-s", help="Server to diagnose"),
-    issue: str = typer.Option(None, "--issue", "-i", help="Issue type (connectivity, performance, disk)"),
+    issue: str = typer.Option(
+        None, "--issue", "-i", help="Issue type (connectivity, performance, disk)"
+    ),
 ):
     """Diagnose infrastructure issues (alias for 'ipilot doctor diagnose')."""
-    from .commands.doctor import diagnose as diagnose_cmd
     from typer.testing import CliRunner
+
+    from .commands.doctor import diagnose as diagnose_cmd
+
     runner = CliRunner()
     args = []
-    if server: args.extend(["--server", server])
-    if issue: args.extend(["--issue", issue])
+    if server:
+        args.extend(["--server", server])
+    if issue:
+        args.extend(["--issue", issue])
     result = runner.invoke(diagnose_cmd, args)
     typer.echo(result.output)
 
@@ -148,7 +167,9 @@ def diagnose(
 @app.command()
 def docs(
     output: str = typer.Option(
-        "docs/cli-reference.md", "--output", "-o",
+        "docs/cli-reference.md",
+        "--output",
+        "-o",
         help="Output file path for generated docs",
     ),
 ):
@@ -172,6 +193,7 @@ def _run_interactive():
                 break
             if cmd.strip():
                 from typer.testing import CliRunner
+
                 runner = CliRunner()
                 result = runner.invoke(app, cmd.split())
                 console.print(result.output)

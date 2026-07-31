@@ -3558,6 +3558,7 @@ app.post('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
   const { name, url, events, secret } = req.body;
   const { data, error } = await supabase.from('webhooks').insert({ user_id: userId, name, url, events: events || [], secret }).select().single();
   if (error) return res.status(500).json({ error: error.message });
+  await logAudit(userId, 'webhook:create', 'webhook', data.id, null, { name, url, events: events || [] });
   res.json(data);
 });
 
@@ -3565,6 +3566,7 @@ app.delete('/api/webhooks/:id', verifyAuth, async (req: Request, res: Response) 
   const userId = (req as any).user.id;
   const { error } = await supabase.from('webhooks').delete().eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
+  await logAudit(userId, 'webhook:delete', 'webhook', req.params.id);
   res.json({ status: 'deleted' });
 });
 
@@ -3628,6 +3630,7 @@ app.post('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
   const expiresAt = expire_days ? new Date(Date.now() + expire_days * 86400000).toISOString() : null;
   const { data, error } = await supabase.from('api_keys').insert({ user_id: userId, name, key_hash: keyHash, key_prefix: keyPrefix, role: role || 'user', expires_at: expiresAt }).select('id, name, key_prefix, role, expires_at').single();
   if (error) return res.status(500).json({ error: error.message });
+  await logAudit(userId, 'api_key:create', 'api_key', data.id, null, { name, role: role || 'user' });
   res.json({ ...data, key: rawKey });
 });
 
@@ -3635,6 +3638,7 @@ app.delete('/api/api-keys/:id', verifyAuth, async (req: Request, res: Response) 
   const userId = (req as any).user.id;
   const { error } = await supabase.from('api_keys').update({ revoked: true }).eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
+  await logAudit(userId, 'api_key:revoke', 'api_key', req.params.id);
   res.json({ status: 'revoked' });
 });
 

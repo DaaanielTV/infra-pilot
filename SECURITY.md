@@ -23,7 +23,7 @@ Please include:
 
 | Language    | Tools              |
 |-------------|--------------------|
-| Python      | `bandit`, `safety` |
+| Python      | `bandit`, `pip-audit` |
 | JavaScript  | `npm audit`        |
 | Docker      | `trivy`            |
 

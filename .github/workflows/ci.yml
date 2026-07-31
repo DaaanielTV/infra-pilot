@@ -141,13 +141,13 @@ jobs:
           cache: 'pip'
       - name: Install security tools
         run: |
-          pip install bandit safety
+          pip install bandit pip-audit
       - name: Run Bandit security check
-        run: bandit -r cli -f json -o bandit-report.json || true
+        run: bandit -c bandit.yaml -r cli -f json -o bandit-report.json
       - name: Check dependencies for vulnerabilities
         run: |
           pip install -r requirements.txt
-          safety check --json || true
+          pip-audit -r requirements.txt
 
   cli-build:
     needs: [changes, cli-lint, cli-test, cli-security]
@@ -293,14 +293,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 black isort
       - name: Run flake8
-        continue-on-error: true
         run: |
           flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || true
+          flake8 services/orchestrator-agent/cogs services/orchestrator-agent/main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Check black formatting
-        run: black --check services/orchestrator-agent || true
+        run: black --check services/orchestrator-agent
       - name: Check import sorting
-        run: isort --check-only services/orchestrator-agent || true
+        run: isort --check-only services/orchestrator-agent
 
   orchestrator-test:
     needs: changes
@@ -380,13 +379,13 @@ jobs:
           cache: 'pip'
       - name: Install security tools
         run: |
-          pip install bandit safety
+          pip install bandit pip-audit
       - name: Run Bandit security check
-        run: bandit -r services/orchestrator-agent/ -f json -o bandit-report.json || true
+        run: bandit -c bandit.yaml -r services/orchestrator-agent/ -f json -o bandit-report.json
       - name: Check dependencies for vulnerabilities
         run: |
           pip install -r services/orchestrator-agent/requirements.txt
-          safety check --json || true
+          pip-audit -r services/orchestrator-agent/requirements.txt
 
   orchestrator-build:
     needs: [changes, orchestrator-lint, orchestrator-test, orchestrator-security]

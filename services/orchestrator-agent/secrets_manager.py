@@ -478,8 +478,16 @@ _manager: Optional[SecretsManager] = None
 
 
 def init_secrets_manager(backend: str = "vault", **kwargs) -> SecretsManager:
+    """Initialise the global secrets manager.
+
+    Pass a ``SecretsBackend`` instance directly as ``backend``, or use
+    ``backend_type`` (via kwargs) for ``"vault"``, ``"aws"`` or ``"azure"``.
+    """
     global _manager
-    _manager = SecretsManager(backend_type=backend, **kwargs)
+    if isinstance(backend, SecretsBackend):
+        _manager = SecretsManager(backend=backend)
+    else:
+        _manager = SecretsManager(backend_type=backend, **kwargs)
     return _manager
 
 

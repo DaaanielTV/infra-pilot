@@ -21,6 +21,7 @@ It's a work-in-progress and contributions of all kinds are welcome.
 ```bash
 git clone https://github.com/drosemann/infra-pilot.git
 cd infra-pilot && cp .env.example .env
+bash scripts/generate-env.sh        # fill empty secrets (Windows: powershell -File scripts/generate-env.ps1)
 docker compose up -d
 pip install ./cli
 ipilot login

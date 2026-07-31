@@ -6,7 +6,7 @@ services:
     container_name: infra-pilot-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-infra_pilot}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example or scripts/generate-env.sh)}
       POSTGRES_DB: ${POSTGRES_DB:-infra_pilot}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -73,7 +73,7 @@ services:
       VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
     ports:
@@ -112,7 +112,7 @@ services:
     container_name: infra-pilot-orchestrator
     environment:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
       PYTHONUNBUFFERED: "1"
@@ -161,7 +161,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-infra_pilot}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB:-infra_pilot}
       NODE_ENV: ${NODE_ENV:-development}
     ports:
@@ -267,7 +267,7 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: infra-pilot-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}?sslmode=disable"
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     depends_on:

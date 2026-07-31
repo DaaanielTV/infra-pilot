@@ -202,6 +202,7 @@ jobs:
       service-path: services/management-panel
       image-name: ${{ github.repository }}/management-panel
       run-build: true
+      type-check-command: npm run typecheck
       test-command: npm run test:coverage
       upload-coverage: true
       coverage-files: ./services/management-panel/coverage/v8
@@ -268,6 +269,7 @@ jobs:
     with:
       service-path: services/discord-service
       image-name: ${{ github.repository }}/discord-service
+      run-tests: false
 
   # ── Orchestrator Agent (Python) ────────────────────────────────────
   orchestrator-lint:

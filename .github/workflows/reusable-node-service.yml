@@ -21,6 +21,21 @@ on:
         required: false
         type: boolean
         default: false
+      run-lint:
+        description: Run the lint command.
+        required: false
+        type: boolean
+        default: true
+      run-type-check:
+        description: Run the type-check command.
+        required: false
+        type: boolean
+        default: true
+      run-tests:
+        description: Run the test command.
+        required: false
+        type: boolean
+        default: true
       lint-command:
         description: Command used to lint the service.
         required: false
@@ -86,14 +101,17 @@ jobs:
         run: npm ci
 
       - name: Run lint
+        if: inputs.run-lint
         working-directory: ${{ inputs.service-path }}
         run: ${{ inputs.lint-command }}
 
       - name: Run type-check
+        if: inputs.run-type-check
         working-directory: ${{ inputs.service-path }}
         run: ${{ inputs.type-check-command }}
 
       - name: Run tests
+        if: inputs.run-tests
         working-directory: ${{ inputs.service-path }}
         run: ${{ inputs.test-command }}
 

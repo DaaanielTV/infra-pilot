@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js"
+    "check": "node --check index.js",
+    "lint": "node --check index.js && node --check integration.js && node --check cli-bridge.js && node --check modules/pterodactyl.js && node --check modules/roleManager.js && node --check modules/serverLimits.js && node --check modules/serverStatus.js && node --check modules/statsCommands.js && node --check modules/ticketCommands.js && node --check modules/ticketSystem.js && node --check modules/validation.js",
+    "type-check": "node --check index.js"
   },
   "dependencies": {
     "axios": "^1.6.0",

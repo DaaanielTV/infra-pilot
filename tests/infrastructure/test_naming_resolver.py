@@ -18,7 +18,14 @@ class TestLoadYamlFile:
         p = tmp_path / "test.yaml"
         p.write_text("key: value\nnested: {a: 1}")
         result = _load_yaml_file(p)
-        assert result == {"key": "value", "nested": {"a": 1}}
+        assert result == {"key": "value"}
+
+    def test_load_yaml_file_skips_non_string_values(self, tmp_path):
+        from infra.naming.resolver import _load_yaml_file
+        p = tmp_path / "test.yaml"
+        p.write_text("flag: true\ncount: 3\nlist: [a, b]\nok: fine")
+        result = _load_yaml_file(p)
+        assert result == {"ok": "fine"}
 
     def test_load_yaml_file_nonexistent(self):
         from infra.naming.resolver import _load_yaml_file

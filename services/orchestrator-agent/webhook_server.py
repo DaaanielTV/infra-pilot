@@ -17,8 +17,6 @@ from discord.ext import commands
 
 logger = logging.getLogger(__name__)
 
-FEDERATION_API_TOKEN: str = os.getenv("FEDERATION_API_TOKEN", "")
-
 
 async def verify_github_signature(
     request: web.Request, handler: Callable[[web.Request], object]
@@ -66,7 +64,21 @@ async def start_webhook_server(bot_instance: commands.Bot):
     Args:
         bot_instance: The Discord bot instance to attach webhook routes from.
     """
-    app = web.Application()
+    app = build_webhook_app(bot_instance)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("GITOPS_WEBHOOK_PORT", "8500"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info("Webhook server listening on port %d", port)
+
+
+async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
+    """Build the aiohttp application with all webhook and API routes.
+
+    Extracted from start_webhook_server so the route table can be tested
+    with aiohttp's TestClient without binding a real port.
+    """
 
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
         """Check Bearer token on federation API routes.
@@ -74,11 +86,12 @@ async def start_webhook_server(bot_instance: commands.Bot):
         Returns ``None`` if the token is valid (or auth is disabled),
         otherwise a 401 response.
         """
-        if not FEDERATION_API_TOKEN:
+        api_token = os.getenv("FEDERATION_API_TOKEN", "")
+        if not api_token:
             return None
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer ") and hmac.compare_digest(
-            auth[7:], FEDERATION_API_TOKEN
+            auth[7:], api_token
         ):
             return None
         return web.json_response(
@@ -189,7 +202,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
             {
                 "status": "ok",
                 "service": "orchestrator-agent",
-                "federation": {"enabled": bool(FEDERATION_API_TOKEN)},
+                "federation": {"enabled": bool(os.getenv("FEDERATION_API_TOKEN", ""))},
                 "version": "1.0.0",
             }
         )
@@ -216,9 +229,4 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
         app.router.add_post("/webhook/gitops", gitops_webhook)
 
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.getenv("GITOPS_WEBHOOK_PORT", "8500"))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-    logger.info("Webhook server listening on port %d", port)
+    return app

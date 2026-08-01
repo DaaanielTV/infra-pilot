@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Dict, Optional
 
 import discord
+import psycopg2.extras
 from config import config
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -29,8 +30,8 @@ class HealthChecks(commands.Cog):
     async def health_check_loop(self):
         try:
             conn = self.vps_manager._get_db_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM health_checks WHERE enabled = 1")
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute("SELECT * FROM health_checks")
             checks = cursor.fetchall()
             cursor.close()
             conn.close()

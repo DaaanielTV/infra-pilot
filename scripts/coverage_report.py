@@ -3,26 +3,19 @@
 
 import json
 import sys
-import xml.etree.ElementTree as ET
-from typing import Optional
+from pathlib import Path
+
+from coverage_lib import read_line_rate
 
 
 def main(coverage_xml_path: str) -> None:
     """Parse the given coverage.xml and print a JSON summary with the coverage percentage."""
-    try:
-        tree = ET.parse(coverage_xml_path)
-    except (FileNotFoundError, ET.ParseError) as e:
-        print(f"Error reading coverage file: {e}", file=sys.stderr)
+    line_rate = read_line_rate(Path(coverage_xml_path))
+    if line_rate is None:
+        print(f"Error reading coverage file: {coverage_xml_path}", file=sys.stderr)
         sys.exit(1)
 
-    root = tree.getroot()
-    line_rate: Optional[str] = root.attrib.get("line-rate")
-    try:
-        percent = float(line_rate) * 100.0 if line_rate is not None else 0.0
-    except (ValueError, TypeError):
-        percent = 0.0
-
-    data = {"coverage": round(percent, 2)}
+    data = {"coverage": round(line_rate * 100.0, 2)}
     print(json.dumps(data))
 
 

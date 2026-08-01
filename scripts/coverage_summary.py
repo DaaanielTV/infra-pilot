@@ -3,28 +3,18 @@
 
 import argparse
 import json
-import sys
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional
+
+from coverage_lib import read_line_rate
 
 
 def read_coverage(xml_path: Path) -> float:
     """Parse coverage.xml and return the line coverage percentage as a float."""
-    if not xml_path.exists():
+    line_rate = read_line_rate(xml_path)
+    if line_rate is None and xml_path.exists():
+        print(f"Error parsing coverage XML: {xml_path}", file=sys.stderr)
         return 0.0
-    try:
-        tree = ET.parse(xml_path)
-    except ET.ParseError as e:
-        print(f"Error parsing coverage XML: {e}", file=sys.stderr)
-        return 0.0
-
-    root = tree.getroot()
-    line_rate: Optional[str] = root.attrib.get("line-rate")
-    try:
-        return float(line_rate) * 100.0 if line_rate is not None else 0.0
-    except (ValueError, TypeError):
-        return 0.0
+    return line_rate * 100.0 if line_rate is not None else 0.0
 
 
 def main() -> None:

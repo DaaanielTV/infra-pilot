@@ -115,6 +115,10 @@ jobs:
         working-directory: ${{ inputs.service-path }}
         run: ${{ inputs.test-command }}
 
+      - name: Run npm audit
+        working-directory: ${{ inputs.service-path }}
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Upload coverage
         if: inputs.upload-coverage
         uses: codecov/codecov-action@v7

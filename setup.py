@@ -13,10 +13,10 @@ setup(
     packages=find_packages(),
     python_requires=">=3.10",
     install_requires=[
-        "click>=8.0",
-        "requests>=2.28",
-        "pyyaml>=6.0",
-        "rich>=13.0",
+        "click==8.1.8",
+        "requests==2.34.2",
+        "pyyaml==6.0.3",
+        "rich==15.0.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -19,7 +19,7 @@
     "playwright:install": "npx playwright install",
     "seed:customers": "node ./scripts/seed-customers.mjs",
     "test": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/**/*.test.ts",
-    "test:coverage": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' NODE_V8_COVERAGE=coverage/v8 node --test --experimental-test-coverage --loader ts-node/esm tests/**/*.test.ts",
+    "test:coverage": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' NODE_V8_COVERAGE=coverage/v8 node --test --experimental-test-coverage --loader ts-node/esm tests/**/*.test.ts --test-coverage-lines=30 --test-coverage-functions=20 --test-coverage-branches=15 --test-coverage-statements=30",
     "test:api": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/integration/**/*.test.ts",
     "test:unit": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/unit/**/*.test.ts",
     "tauri": "tauri",

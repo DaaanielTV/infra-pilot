@@ -114,7 +114,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov
       - name: Run pytest for CLI
         run: |
-          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing
+          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=15
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -222,7 +222,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '18.x'
+          node-version: '22.x'
           cache: 'npm'
           cache-dependency-path: services/management-panel/package-lock.json
       - name: Install dependencies
@@ -438,7 +438,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '18'
+          node-version: '22'
       - name: Install markdownlint
         run: npm install -g markdownlint-cli
       - name: Run markdownlint

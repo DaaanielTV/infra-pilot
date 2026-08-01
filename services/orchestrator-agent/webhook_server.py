@@ -48,7 +48,9 @@ def _serialize_rbac(obj: Any) -> Any:
 
 async def rbac_roles_list(request: web.Request) -> web.Response:
     """List all roles with their permissions."""
-    return web.json_response({"roles": [_serialize_rbac(r) for r in rbac_engine.list_roles()]})
+    return web.json_response(
+        {"roles": [_serialize_rbac(r) for r in rbac_engine.list_roles()]}
+    )
 
 
 async def rbac_role_create(request: web.Request) -> web.Response:
@@ -60,7 +62,9 @@ async def rbac_role_create(request: web.Request) -> web.Response:
     name = body.get("name")
     permission_names = body.get("permissions")
     if not isinstance(name, str) or not name or not isinstance(permission_names, list):
-        return web.json_response({"error": "name and permissions list are required"}, status=400)
+        return web.json_response(
+            {"error": "name and permissions list are required"}, status=400
+        )
     try:
         permissions = {Permission(p) for p in permission_names}
     except ValueError:
@@ -68,10 +72,10 @@ async def rbac_role_create(request: web.Request) -> web.Response:
         return web.json_response(
             {"error": "unknown permission; valid values: " + valid}, status=400
         )
-    role = Role(name=name, permissions=permissions, description=str(body.get("description", "")))
-    return web.json_response(
-        _serialize_rbac(rbac_engine.create_role(role)), status=201
+    role = Role(
+        name=name, permissions=permissions, description=str(body.get("description", ""))
     )
+    return web.json_response(_serialize_rbac(rbac_engine.create_role(role)), status=201)
 
 
 async def rbac_org_create(request: web.Request) -> web.Response:
@@ -82,8 +86,15 @@ async def rbac_org_create(request: web.Request) -> web.Response:
         return web.json_response({"error": "invalid JSON body"}, status=400)
     name = body.get("name")
     owner_user_id = body.get("owner_user_id")
-    if not isinstance(name, str) or not name or not isinstance(owner_user_id, str) or not owner_user_id:
-        return web.json_response({"error": "name and owner_user_id are required"}, status=400)
+    if (
+        not isinstance(name, str)
+        or not name
+        or not isinstance(owner_user_id, str)
+        or not owner_user_id
+    ):
+        return web.json_response(
+            {"error": "name and owner_user_id are required"}, status=400
+        )
     org = Organization(
         id=str(body.get("id") or f"org-{uuid.uuid4().hex[:12]}"),
         name=name,
@@ -96,7 +107,9 @@ async def rbac_orgs_for_user(request: web.Request) -> web.Response:
     """List organizations the given user is a member of (?user_id=...)."""
     user_id = request.query.get("user_id", "")
     if not user_id:
-        return web.json_response({"error": "user_id query parameter is required"}, status=400)
+        return web.json_response(
+            {"error": "user_id query parameter is required"}, status=400
+        )
     orgs = rbac_engine.list_orgs_for_user(user_id)
     return web.json_response({"orgs": [_serialize_rbac(o) for o in orgs]})
 
@@ -111,7 +124,9 @@ async def rbac_role_assign(request: web.Request) -> web.Response:
     org_id = body.get("org_id")
     role_name = body.get("role_name")
     if not all(isinstance(v, str) and v for v in (user_id, org_id, role_name)):
-        return web.json_response({"error": "user_id, org_id and role_name are required"}, status=400)
+        return web.json_response(
+            {"error": "user_id, org_id and role_name are required"}, status=400
+        )
     if rbac_engine.get_role(role_name) is None:
         return web.json_response({"error": f"unknown role: {role_name}"}, status=400)
     if rbac_engine.get_org(org_id) is None:
@@ -131,12 +146,20 @@ async def rbac_org_permissions(request: web.Request) -> web.Response:
     user_id = request.query.get("user_id", "")
     org_id = request.match_info["org_id"]
     if not user_id:
-        return web.json_response({"error": "user_id query parameter is required"}, status=400)
+        return web.json_response(
+            {"error": "user_id query parameter is required"}, status=400
+        )
     if rbac_engine.get_org(org_id) is None:
         return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
-    resolved = [p for p in Permission if rbac_engine.has_permission(user_id, p, org_id=org_id)]
+    resolved = [
+        p for p in Permission if rbac_engine.has_permission(user_id, p, org_id=org_id)
+    ]
     return web.json_response(
-        {"user_id": user_id, "org_id": org_id, "permissions": sorted(p.value for p in resolved)}
+        {
+            "user_id": user_id,
+            "org_id": org_id,
+            "permissions": sorted(p.value for p in resolved),
+        }
     )
 
 
@@ -222,9 +245,7 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
         if not api_token:
             return None
         auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer ") and hmac.compare_digest(
-            auth[7:], api_token
-        ):
+        if auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], api_token):
             return None
         return web.json_response(
             {
@@ -348,9 +369,7 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     app.router.add_post("/api/v1/rbac/orgs", rbac_org_create)
     app.router.add_get("/api/v1/rbac/orgs", rbac_orgs_for_user)
     app.router.add_post("/api/v1/rbac/assign", rbac_role_assign)
-    app.router.add_get(
-        "/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions
-    )
+    app.router.add_get("/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
 
     cog = bot_instance.get_cog("GitDeployer")

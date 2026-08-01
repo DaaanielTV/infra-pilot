@@ -102,93 +102,7 @@ def cmd_config_set(args):
 # === Edge & IoT Commands ===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # === Green Computing Commands ===
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # === v3 Networking Commands ===
@@ -429,169 +343,7 @@ def cmd_cell_deactivate(args):
 # === v3 Marketplace Commands ===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # === v4 Emerging Tech Handler Functions ===
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1030,185 +782,7 @@ def build_parser() -> argparse.ArgumentParser:
 # === v4 Customer Experience Commands ===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # === v3 Identity & Governance Commands ===
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def cmd_audit_anomalies(args):
@@ -1227,30 +801,6 @@ def cmd_audit_summary(args):
     print_output(result, args.output)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def cmd_quota_list(args):
     result = get_client().quota_list()
     data = result if isinstance(result, list) else result.get("quotas", result)
@@ -1267,10 +817,6 @@ def cmd_quota_check(args):
     print_output(result, args.output)
 
 
-
-
-
-
 def cmd_maintenance_list(args):
     result = get_client().maintenance_list_windows()
     data = result if isinstance(result, list) else result.get("windows", result)
@@ -1281,26 +827,6 @@ def cmd_maintenance_schedule(args):
     systems = [s.strip() for s in args.systems.split(",")]
     result = get_client().maintenance_schedule(args.name, args.start, args.end, systems)
     print_output(result, args.output)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     # === v4 Platform Engineering Commands ===
 
@@ -1572,260 +1098,10 @@ def cmd_pulse_summary(args):
 # === v4 AIOps Commands ===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # === v4 FinOps Commands ===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # === v4 SOC Commands ===
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def main_inner(args, parser=None):
@@ -1837,172 +1113,154 @@ def main_inner(args, parser=None):
     if parser is None:
         parser = build_parser()
     cmd_map = {
-            'login': cmd_login,
-            'logout': cmd_logout,
-            'health': cmd_health,
-        }
+        "login": cmd_login,
+        "logout": cmd_logout,
+        "health": cmd_health,
+    }
 
     sub_router = {
-            'server': {
-                'list': cmd_server_list,
-                'create': cmd_server_create,
-                'delete': cmd_server_delete,
-                'status': cmd_server_status
-            },
-            'backup': {
-                'list': cmd_backup_list,
-                'create': cmd_backup_create
-            },
-            'config': {
-                'get': cmd_config_get,
-                'set': cmd_config_set
-            },
-            'audit': {
-                'anomalies': cmd_audit_anomalies,
-                'trend': cmd_audit_trend,
-                'summary': cmd_audit_summary
-            },
-            'quota': {
-                'list': cmd_quota_list,
-                'check': cmd_quota_check
-            },
-            'maintenance': {
-                'list': cmd_maintenance_list,
-                'schedule': cmd_maintenance_schedule
-            },
-            'sdwan': {
-                'status': cmd_sdwan_status,
-                'apps': cmd_sdwan_apps,
-                'create': cmd_sdwan_create,
-                'delete': cmd_sdwan_delete,
-                'toggle': cmd_sdwan_toggle
-            },
-            'vpn': {
-                'configs': cmd_vpn_configs,
-                'create': cmd_vpn_create,
-                'delete': cmd_vpn_delete,
-                'status': cmd_vpn_status
-            },
-            'dns': {
-                'zones': cmd_dns_zones,
-                'create-zone': cmd_dns_create_zone,
-                'delete-zone': cmd_dns_delete_zone,
-                'records': cmd_dns_records,
-                'add-record': cmd_dns_add_record,
-                'delete-record': cmd_dns_delete_record
-            },
-            'bgp': {
-                'sessions': cmd_bgp_sessions,
-                'create': cmd_bgp_create,
-                'delete': cmd_bgp_delete,
-                'routes': cmd_bgp_routes
-            },
-            'proxy': {
-                'rules': cmd_proxy_rules,
-                'create': cmd_proxy_create,
-                'delete': cmd_proxy_delete,
-                'toggle': cmd_proxy_toggle
-            },
-            'segment': {
-                'list': cmd_seg_list,
-                'create': cmd_seg_create,
-                'delete': cmd_seg_delete
-            },
-            'capture': {
-                'list': cmd_cap_list,
-                'start': cmd_cap_start,
-                'stop': cmd_cap_stop
-            },
-            'dnsfilter': {
-                'status': cmd_dnsfilter_status,
-                'rules': cmd_dnsfilter_rules,
-                'add': cmd_dnsfilter_add,
-                'remove': cmd_dnsfilter_remove
-            },
-            'dhcp': {
-                'leases': cmd_dhcp_leases
-            },
-            'netcost': {
-                'show': cmd_netcost_show,
-                'budget': cmd_netcost_budget
-            },
-            'cell': {
-                'networks': cmd_cell_networks,
-                'register': cmd_cell_register,
-                'delete': cmd_cell_delete,
-                'status': cmd_cell_status,
-                'sims': cmd_cell_sims,
-                'activate': cmd_cell_activate,
-                'deactivate': cmd_cell_deactivate
-            },
-            'devportal': {
-                'list': cmd_devportal_list,
-                'register': cmd_devportal_register,
-                'get': cmd_devportal_get,
-                'summary': cmd_devportal_summary
-            },
-            'scaffold': {
-                'list': cmd_scaffold_list,
-                'generate': cmd_scaffold_generate,
-                'status': cmd_scaffold_status,
-                'step': cmd_scaffold_step
-            },
-            'service-catalog': {
-                'list': cmd_catalog_list,
-                'register': cmd_catalog_register,
-                'get': cmd_catalog_get,
-                'score': cmd_catalog_score,
-                'summary': cmd_catalog_summary
-            },
-            'scorecards': {
-                'list': cmd_scorecards_list,
-                'create': cmd_scorecards_create,
-                'get': cmd_scorecards_get,
-                'update': cmd_scorecards_update,
-                'summary': cmd_scorecards_summary
-            },
-            'template-registry': {
-                'list': cmd_templatereg_list,
-                'create': cmd_templatereg_create,
-                'get': cmd_templatereg_get,
-                'use': cmd_templatereg_use,
-                'summary': cmd_templatereg_summary
-            },
-            'techdebt': {
-                'list': cmd_techdebt_list,
-                'report': cmd_techdebt_report,
-                'get': cmd_techdebt_get,
-                'fix': cmd_techdebt_fix,
-                'summary': cmd_techdebt_summary
-            },
-            'environments': {
-                'list': cmd_environments_list,
-                'create': cmd_environments_create,
-                'get': cmd_environments_get,
-                'delete': cmd_environments_delete,
-                'extend': cmd_environments_extend,
-                'summary': cmd_environments_summary
-            },
-            'api-catalog': {
-                'list': cmd_apicatalog_list,
-                'register': cmd_apicatalog_register,
-                'get': cmd_apicatalog_get,
-                'summary': cmd_apicatalog_summary
-            },
-            'docgen': {
-                'list': cmd_docgen_list,
-                'generate': cmd_docgen_generate,
-                'get': cmd_docgen_get,
-                'summary': cmd_docgen_summary
-            },
-            'pulse': {
-                'list': cmd_pulse_list,
-                'create': cmd_pulse_create,
-                'respond': cmd_pulse_respond,
-                'results': cmd_pulse_results,
-                'summary': cmd_pulse_summary
-            },
-        }
+        "server": {
+            "list": cmd_server_list,
+            "create": cmd_server_create,
+            "delete": cmd_server_delete,
+            "status": cmd_server_status,
+        },
+        "backup": {"list": cmd_backup_list, "create": cmd_backup_create},
+        "config": {"get": cmd_config_get, "set": cmd_config_set},
+        "audit": {
+            "anomalies": cmd_audit_anomalies,
+            "trend": cmd_audit_trend,
+            "summary": cmd_audit_summary,
+        },
+        "quota": {"list": cmd_quota_list, "check": cmd_quota_check},
+        "maintenance": {
+            "list": cmd_maintenance_list,
+            "schedule": cmd_maintenance_schedule,
+        },
+        "sdwan": {
+            "status": cmd_sdwan_status,
+            "apps": cmd_sdwan_apps,
+            "create": cmd_sdwan_create,
+            "delete": cmd_sdwan_delete,
+            "toggle": cmd_sdwan_toggle,
+        },
+        "vpn": {
+            "configs": cmd_vpn_configs,
+            "create": cmd_vpn_create,
+            "delete": cmd_vpn_delete,
+            "status": cmd_vpn_status,
+        },
+        "dns": {
+            "zones": cmd_dns_zones,
+            "create-zone": cmd_dns_create_zone,
+            "delete-zone": cmd_dns_delete_zone,
+            "records": cmd_dns_records,
+            "add-record": cmd_dns_add_record,
+            "delete-record": cmd_dns_delete_record,
+        },
+        "bgp": {
+            "sessions": cmd_bgp_sessions,
+            "create": cmd_bgp_create,
+            "delete": cmd_bgp_delete,
+            "routes": cmd_bgp_routes,
+        },
+        "proxy": {
+            "rules": cmd_proxy_rules,
+            "create": cmd_proxy_create,
+            "delete": cmd_proxy_delete,
+            "toggle": cmd_proxy_toggle,
+        },
+        "segment": {
+            "list": cmd_seg_list,
+            "create": cmd_seg_create,
+            "delete": cmd_seg_delete,
+        },
+        "capture": {"list": cmd_cap_list, "start": cmd_cap_start, "stop": cmd_cap_stop},
+        "dnsfilter": {
+            "status": cmd_dnsfilter_status,
+            "rules": cmd_dnsfilter_rules,
+            "add": cmd_dnsfilter_add,
+            "remove": cmd_dnsfilter_remove,
+        },
+        "dhcp": {"leases": cmd_dhcp_leases},
+        "netcost": {"show": cmd_netcost_show, "budget": cmd_netcost_budget},
+        "cell": {
+            "networks": cmd_cell_networks,
+            "register": cmd_cell_register,
+            "delete": cmd_cell_delete,
+            "status": cmd_cell_status,
+            "sims": cmd_cell_sims,
+            "activate": cmd_cell_activate,
+            "deactivate": cmd_cell_deactivate,
+        },
+        "devportal": {
+            "list": cmd_devportal_list,
+            "register": cmd_devportal_register,
+            "get": cmd_devportal_get,
+            "summary": cmd_devportal_summary,
+        },
+        "scaffold": {
+            "list": cmd_scaffold_list,
+            "generate": cmd_scaffold_generate,
+            "status": cmd_scaffold_status,
+            "step": cmd_scaffold_step,
+        },
+        "service-catalog": {
+            "list": cmd_catalog_list,
+            "register": cmd_catalog_register,
+            "get": cmd_catalog_get,
+            "score": cmd_catalog_score,
+            "summary": cmd_catalog_summary,
+        },
+        "scorecards": {
+            "list": cmd_scorecards_list,
+            "create": cmd_scorecards_create,
+            "get": cmd_scorecards_get,
+            "update": cmd_scorecards_update,
+            "summary": cmd_scorecards_summary,
+        },
+        "template-registry": {
+            "list": cmd_templatereg_list,
+            "create": cmd_templatereg_create,
+            "get": cmd_templatereg_get,
+            "use": cmd_templatereg_use,
+            "summary": cmd_templatereg_summary,
+        },
+        "techdebt": {
+            "list": cmd_techdebt_list,
+            "report": cmd_techdebt_report,
+            "get": cmd_techdebt_get,
+            "fix": cmd_techdebt_fix,
+            "summary": cmd_techdebt_summary,
+        },
+        "environments": {
+            "list": cmd_environments_list,
+            "create": cmd_environments_create,
+            "get": cmd_environments_get,
+            "delete": cmd_environments_delete,
+            "extend": cmd_environments_extend,
+            "summary": cmd_environments_summary,
+        },
+        "api-catalog": {
+            "list": cmd_apicatalog_list,
+            "register": cmd_apicatalog_register,
+            "get": cmd_apicatalog_get,
+            "summary": cmd_apicatalog_summary,
+        },
+        "docgen": {
+            "list": cmd_docgen_list,
+            "generate": cmd_docgen_generate,
+            "get": cmd_docgen_get,
+            "summary": cmd_docgen_summary,
+        },
+        "pulse": {
+            "list": cmd_pulse_list,
+            "create": cmd_pulse_create,
+            "respond": cmd_pulse_respond,
+            "results": cmd_pulse_results,
+            "summary": cmd_pulse_summary,
+        },
+    }
 
     if args.command in sub_router:
         sub_map = sub_router[args.command]

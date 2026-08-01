@@ -204,11 +204,11 @@ class TestProjectScopingRegression:
         assert engine.has_permission(
             "zoe", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id
         )
-        assert not engine.has_permission(
-            "zoe", Permission.INSTANCE_READ, org_id=org.id
-        )
+        assert not engine.has_permission("zoe", Permission.INSTANCE_READ, org_id=org.id)
 
-    def test_org_wide_membership_still_grants_project_access(self, engine, org, project):
+    def test_org_wide_membership_still_grants_project_access(
+        self, engine, org, project
+    ):
         engine.assign_role("yara", org.id, "operator")
         assert engine.has_permission(
             "yara", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id

@@ -10,8 +10,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 FROM base AS production
 COPY --from=deps /app/node_modules ./node_modules

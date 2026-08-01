@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import http from 'http';
@@ -2832,11 +2833,91 @@ app.post('/api/notification-channels/:id/test', verifyAuth, async (req: Request,
 
 // Dashboard builder routes moved to experimental/management-panel-expanded/dashboard-builder.ts
 
+// Dashboard routes backed by data/dashboards.json (file-based store)
+const DASHBOARDS_FILE = path.join(__dirname, '..', 'data', 'dashboards.json');
+
+async function readDashboards(): Promise<any[]> {
+  try {
+    const raw = await fs.readFile(DASHBOARDS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+async function writeDashboards(dashboards: any[]): Promise<void> {
+  await fs.writeFile(DASHBOARDS_FILE, JSON.stringify(dashboards, null, 2), 'utf-8');
+}
+
+app.get('/api/dashboards', verifyAuth, async (_req: Request, res: Response) => {
+  try {
+    res.json({ dashboards: await readDashboards() });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dashboards' });
+  }
+});
+
+app.get('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboards = await readDashboards();
+    const dashboard = dashboards.find((d: any) => d.id === req.params.id);
+    if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+app.post('/api/dashboards', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboards = await readDashboards();
+    const id = req.body.id || crypto.randomUUID();
+    const dashboard = { id, ...req.body, createdAt: new Date().toISOString() };
+    dashboards.push(dashboard);
+    await writeDashboards(dashboards);
+    await logAudit((req as any).user.id, 'dashboard:create', 'dashboard', id);
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create dashboard' });
+  }
+});
+
+app.put('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboards = await readDashboards();
+    const index = dashboards.findIndex((d: any) => d.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Dashboard not found' });
+    const updated = { ...dashboards[index], ...req.body, id: req.params.id, updatedAt: new Date().toISOString() };
+    dashboards[index] = updated;
+    await writeDashboards(dashboards);
+    await logAudit((req as any).user.id, 'dashboard:update', 'dashboard', req.params.id);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update dashboard' });
+  }
+});
+
+app.delete('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboards = await readDashboards();
+    const index = dashboards.findIndex((d: any) => d.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Dashboard not found' });
+    dashboards.splice(index, 1);
+    await writeDashboards(dashboards);
+    await logAudit((req as any).user.id, 'dashboard:delete', 'dashboard', req.params.id);
+    res.json({ status: 'deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete dashboard' });
+  }
+});
+
 app.get('/api/dashboards/:id/data', verifyAuth, async (req: Request, res: Response) => {
   try {
     const period = req.query.period as string;
-    const data = await de.getDashboardData(req.params.id, { period });
-    res.json(data);
+    const dashboards = await readDashboards();
+    const dashboard = dashboards.find((d: any) => d.id === req.params.id);
+    if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json({ dashboard, widgets: dashboard.widgets || [], period: period || '24h' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
@@ -3444,9 +3525,11 @@ app.get('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => 
   const userId = (req as any).user.id;
   const { version } = req.query;
   if (version) {
-    const { data, error } = await supabase.from('secret_versions').select('*').eq('secret_id', supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId)).eq('version', parseInt(version as string)).single();
+    const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
+    if (!secret) return res.status(404).json({ error: 'Secret not found' });
+    const { data, error } = await supabase.from('secret_versions').select('value, version').eq('secret_id', secret.id).eq('version', parseInt(version as string)).single();
     if (error) return res.status(404).json({ error: 'Not found' });
-    return res.json({ value: data.value, version: data.version });
+    return res.json(data);
   }
   const { data, error } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
   if (error) return res.status(404).json({ error: 'Not found' });
@@ -3580,7 +3663,6 @@ app.post('/api/webhooks/:id/test', verifyAuth, async (req: Request, res: Respons
   const { data: webhook } = await supabase.from('webhooks').select('*').eq('id', req.params.id).eq('user_id', userId).single();
   if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
   try {
-    const axios = require('axios');
     const payload = { event: req.body.event || 'test', timestamp: new Date().toISOString(), webhook_id: webhook.id };
     const response = await axios.post(webhook.url, payload, { headers: webhook.secret ? { 'X-Webhook-Secret': webhook.secret } : {} });
     await supabase.from('webhook_logs').insert({ webhook_id: webhook.id, event: 'test', status: 'success', response_code: response.status, response_body: JSON.stringify(response.data) });
@@ -3790,7 +3872,6 @@ app.post('/api/templates/init', verifyAuth, async (req: Request, res: Response) 
 
 app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response) => {
   const { duration } = req.body;
-  const os = require('os');
   const cpus = os.cpus();
   const totalMem = os.totalmem();
   const freeMem = os.freemem();

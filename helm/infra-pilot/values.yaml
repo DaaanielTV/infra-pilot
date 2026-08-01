@@ -8,8 +8,9 @@ global:
 
 image:
   repository: infra-pilot
-  pullPolicy: Always
-  tag: "latest"
+  pullPolicy: IfNotPresent
+  # Empty tag defaults to Chart.AppVersion for reproducible deployments
+  tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
@@ -20,8 +21,19 @@ serviceAccount:
   name: ""
 
 podAnnotations: {}
-podSecurityContext: {}
-securityContext: {}
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
 
 service:
   type: ClusterIP
@@ -92,7 +104,7 @@ orchestrator:
   enabled: true
   image:
     repository: ghcr.io/drosemann/infra-pilot-orchestrator-agent
-    tag: latest
+    tag: ""
   config:
     logLevel: INFO
     workerCount: 4
@@ -108,7 +120,7 @@ managementPanel:
   enabled: true
   image:
     repository: ghcr.io/drosemann/infra-pilot-management-panel
-    tag: latest
+    tag: ""
   service:
     port: 3000
   env:
@@ -123,7 +135,7 @@ discordService:
   enabled: false
   image:
     repository: ghcr.io/drosemann/infra-pilot-discord-service
-    tag: latest
+    tag: ""
   env:
     - name: DISCORD_TOKEN
       value: ""

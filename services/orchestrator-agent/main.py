@@ -1,10 +1,12 @@
 """Orchestrator Agent entry point - Discord bot with webhook server."""
 
 import asyncio
+import hashlib
+import hmac
 import logging
 import os
 import sys
-from typing import Optional
+from typing import Callable, Optional
 
 import discord
 from aiohttp import web
@@ -134,6 +136,48 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     app.middlewares.append(federation_auth_middleware)
 
+    async def verify_github_signature(
+        request: web.Request, handler: Callable[[web.Request], object]
+    ) -> web.Response:
+        """Verify GitHub webhook HMAC-SHA256 signature (X-Hub-Signature-256).
+
+        Fails closed: without a configured GITHUB_WEBHOOK_SECRET the route
+        refuses all traffic instead of accepting unsigned requests.
+        """
+        secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+        if not secret:
+            return web.json_response(
+                {"error": "webhook auth not configured"}, status=503
+            )
+        body = await request.read()
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(
+            secret.encode(), body, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            logger.warning("Rejected webhook with invalid signature from %s", request.remote)
+            return web.json_response({"error": "invalid webhook signature"}, status=401)
+        return await handler(request)
+
+    async def verify_gitops_token(
+        request: web.Request, handler: Callable[[web.Request], object]
+    ) -> web.Response:
+        """Verify GitOps webhook Bearer token.
+
+        Fails closed: without a configured GITOPS_WEBHOOK_TOKEN the route
+        refuses all traffic instead of accepting unauthenticated requests.
+        """
+        token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
+        if not token:
+            return web.json_response(
+                {"error": "webhook auth not configured"}, status=503
+            )
+        auth = request.headers.get("Authorization", "")
+        if not (auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], token)):
+            logger.warning("Rejected webhook with invalid token from %s", request.remote)
+            return web.json_response({"error": "unauthorized"}, status=401)
+        return await handler(request)
+
     async def health(request: web.Request) -> web.Response:
         from db import get_pool as _get_pool
 
@@ -240,12 +284,18 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:
-        app.router.add_post("/webhook/github/{deploy_id}", cog.handle_webhook)
-        app.router.add_post("/webhook/github", cog.handle_webhook)
+        async def github_webhook(request: web.Request) -> web.Response:
+            return await verify_github_signature(request, cog.handle_webhook)
+
+        app.router.add_post("/webhook/github/{deploy_id}", github_webhook)
+        app.router.add_post("/webhook/github", github_webhook)
 
     gitops_cog = bot_instance.get_cog("GitOpsSync")
     if gitops_cog:
-        app.router.add_post("/webhook/gitops", gitops_cog.handle_webhook)
+        async def gitops_webhook(request: web.Request) -> web.Response:
+            return await verify_gitops_token(request, gitops_cog.handle_webhook)
+
+        app.router.add_post("/webhook/gitops", gitops_webhook)
 
     runner = web.AppRunner(app)
     await runner.setup()

@@ -4,18 +4,149 @@ Extracted from main.py so the webhook surface can be tested and
 extended without importing the Discord bot entry point.
 """
 
+import dataclasses
 import hashlib
 import hmac
 import logging
 import os
 import sys
-from typing import Callable, Optional
+import uuid
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Optional
 
 import psutil
 from aiohttp import web
 from discord.ext import commands
 
+from rbac import Organization, Permission, RBACEngine, Role
+
 logger = logging.getLogger(__name__)
+
+# The federation API token holder acts as platform administrator for the
+# RBAC management API. Tenant users are represented by memberships inside
+# the engine and never authenticate over the wire.
+rbac_engine = RBACEngine()
+
+
+def _serialize_rbac(obj: Any) -> Any:
+    """Serialize RBAC dataclasses and enums into JSON-safe primitives."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, (set, frozenset)):
+        return sorted(_serialize_rbac(v) for v in obj)
+    if isinstance(obj, dict):
+        return {k: _serialize_rbac(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialize_rbac(v) for v in obj]
+    if isinstance(obj, Enum):
+        return obj.value
+    if dataclasses.is_dataclass(obj):
+        return {k: _serialize_rbac(v) for k, v in dataclasses.asdict(obj).items()}
+    return obj
+
+
+async def rbac_roles_list(request: web.Request) -> web.Response:
+    """List all roles with their permissions."""
+    return web.json_response({"roles": [_serialize_rbac(r) for r in rbac_engine.list_roles()]})
+
+
+async def rbac_role_create(request: web.Request) -> web.Response:
+    """Create a custom role from {name, permissions, description?}."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    name = body.get("name")
+    permission_names = body.get("permissions")
+    if not isinstance(name, str) or not name or not isinstance(permission_names, list):
+        return web.json_response({"error": "name and permissions list are required"}, status=400)
+    try:
+        permissions = {Permission(p) for p in permission_names}
+    except ValueError:
+        valid = ", ".join(sorted(p.value for p in Permission))
+        return web.json_response(
+            {"error": "unknown permission; valid values: " + valid}, status=400
+        )
+    role = Role(name=name, permissions=permissions, description=str(body.get("description", "")))
+    return web.json_response(
+        _serialize_rbac(rbac_engine.create_role(role)), status=201
+    )
+
+
+async def rbac_org_create(request: web.Request) -> web.Response:
+    """Create an organization and auto-assign the owner role."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    name = body.get("name")
+    owner_user_id = body.get("owner_user_id")
+    if not isinstance(name, str) or not name or not isinstance(owner_user_id, str) or not owner_user_id:
+        return web.json_response({"error": "name and owner_user_id are required"}, status=400)
+    org = Organization(
+        id=str(body.get("id") or f"org-{uuid.uuid4().hex[:12]}"),
+        name=name,
+        owner_user_id=owner_user_id,
+    )
+    return web.json_response(_serialize_rbac(rbac_engine.create_org(org)), status=201)
+
+
+async def rbac_orgs_for_user(request: web.Request) -> web.Response:
+    """List organizations the given user is a member of (?user_id=...)."""
+    user_id = request.query.get("user_id", "")
+    if not user_id:
+        return web.json_response({"error": "user_id query parameter is required"}, status=400)
+    orgs = rbac_engine.list_orgs_for_user(user_id)
+    return web.json_response({"orgs": [_serialize_rbac(o) for o in orgs]})
+
+
+async def rbac_role_assign(request: web.Request) -> web.Response:
+    """Assign a role to a user within an organization (optionally scoped to a project)."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    user_id = body.get("user_id")
+    org_id = body.get("org_id")
+    role_name = body.get("role_name")
+    if not all(isinstance(v, str) and v for v in (user_id, org_id, role_name)):
+        return web.json_response({"error": "user_id, org_id and role_name are required"}, status=400)
+    if rbac_engine.get_role(role_name) is None:
+        return web.json_response({"error": f"unknown role: {role_name}"}, status=400)
+    if rbac_engine.get_org(org_id) is None:
+        return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
+    membership = rbac_engine.assign_role(
+        user_id=user_id,
+        org_id=org_id,
+        role_name=role_name,
+        project_id=str(body.get("project_id", "")),
+        granted_by=str(body.get("granted_by", "api")),
+    )
+    return web.json_response(_serialize_rbac(membership), status=201)
+
+
+async def rbac_org_permissions(request: web.Request) -> web.Response:
+    """Return the resolved permission list for a user within an org (?user_id=...)."""
+    user_id = request.query.get("user_id", "")
+    org_id = request.match_info["org_id"]
+    if not user_id:
+        return web.json_response({"error": "user_id query parameter is required"}, status=400)
+    if rbac_engine.get_org(org_id) is None:
+        return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
+    resolved = [p for p in Permission if rbac_engine.has_permission(user_id, p, org_id=org_id)]
+    return web.json_response(
+        {"user_id": user_id, "org_id": org_id, "permissions": sorted(p.value for p in resolved)}
+    )
+
+
+async def rbac_org_members(request: web.Request) -> web.Response:
+    """List memberships of an organization (optionally ?project_id=...)."""
+    org_id = request.match_info["org_id"]
+    if rbac_engine.get_org(org_id) is None:
+        return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
+    members = rbac_engine.list_members(org_id, request.query.get("project_id", ""))
+    return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
 async def verify_github_signature(
@@ -79,6 +210,7 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     Extracted from start_webhook_server so the route table can be tested
     with aiohttp's TestClient without binding a real port.
     """
+    app = web.Application()
 
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
         """Check Bearer token on federation API routes.
@@ -211,6 +343,15 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     app.router.add_get("/api/health", health)
     app.router.add_get("/metrics", metrics)
     app.router.add_get("/api/v1/federation/status", federation_status)
+    app.router.add_get("/api/v1/rbac/roles", rbac_roles_list)
+    app.router.add_post("/api/v1/rbac/roles", rbac_role_create)
+    app.router.add_post("/api/v1/rbac/orgs", rbac_org_create)
+    app.router.add_get("/api/v1/rbac/orgs", rbac_orgs_for_user)
+    app.router.add_post("/api/v1/rbac/assign", rbac_role_assign)
+    app.router.add_get(
+        "/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions
+    )
+    app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:

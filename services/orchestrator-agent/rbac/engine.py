@@ -191,6 +191,10 @@ class RBACEngine:
     def get_role(self, name: str) -> Optional[Role]:
         return self._roles.get(name)
 
+    def list_roles(self) -> List[Role]:
+        """Return all roles (built-in and custom) in stable name order."""
+        return [self._roles[name] for name in sorted(self._roles)]
+
     def delete_role(self, name: str) -> bool:
         if name in BUILT_IN_ROLES:
             return False

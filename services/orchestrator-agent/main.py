@@ -155,7 +155,9 @@ async def start_webhook_server(bot_instance: commands.Bot):
         if not FEDERATION_API_TOKEN:
             return None
         auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer ") and auth[7:] == FEDERATION_API_TOKEN:
+        if auth.startswith("Bearer ") and hmac.compare_digest(
+            auth[7:], FEDERATION_API_TOKEN
+        ):
             return None
         return web.json_response(
             {

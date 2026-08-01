@@ -61,27 +61,3 @@ class TestConfigDefaults:
         assert c.RESOURCE_LIMITS["min_cpu"] == 0.5
         assert c.RESOURCE_LIMITS["max_cpu"] == 4.0
         assert c.RESOURCE_LIMITS["max_memory_mb"] == 8192
-
-
-class TestPricing:
-    @pytest.fixture
-    def prices(self):
-        from unittest.mock import patch
-
-        from cogs.vps_pricing import VPSPricing
-
-        class FakeBot:
-            logger = None
-
-        bot = FakeBot()
-        with patch("cogs.vps_pricing.get_sync_connection"):
-            return VPSPricing(bot)
-
-    def test_calculate_vps_cost(self, prices):
-        cost = prices.calculate_vps_cost(cpu=2.0, memory=4096, storage=50)
-        # CPU: 2*50=100, Memory: (4096/1024)*25=100, Storage: 50*1=50 => 250
-        assert cost == 250.0
-
-    def test_minimal_vps_cost(self, prices):
-        cost = prices.calculate_vps_cost(cpu=0.5, memory=512, storage=10)
-        assert cost > 0

@@ -198,20 +198,6 @@ async def init_database_tables():
         """,
         "CREATE INDEX IF NOT EXISTS idx_ssl_domain ON ssl_certificates(domain);",
         """
-        CREATE TABLE IF NOT EXISTS scaling_rules (
-            id SERIAL PRIMARY KEY,
-            container_id VARCHAR(255) NOT NULL,
-            metric VARCHAR(50) NOT NULL,
-            threshold DOUBLE PRECISION NOT NULL,
-            duration_minutes INT DEFAULT 5,
-            action VARCHAR(50) NOT NULL,
-            cooldown_until TIMESTAMP,
-            enabled BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        "CREATE INDEX IF NOT EXISTS idx_scaling_container ON scaling_rules(container_id);",
-        """
         CREATE TABLE IF NOT EXISTS resource_quotas (
             id SERIAL PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,
@@ -584,117 +570,9 @@ async def init_database_tables():
         )
         """,
     ]
-    # Billing tables (usage metering and invoicing)
-    billing_tables = [
-        """
-        CREATE TABLE IF NOT EXISTS usage_records (
-            id BIGSERIAL PRIMARY KEY,
-            org_id VARCHAR(36) NOT NULL,
-            project_id VARCHAR(36),
-            instance_id VARCHAR(255) NOT NULL,
-            instance_name VARCHAR(255),
-            provider VARCHAR(50) DEFAULT 'docker',
-            cpu_cores DECIMAL(6,2) DEFAULT 0,
-            memory_mb INT DEFAULT 0,
-            storage_gb INT DEFAULT 0,
-            network_rx_bytes BIGINT DEFAULT 0,
-            network_tx_bytes BIGINT DEFAULT 0,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        "CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_records(org_id);",
-        "CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage_records(collected_at);",
-        """
-        CREATE TABLE IF NOT EXISTS invoices (
-            id VARCHAR(36) PRIMARY KEY,
-            org_id VARCHAR(36) NOT NULL,
-            org_name VARCHAR(255) NOT NULL,
-            period_start TIMESTAMP NOT NULL,
-            period_end TIMESTAMP NOT NULL,
-            subtotal DECIMAL(12,2) DEFAULT 0,
-            discount DECIMAL(12,2) DEFAULT 0,
-            tax_rate DECIMAL(5,4) DEFAULT 0,
-            tax_amount DECIMAL(12,2) DEFAULT 0,
-            total DECIMAL(12,2) DEFAULT 0,
-            currency VARCHAR(3) DEFAULT 'USD',
-            status VARCHAR(20) DEFAULT 'draft',
-            paid_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        "CREATE INDEX IF NOT EXISTS idx_invoice_org ON invoices(org_id, status);",
-        """
-        CREATE TABLE IF NOT EXISTS invoice_line_items (
-            id BIGSERIAL PRIMARY KEY,
-            invoice_id VARCHAR(36) NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
-            description VARCHAR(255) NOT NULL,
-            quantity DECIMAL(14,4) DEFAULT 0,
-            unit VARCHAR(50) DEFAULT '',
-            unit_price DECIMAL(12,6) DEFAULT 0,
-            total DECIMAL(12,2) DEFAULT 0,
-            metric VARCHAR(50) DEFAULT ''
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS pricing_tiers (
-            id SERIAL PRIMARY KEY,
-            org_id VARCHAR(36),
-            metric VARCHAR(50) NOT NULL,
-            unit_price DECIMAL(12,6) NOT NULL,
-            effective_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE (org_id, metric)
-        )
-        """,
-    ]
-    # Region / federation tables (multi-datacenter support)
-    region_tables = [
-        """
-        CREATE TABLE IF NOT EXISTS regions (
-            id VARCHAR(36) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            display_name VARCHAR(255),
-            status VARCHAR(20) DEFAULT 'active',
-            labels JSONB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS datacenters (
-            id VARCHAR(36) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            region_id VARCHAR(36) NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
-            location VARCHAR(255),
-            provider VARCHAR(50) DEFAULT 'docker',
-            status VARCHAR(20) DEFAULT 'active',
-            total_cpu_cores DECIMAL(8,2) DEFAULT 0,
-            total_memory_mb BIGINT DEFAULT 0,
-            total_storage_gb BIGINT DEFAULT 0,
-            used_cpu_cores DECIMAL(8,2) DEFAULT 0,
-            used_memory_mb BIGINT DEFAULT 0,
-            used_storage_gb BIGINT DEFAULT 0,
-            labels JSONB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS federation_peers (
-            id VARCHAR(36) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            api_url VARCHAR(512) NOT NULL,
-            api_token VARCHAR(512),
-            status VARCHAR(20) DEFAULT 'unknown',
-            version VARCHAR(50),
-            labels JSONB,
-            last_seen TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-    ]
     all_tables = []
     all_tables.extend(tables)
     all_tables.extend(rbac_tables)
-    all_tables.extend(billing_tables)
-    all_tables.extend(region_tables)
 
     async with pool.acquire() as conn:
         for stmt in all_tables:

@@ -34,19 +34,3 @@ def test_manifest_schema_imports():
 def test_rbac_engine_imports():
     module = importlib.import_module("rbac.engine")
     assert hasattr(module, "RBACEngine")
-
-
-def test_billing_engine_imports():
-    module = importlib.import_module("billing.billing_engine")
-    assert hasattr(module, "BillingEngine")
-
-
-def test_healing_engine_imports():
-    module = importlib.import_module("healing.engine")
-    assert hasattr(module, "HealingEngine")
-
-
-def test_region_imports():
-    module = importlib.import_module("region.region")
-    assert hasattr(module, "Region")
-    assert hasattr(module, "Datacenter")

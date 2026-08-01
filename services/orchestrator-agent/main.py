@@ -26,14 +26,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix=BOT_PREFIX, intents=intents)
 bot.config = config
 
-# Auto-scaling engine (initialised after cog load completes)
-scaling_engine = None
-
 CORE_COGS = [
     "cogs.vps_commands",
-    "cogs.vps_pricing",
-    "cogs.vps_billing",
-    "cogs.prepaid_billing",
     "cogs.monitoring",
     "cogs.bot_commands",
     "cogs.health_checks",
@@ -42,10 +36,8 @@ CORE_COGS = [
     "cogs.template_manager",
     "cogs.task_scheduler",
     "cogs.alert_manager",
-    "cogs.auto_scaler",
     "cogs.cleanup",
     "cogs.database_manager",
-    "cogs.modpack_installer",
     "cogs.update_manager",
 ]
 
@@ -74,26 +66,6 @@ async def on_ready():
 
     await bot.tree.sync()
     logger.info("Commands synced")
-
-    # Wire auto-scaling engine (only once)
-    if not hasattr(bot, "scaling_engine") or bot.scaling_engine is None:
-        vps_cog = bot.get_cog("VPSCommands")
-        if vps_cog and hasattr(vps_cog, "vps_manager"):
-            from scaling import ScalingEngine
-
-            engine = ScalingEngine(vps_cog.vps_manager)
-            bot.scaling_engine = engine
-            # Set engine on AutoScaler cog if loaded
-            asc = bot.get_cog("AutoScaler")
-            if asc:
-                asc.engine = engine
-            # Connect to healing engine if available
-            healing = bot.get_cog("HealingCog")
-            if healing and hasattr(healing, "engine"):
-                healing.engine.set_scaling_engine(engine)
-                logger.info("Scaling engine connected to healing engine")
-            asyncio.create_task(engine.start())
-            logger.info("Auto-scaling engine started")
 
     asyncio.create_task(start_webhook_server(bot))
 

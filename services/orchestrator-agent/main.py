@@ -292,6 +292,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:
+
         async def github_webhook(request: web.Request) -> web.Response:
             return await verify_github_signature(request, cog.handle_webhook)
 
@@ -300,6 +301,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
 
     gitops_cog = bot_instance.get_cog("GitOpsSync")
     if gitops_cog:
+
         async def gitops_webhook(request: web.Request) -> web.Response:
             return await verify_gitops_token(request, gitops_cog.handle_webhook)
 

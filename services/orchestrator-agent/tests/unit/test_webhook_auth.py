@@ -46,9 +46,9 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
         return client
 
     def valid_signature(self, body: bytes) -> str:
-        return "sha256=" + hmac.new(
-            self.secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        return (
+            "sha256=" + hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
+        )
 
     async def test_rejects_missing_signature(self):
         client = await self.build_client({}, b"")
@@ -60,7 +60,9 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
             {"X-Hub-Signature-256": "sha256=deadbeef"}, b"payload"
         )
         resp = await client.post(
-            "/webhook/github", data=b"payload", headers={"X-Hub-Signature-256": "sha256=deadbeef"}
+            "/webhook/github",
+            data=b"payload",
+            headers={"X-Hub-Signature-256": "sha256=deadbeef"},
         )
         self.assertEqual(resp.status, 401)
 
@@ -112,7 +114,9 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
     async def test_accepts_valid_token(self):
         client = await self.build_client({"Authorization": "Bearer test-token"})
         resp = await client.post(
-            "/webhook/gitops", data=b"{}", headers={"Authorization": "Bearer test-token"}
+            "/webhook/gitops",
+            data=b"{}",
+            headers={"Authorization": "Bearer test-token"},
         )
         self.assertEqual(resp.status, 200)
 

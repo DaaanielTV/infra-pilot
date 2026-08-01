@@ -200,7 +200,7 @@ services:
     image: prom/prometheus:v2.53.0
     container_name: infra-pilot-prometheus
     volumes:
-      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
@@ -230,8 +230,8 @@ services:
     image: grafana/grafana:11.1.0
     container_name: infra-pilot-grafana
     volumes:
-      - ./infrastructure/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./infrastructure/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - grafana_data:/var/lib/grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"

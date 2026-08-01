@@ -40,7 +40,6 @@ jobs:
         with:
           filters: |
             cli:
-              - 'services/cli/**'
               - 'cli/**'
             dashboard:
               - 'services/management-panel/**'
@@ -51,7 +50,6 @@ jobs:
               - '*.md'
             infrastructure:
               - 'infra/**'
-              - 'infrastructure/**'
             orchestrator:
               - 'services/orchestrator-agent/**'
             scripts:
@@ -535,9 +533,9 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check Prometheus config
         run: |
-          if [ -f infrastructure/prometheus/prometheus.yml ]; then
+          if [ -f infra/monitoring/prometheus/prometheus.yml ]; then
             echo "Prometheus config exists"
-            cat infrastructure/prometheus/prometheus.yml | head -20
+            cat infra/monitoring/prometheus/prometheus.yml | head -20
           fi
 
   # ── Scripts ────────────────────────────────────────────────────────

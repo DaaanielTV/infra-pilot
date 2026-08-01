@@ -354,10 +354,12 @@ async def create_server_task(interaction: discord.Interaction) -> None:
                     "docker",
                     "run",
                     "-itd",
-                    "--privileged",
                     "--hostname",
                     "crashcloud",
-                    "--cap-add=ALL",
+                    "--cap-drop=ALL",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--read-only",
                     DOCKER_IMAGE,
                 ]
             )
@@ -940,10 +942,12 @@ async def create_server_task(interaction):
                     "docker",
                     "run",
                     "-itd",
-                    "--privileged",
                     "--hostname",
                     "crashcloud",
-                    "--cap-add=ALL",
+                    "--cap-drop=ALL",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--read-only",
                     image,
                 ]
             )

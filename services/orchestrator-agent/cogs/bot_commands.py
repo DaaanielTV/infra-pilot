@@ -166,10 +166,12 @@ class BotCommands(commands.Cog):
                         "docker",
                         "run",
                         "-itd",
-                        "--privileged",
                         "--hostname",
                         "vps",
-                        "--cap-add=ALL",
+                        "--cap-drop=ALL",
+                        "--security-opt",
+                        "no-new-privileges",
+                        "--read-only",
                         config.DEFAULT_SSH_IMAGE,
                     ]
                 )

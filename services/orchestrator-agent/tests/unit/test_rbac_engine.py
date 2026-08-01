@@ -189,3 +189,71 @@ class TestBuiltInRoles:
             "ivy", Permission.INSTANCE_CREATE, org_id=org.id
         )
         assert not engine.has_permission("ivy", Permission.ORG_MANAGE, org_id=org.id)
+
+    def test_operator_cannot_delete_org(self, engine, org):
+        engine.assign_role("kate", org.id, "operator")
+        assert engine.has_permission("kate", Permission.INSTANCE_CREATE, org_id=org.id)
+        assert not engine.has_permission("kate", Permission.ORG_DELETE, org_id=org.id)
+
+
+class TestProjectScopingRegression:
+    """A project-scoped membership must not grant org-wide access."""
+
+    def test_project_membership_does_not_leak_org_wide(self, engine, org, project):
+        engine.assign_role("zoe", org.id, "viewer", project_id=project.id)
+        assert engine.has_permission(
+            "zoe", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id
+        )
+        assert not engine.has_permission(
+            "zoe", Permission.INSTANCE_READ, org_id=org.id
+        )
+
+    def test_org_wide_membership_still_grants_project_access(self, engine, org, project):
+        engine.assign_role("yara", org.id, "operator")
+        assert engine.has_permission(
+            "yara", Permission.INSTANCE_READ, org_id=org.id, project_id=project.id
+        )
+
+
+class TestRoleListing:
+    def test_list_roles_returns_sorted_builtin_and_custom(self, engine):
+        engine.create_role(
+            Role(name="zeta-role", permissions={Permission.INSTANCE_READ})
+        )
+        names = [r.name for r in engine.list_roles()]
+        assert "admin" in names
+        assert "zeta-role" in names
+        assert names == sorted(names)
+
+    def test_custom_role_deletion(self, engine):
+        engine.create_role(
+            Role(name="tmp-role", permissions={Permission.INSTANCE_READ})
+        )
+        assert engine.delete_role("tmp-role") is True
+        assert engine.get_role("tmp-role") is None
+
+
+class TestMembersAndCascade:
+    def test_list_members_filters_by_project(self, engine, org, project):
+        other = Project(id="p-other", org_id=org.id, name="other")
+        engine.create_project(other)
+        engine.assign_role("liam", org.id, "viewer", project_id=project.id)
+        engine.assign_role("mia", org.id, "viewer", project_id=other.id)
+        user_ids = {m.user_id for m in engine.list_members(org.id)}
+        assert {"user-1", "liam", "mia"} <= user_ids
+        assert {m.user_id for m in engine.list_members(org.id, project.id)} == {"liam"}
+
+    def test_delete_org_cascades_projects_and_memberships(self, engine, org, project):
+        engine.assign_role("noah", org.id, "viewer")
+        assert engine.delete_org(org.id) is True
+        assert engine.get_org(org.id) is None
+        assert engine.get_project(project.id) is None
+        assert engine.list_members(org.id) == []
+
+    def test_to_dict_exports_state(self, engine, org):
+        state = engine.to_dict()
+        assert org.id in state["orgs"]
+        assert any(
+            m["user_id"] == "user-1" and m["role_name"] == "owner"
+            for m in state["memberships"]
+        )

@@ -212,7 +212,12 @@ function createDefaultSnapshots(appId: string) {
 }
 
 // Middleware
-app.use(cors());
+// CORS: allow only configured origins (comma-separated CORS_ORIGINS, default localhost dev)
+const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3001')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({ origin: corsOrigins, credentials: true }));
 app.use(express.json());
 
 // Health and observability-aware health

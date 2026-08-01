@@ -169,11 +169,10 @@ class RBACEngine:
                 continue
             if org_id and membership.org_id != org_id:
                 continue
-            if (
-                project_id
-                and membership.project_id
-                and membership.project_id != project_id
-            ):
+            if project_id:
+                if membership.project_id and membership.project_id != project_id:
+                    continue
+            elif membership.project_id:
                 continue
 
             role = self._roles.get(membership.role_name)

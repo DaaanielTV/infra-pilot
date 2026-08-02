@@ -17,9 +17,8 @@ def build_manager(monkeypatch, tmp_path):
     return module.VPSManager(), module.VPSConfig, mock_client
 
 
-def test_create_vps_uses_configured_docker_runtime(monkeypatch, tmp_path):
-    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
-    config = config_type(
+def make_config(config_type, **overrides):
+    values = dict(
         cpu_limit=1.5,
         memory_limit=512,
         storage_limit=20,
@@ -27,6 +26,13 @@ def test_create_vps_uses_configured_docker_runtime(monkeypatch, tmp_path):
         ports={"22/tcp": "2222"},
         env_vars={"TOKEN": "redacted"},
     )
+    values.update(overrides)
+    return config_type(**values)
+
+
+def test_create_vps_uses_configured_docker_runtime(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    config = make_config(config_type)
 
     container_id = asyncio.run(manager.create_vps("user-1", config))
 
@@ -36,6 +42,30 @@ def test_create_vps_uses_configured_docker_runtime(monkeypatch, tmp_path):
     assert kwargs["cpu_quota"] == 150000
     assert kwargs["mem_limit"] == "512m"
     assert kwargs["restart_policy"] == {"Name": "unless-stopped"}
+
+
+def test_create_vps_never_spawns_privileged_containers(monkeypatch, tmp_path):
+    """Regression: container spawns must not carry --privileged/--cap-add=ALL."""
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    config = make_config(config_type)
+
+    asyncio.run(manager.create_vps("user-1", config))
+
+    _, kwargs = mock_client.containers.created[0]
+    assert kwargs.get("privileged") in (None, False)
+    assert not kwargs.get("cap_add")
+
+
+def test_create_vps_failure_returns_none(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+
+    def boom(**kwargs):
+        raise RuntimeError("docker daemon down")
+
+    mock_client.containers.run = boom
+
+    result = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    assert result is None
 
 
 def test_runtime_errors_return_false_without_raising(monkeypatch, tmp_path):
@@ -55,3 +85,105 @@ def test_stats_are_normalized_from_docker_payload(monkeypatch, tmp_path):
         "memory_usage": 25.0,
         "network": {"rx_bytes": 10, "tx_bytes": 20},
     }
+
+
+def test_start_stop_restart_lifecycle(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+
+    assert asyncio.run(manager.stop_vps(container_id)) is True
+    assert manager.vps_instances[container_id]["status"] == "stopped"
+
+    assert asyncio.run(manager.start_vps(container_id)) is True
+    assert manager.vps_instances[container_id]["status"] == "running"
+
+    assert asyncio.run(manager.restart_vps(container_id)) is True
+    assert manager.vps_instances[container_id]["status"] == "running"
+
+
+def test_delete_vps_removes_instance(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+
+    assert asyncio.run(manager.delete_vps(container_id)) is True
+    assert container_id not in manager.vps_instances
+
+
+def test_update_vps_config_changes_limits(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+
+    updated = make_config(config_type, cpu_limit=2.0, memory_limit=1024, storage_limit=50)
+    assert asyncio.run(manager.update_vps_config(container_id, updated)) is True
+
+    stored = manager.vps_instances[container_id]["config"]
+    assert stored["cpu_limit"] == 2.0
+    assert stored["memory_limit"] == 1024
+    assert stored["storage_limit"] == 50
+    assert mock_client.containers.by_id[container_id].updated is True
+
+
+def test_list_user_instances_scopes_to_user(monkeypatch, tmp_path):
+    manager, config_type, _mock_client = build_manager(monkeypatch, tmp_path)
+    asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    asyncio.run(manager.create_vps("user-2", make_config(config_type)))
+
+    instances = asyncio.run(manager.list_user_instances("user-1"))
+
+    assert len(instances) == 1
+    assert instances[0]["container_id"] == "container-1"
+    assert instances[0]["stats"] is not None
+
+
+def test_create_backup_commits_container_image(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+
+    image_id = asyncio.run(manager.create_backup(container_id, retention_type="daily"))
+
+    assert image_id is not None
+    assert image_id.endswith("-img-1")
+    backups = manager.vps_instances[container_id].get("backups", [])
+    assert backups and backups[0]["retention_type"] == "daily"
+    assert backups[0]["image_id"] == image_id
+
+
+def test_list_backups_falls_back_to_in_memory(monkeypatch, tmp_path):
+    manager, config_type, _mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    asyncio.run(manager.create_backup(container_id, retention_type="weekly"))
+
+    backups = asyncio.run(manager.list_backups(container_id))
+
+    assert len(backups) == 1
+    assert backups[0]["retention_type"] == "weekly"
+
+
+def test_container_name_validation_rejects_injection(monkeypatch, tmp_path):
+    manager, _config_type, _mock_client = build_manager(monkeypatch, tmp_path)
+
+    assert manager.is_safe_name("web-app-01") is True
+    assert manager.is_safe_name("web.app_01") is True
+
+    assert manager.is_safe_name("foo; rm -rf /") is False
+    assert manager.is_safe_name("foo$(whoami)") is False
+    assert manager.is_safe_name("foo`id`") is False
+    assert manager.is_safe_name("foo && docker rm -f $(docker ps -q)") is False
+    assert manager.is_safe_name("..") is False
+    assert manager.is_safe_name("") is False
+    assert manager.is_safe_name("a" * 129) is False
+
+
+def test_generate_random_port_is_in_ephemeral_range(monkeypatch, tmp_path):
+    manager, _config_type, _mock_client = build_manager(monkeypatch, tmp_path)
+
+    for _ in range(100):
+        port = manager.generate_random_port()
+        assert 1025 <= port <= 65535
+
+
+def test_instances_persist_to_json_fallback(monkeypatch, tmp_path):
+    manager, config_type, _mock_client = build_manager(monkeypatch, tmp_path)
+    asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+
+    assert (tmp_path / "vps_instances.json").exists()

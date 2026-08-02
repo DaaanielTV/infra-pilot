@@ -2,9 +2,35 @@ import pathlib
 import sys
 from dataclasses import dataclass
 
+import pytest
+
 SERVICE_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
+
+
+@pytest.fixture(autouse=True)
+def no_database(monkeypatch):
+    """Stub database access so unit tests are hermetic and fast.
+
+    ``vps_manager`` falls back to JSON-file persistence when the database
+    is unreachable; stubbing the connection helpers exercises exactly that
+    production resilience path without real connection timeouts.
+    """
+
+    async def no_pool():
+        raise RuntimeError("database disabled in unit tests")
+
+    def no_sync_connection():
+        raise RuntimeError("database disabled in unit tests")
+
+    monkeypatch.setattr("db.get_pool", no_pool)
+    monkeypatch.setattr("db.get_sync_connection", no_sync_connection)
+
+
+@dataclass
+class MockImage:
+    id: str = "image-1"
 
 
 @dataclass
@@ -16,18 +42,28 @@ class MockContainer:
     removed: bool = False
     started: bool = False
     restarted: bool = False
+    updated: bool = False
 
     def stop(self):
         self.stopped = True
+        self.status = "stopped"
 
     def remove(self):
         self.removed = True
 
     def start(self):
         self.started = True
+        self.status = "running"
 
     def restart(self):
         self.restarted = True
+        self.status = "running"
+
+    def update(self, **kwargs):
+        self.updated = True
+
+    def commit(self, repository="", **kwargs):
+        return MockImage(id=f"{repository}-img-1")
 
     def stats(self, stream=False):
         return {

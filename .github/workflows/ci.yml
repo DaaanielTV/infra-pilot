@@ -126,7 +126,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov
       - name: Run pytest for CLI
         run: |
-          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=15
+          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=35
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -279,7 +279,7 @@ jobs:
     with:
       service-path: services/discord-service
       image-name: ${{ github.repository }}/discord-service
-      run-tests: false
+      run-tests: true
 
   # ── Orchestrator Agent (Python) ────────────────────────────────────
   orchestrator-lint:
@@ -454,7 +454,7 @@ jobs:
       - name: Install markdownlint
         run: npm install -g markdownlint-cli
       - name: Run markdownlint
-        run: markdownlint '**/*.md' --ignore node_modules --ignore .git --ignore '**/node_modules/**' --ignore '**/target/**' || true
+        run: markdownlint '**/*.md' --ignore node_modules --ignore .git --ignore '**/node_modules/**' --ignore '**/target/**'
 
   docs-check-links:
     needs: changes
@@ -485,7 +485,7 @@ jobs:
       - name: Install codespell
         run: pip install codespell
       - name: Run codespell
-        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use" || true
+        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use"
 
   # ── Infrastructure ─────────────────────────────────────────────────
   infra-lint-python:
@@ -505,18 +505,16 @@ jobs:
       - name: Install tools
         run: pip install flake8 black isort
       - name: Lint infra
-        continue-on-error: true
         run: |
           flake8 infra/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 infra/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-          black --check infra/ || true
+          black --check infra/
 
   infra-validate-terraform:
     needs: changes
     if: ${{ needs.changes.outputs.infrastructure == 'true' }}
     runs-on: ubuntu-latest
     name: Infra Validate Terraform
-    continue-on-error: true
     strategy:
       fail-fast: false
 
@@ -529,9 +527,9 @@ jobs:
       - name: Terraform validate
         working-directory: infra/terraform
         run: |
-          terraform init -backend=false || true
-          terraform validate || true
-          terraform fmt -check -diff || true
+          terraform init -backend=false
+          terraform validate
+          terraform fmt -check -diff
 
   infra-validate-prometheus:
     needs: changes
@@ -586,8 +584,8 @@ jobs:
       - name: Run health check test
         run: |
           chmod +x scripts/healthcheck.sh
-          bash scripts/healthcheck.sh --dry-run 2>&1 || true
+          bash scripts/healthcheck.sh --dry-run
       - name: Run verify script
         run: |
           chmod +x scripts/verify.sh
-          bash scripts/verify.sh --offline 2>&1 || true
+          bash scripts/verify.sh --offline

@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
 import pr_voting  # noqa: E402
@@ -12,11 +14,21 @@ import pr_voting  # noqa: E402
 class FakeGh:
     """Records gh invocations and serves canned responses per route."""
 
-    def __init__(self, prs=None, reactions=None, ci_green=True, merge_ok=True):
+    def __init__(
+        self,
+        prs=None,
+        reactions=None,
+        ci_green=True,
+        merge_ok=True,
+        ci_rollup=None,
+        fail_prefixes=None,
+    ):
         self.prs = prs or []
         self.reactions = reactions or {"+1": [], "-1": []}
         self.ci_green = ci_green
         self.merge_ok = merge_ok
+        self.ci_rollup = ci_rollup
+        self.fail_prefixes = fail_prefixes or []
         self.merge_calls = []
         self.comments = []
 
@@ -24,42 +36,51 @@ class FakeGh:
         args = list(args)
         stdout = ""
         returncode = 0
-        if args[:2] == ["pr", "list"]:
-            stdout = json.dumps(self.prs)
-        elif args[:2] == ["pr", "view"]:
-            if self.ci_green:
-                stdout = json.dumps(
-                    {
-                        "statusCheckRollup": [
-                            {
-                                "__typename": "CheckRun",
-                                "status": "COMPLETED",
-                                "conclusion": "SUCCESS",
-                            }
-                        ]
-                    }
-                )
-            else:
-                stdout = json.dumps(
-                    {
-                        "statusCheckRollup": [
-                            {
-                                "__typename": "CheckRun",
-                                "status": "COMPLETED",
-                                "conclusion": "FAILURE",
-                            }
-                        ]
-                    }
-                )
-        elif args[0] == "api":
-            endpoint = args[2]
-            content = "+1" if "content=%2B1" in endpoint else "-1"
-            stdout = json.dumps(self.reactions.get(content, []))
-        elif args[:2] == ["pr", "merge"]:
-            self.merge_calls.append(args)
-            returncode = 0 if self.merge_ok else 1
-        elif args[:2] == ["pr", "comment"]:
-            self.comments.append(args)
+        for prefix in self.fail_prefixes:
+            if args[: len(prefix)] == prefix:
+                returncode = 1
+        if returncode == 0:
+            if args[:2] == ["pr", "list"]:
+                stdout = json.dumps(self.prs)
+            elif args[:2] == ["pr", "view"]:
+                if self.ci_rollup is not None:
+                    stdout = json.dumps({"statusCheckRollup": self.ci_rollup})
+                elif self.ci_green:
+                    stdout = json.dumps(
+                        {
+                            "statusCheckRollup": [
+                                {
+                                    "__typename": "CheckRun",
+                                    "status": "COMPLETED",
+                                    "conclusion": "SUCCESS",
+                                }
+                            ]
+                        }
+                    )
+                else:
+                    stdout = json.dumps(
+                        {
+                            "statusCheckRollup": [
+                                {
+                                    "__typename": "CheckRun",
+                                    "status": "COMPLETED",
+                                    "conclusion": "FAILURE",
+                                }
+                            ]
+                        }
+                    )
+            elif args[0] == "api":
+                endpoint = next(arg for arg in args if arg.startswith("repos/"))
+                content = "+1" if "content=%2B1" in endpoint else "-1"
+                reactions = self.reactions.get(content, [])
+                stdout = "\n".join(json.dumps(reaction) for reaction in reactions)
+            elif args[:2] == ["pr", "merge"]:
+                self.merge_calls.append(args)
+                returncode = 0 if self.merge_ok else 1
+            elif args[:2] == ["pr", "comment"]:
+                self.comments.append(args)
+        if check and returncode != 0:
+            raise subprocess.CalledProcessError(returncode, args)
         return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr="")
 
 
@@ -92,6 +113,14 @@ def run_main(fake, **kwargs):
             argv.extend([f"--{key.replace('_', '-')}", str(value)])
     pr_voting.run_gh = fake
     return pr_voting.main(argv)
+
+
+@pytest.fixture(autouse=True)
+def restore_run_gh():
+    """Restore the real pr_voting.run_gh after each test."""
+    original = pr_voting.run_gh
+    yield
+    pr_voting.run_gh = original
 
 
 # ── count_votes ──────────────────────────────────────────────────────
@@ -152,16 +181,40 @@ def test_select_winner_skips_ineligible():
 # ── is_ci_green ──────────────────────────────────────────────────────
 
 
-def test_is_ci_green_with_no_checks(monkeypatch):
-    fake = FakeGh(prs=[], ci_green=True)
+def test_is_ci_green_with_no_checks():
+    fake = FakeGh(ci_rollup=[])
     pr_voting.run_gh = fake
     assert pr_voting.is_ci_green("owner/repo", 1) is True
 
 
-def test_is_ci_green_false_on_failed_check(monkeypatch):
-    fake = FakeGh(prs=[], ci_green=False)
+def test_is_ci_green_pass_on_success_check():
+    fake = FakeGh()
+    pr_voting.run_gh = fake
+    assert pr_voting.is_ci_green("owner/repo", 1) is True
+
+
+def test_is_ci_green_false_on_failed_check():
+    fake = FakeGh(ci_green=False)
     pr_voting.run_gh = fake
     assert pr_voting.is_ci_green("owner/repo", 1) is False
+
+
+def test_is_ci_green_pass_on_success_status_context():
+    fake = FakeGh(ci_rollup=[{"__typename": "StatusContext", "state": "SUCCESS"}])
+    pr_voting.run_gh = fake
+    assert pr_voting.is_ci_green("owner/repo", 1) is True
+
+
+def test_is_ci_green_false_on_failed_status_context():
+    fake = FakeGh(ci_rollup=[{"__typename": "StatusContext", "state": "FAILURE"}])
+    pr_voting.run_gh = fake
+    assert pr_voting.is_ci_green("owner/repo", 1) is False
+
+
+def test_is_ci_green_unreadable_status_returns_true():
+    fake = FakeGh(fail_prefixes=[["pr", "view"]])
+    pr_voting.run_gh = fake
+    assert pr_voting.is_ci_green("owner/repo", 1) is True
 
 
 # ── main (end to end) ────────────────────────────────────────────────
@@ -226,3 +279,47 @@ def test_main_net_negative_score_is_ineligible():
     )
     assert run_main(fake, min_voters=1) == 0
     assert fake.merge_calls == []
+
+
+# ── failure propagation ──────────────────────────────────────────────
+
+
+def test_fetch_open_prs_raises_on_gh_failure():
+    fake = FakeGh(fail_prefixes=[["pr", "list"]])
+    pr_voting.run_gh = fake
+    with pytest.raises(subprocess.CalledProcessError):
+        pr_voting.fetch_open_prs("owner/repo")
+
+
+def test_fetch_reactions_raises_on_gh_failure():
+    fake = FakeGh(fail_prefixes=[["api"]])
+    pr_voting.run_gh = fake
+    with pytest.raises(subprocess.CalledProcessError):
+        pr_voting.fetch_reactions("owner/repo", 1, "+1")
+
+
+def test_comment_on_pr_failure_is_nonfatal():
+    fake = FakeGh(fail_prefixes=[["pr", "comment"]])
+    pr_voting.run_gh = fake
+    assert pr_voting.comment_on_pr("owner/repo", 1, "body") is None
+
+
+def test_main_failed_merge_comment_failure_still_returns_1():
+    fake = FakeGh(
+        prs=[make_pr(1, "Fix bug", created="2026-01-01T00:00:00Z")],
+        reactions={"+1": [make_reaction("bob", "+1")], "-1": []},
+        merge_ok=False,
+        fail_prefixes=[["pr", "comment"]],
+    )
+    assert run_main(fake, min_voters=1) == 1
+    assert fake.comments == []
+
+
+def test_main_comment_failure_after_merge_still_prints_result():
+    fake = FakeGh(
+        prs=[make_pr(1, "Fix bug", created="2026-01-01T00:00:00Z")],
+        reactions={"+1": [make_reaction("bob", "+1")], "-1": []},
+        fail_prefixes=[["pr", "comment"]],
+    )
+    assert run_main(fake, min_voters=1) == 0
+    assert len(fake.merge_calls) == 1

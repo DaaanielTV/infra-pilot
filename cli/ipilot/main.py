@@ -219,6 +219,6 @@ def _generate_docs(output_path: str):
     lines.append("```\n" + result.output + "```\n")
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     typer.echo(f"Docs generated: {output_path}")

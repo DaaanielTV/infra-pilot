@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 THUMBS_UP = "+1"
 THUMBS_DOWN = "-1"
 GREEN_CONCLUSIONS = ("SUCCESS", "SKIPPED", "NEUTRAL")
+GH_TIMEOUT_SECONDS = 120
 
 
 @dataclass
@@ -55,7 +56,13 @@ class Candidate:
 
 def run_gh(args: Sequence[str], check: bool = True) -> subprocess.CompletedProcess:
     """Run ``gh`` with the given arguments and return the completed process."""
-    return subprocess.run(["gh", *args], capture_output=True, text=True, check=check)
+    return subprocess.run(
+        ["gh", *args],
+        capture_output=True,
+        text=True,
+        check=check,
+        timeout=GH_TIMEOUT_SECONDS,
+    )
 
 
 def fetch_open_prs(repo: str) -> List[Dict[str, Any]]:
@@ -70,6 +77,8 @@ def fetch_open_prs(repo: str) -> List[Dict[str, Any]]:
             "open",
             "--json",
             "number,title,author,isDraft,createdAt",
+            "--limit",
+            "1000",
         ]
     )
     return json.loads(proc.stdout)
@@ -79,8 +88,8 @@ def fetch_reactions(repo: str, number: int, content: str) -> List[Dict[str, Any]
     """Return the per-user reactions of one ``content`` type on a PR."""
     endpoint = f"repos/{repo}/issues/{number}/reactions"
     query = urllib.parse.urlencode({"content": content, "per_page": 100})
-    proc = run_gh(["api", "--paginate", f"{endpoint}?{query}"])
-    return json.loads(proc.stdout)
+    proc = run_gh(["api", "--paginate", "--jq", ".[]", f"{endpoint}?{query}"])
+    return [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
 
 
 def count_votes(
@@ -126,6 +135,8 @@ def is_ci_green(repo: str, number: int) -> bool:
         return True
     for check in rollup:
         conclusion = check.get("conclusion")
+        if conclusion is None:
+            conclusion = check.get("state")
         if conclusion is None or conclusion.upper() not in GREEN_CONCLUSIONS:
             return False
     return True
@@ -190,12 +201,30 @@ def merge_pr(repo: str, number: int, method: str) -> bool:
         ],
         check=False,
     )
+    if proc.returncode != 0:
+        print(
+            f"Error: gh pr merge for #{number} failed:\n{proc.stderr.strip()}",
+            file=sys.stderr,
+        )
     return proc.returncode == 0
 
 
 def comment_on_pr(repo: str, number: int, body: str) -> None:
-    """Post a comment on the PR (winner announcement / merge failure)."""
-    run_gh(["pr", "comment", str(number), "--repo", repo, "--body", body])
+    """Post a comment on the PR (winner announcement / merge failure).
+
+    Comment failures are logged but never raised: posting a comment must not
+    mask the deliberate return code of the caller.
+    """
+    proc = run_gh(
+        ["pr", "comment", str(number), "--repo", repo, "--body", body],
+        check=False,
+    )
+    if proc.returncode != 0:
+        stderr = proc.stderr.strip() if proc.stderr else ""
+        print(
+            f"Warning: failed to post comment on #{number}: {stderr}",
+            file=sys.stderr,
+        )
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:

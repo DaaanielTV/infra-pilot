@@ -74,7 +74,6 @@ echo ""
 echo "--- File Checks ---"
 check_file "$ROOT_DIR/.env.example" ".env example present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/docker-compose.yml" "docker compose config present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_file "$ROOT_DIR/services/service-core/pom.xml" "service-core Maven manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/orchestrator-agent/requirements.txt" "orchestrator-agent Python manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/management-panel/package.json" "management-panel Node manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/discord-service/package.json" "discord-service package manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))

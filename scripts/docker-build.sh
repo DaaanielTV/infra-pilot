@@ -31,7 +31,6 @@ EOF
 
 REGISTRY="${REGISTRY:-}"
 SERVICES=(
-  "services/service-core"
   "services/orchestrator-agent"
   "services/discord-service"
   "services/management-panel"

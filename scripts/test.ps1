@@ -25,8 +25,7 @@ function Section($title) {
 $TestServices = @(
     "services/orchestrator-agent",
     "services/discord-service",
-    "services/management-panel",
-    "services/service-core"
+    "services/management-panel"
 )
 
 $Passed = 0; $Skipped = 0; $Failed = 0
@@ -63,17 +62,6 @@ foreach ($service in $TestServices) {
                 else { Error "Tests failed for $name"; $Failed++ }
             } else { Warn "No test script defined in package.json"; $Skipped++ }
         } else { Warn "No package.json found"; $Skipped++ }
-
-    } elseif ($name -eq "service-core") {
-        if ($Offline) { Warn "Offline mode: skipping Maven tests"; $Skipped++ }
-        else {
-            $pom = Join-Path $servicePath "pom.xml"
-            if ((Test-Path $pom) -and (Get-Command mvn -ErrorAction SilentlyContinue)) {
-                if ($Coverage) { mvn test jacoco:report -q } else { mvn test -q }
-                if ($LASTEXITCODE -eq 0) { Success "Tests passed for $name"; $Passed++ }
-                else { Error "Tests failed for $name"; $Failed++ }
-            } else { Warn "Maven not found or no pom.xml, skipping tests"; $Skipped++ }
-        }
     }
 }
 

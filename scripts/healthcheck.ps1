@@ -42,7 +42,6 @@ Write-Host ""
 Write-Host "--- File Checks ---"
 if (CheckFile ".env.example" ".env example present") { $OkCount++ } else { $WarnCount++ }
 if (CheckFile "docker-compose.yml" "docker compose config present") { $OkCount++ } else { $WarnCount++ }
-if (CheckFile "services/service-core/pom.xml" "service-core Maven manifest present") { $OkCount++ } else { $WarnCount++ }
 if (CheckFile "services/orchestrator-agent/requirements.txt" "orchestrator-agent Python manifest present") { $OkCount++ } else { $WarnCount++ }
 if (CheckFile "services/management-panel/package.json" "management-panel Node manifest present") { $OkCount++ } else { $WarnCount++ }
 if (CheckFile "services/discord-service/package.json" "discord-service package manifest present") { $OkCount++ } else { $WarnCount++ }

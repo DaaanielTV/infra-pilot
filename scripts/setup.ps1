@@ -25,7 +25,6 @@ function CheckCommand($cmd, $name) {
 }
 
 $Services = @(
-    "services/service-core",
     "services/orchestrator-agent",
     "services/discord-service",
     "services/management-panel"

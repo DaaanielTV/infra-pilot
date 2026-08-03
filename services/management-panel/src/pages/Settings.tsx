@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { MaintenanceScheduler } from '../components/MaintenanceScheduler';
 import { AlertConfig } from '../components/AlertConfig';

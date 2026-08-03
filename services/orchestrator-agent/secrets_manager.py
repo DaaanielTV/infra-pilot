@@ -349,7 +349,7 @@ class AWSSecretsManagerBackend(SecretsBackend):
                 "interval_days": rotation_days,
             }
         except Exception as e:
-            logger.error(f"Failed to rotate secret {secret_id}: {e}")
+            logger.error(f"Failed to rotate secret: {e}")
             raise
 
     def get_secret_value(
@@ -386,7 +386,7 @@ class AWSSecretsManagerBackend(SecretsBackend):
             self.client.restore_secret(SecretId=secret_id)
             return True
         except Exception as e:
-            logger.error(f"Failed to restore secret {secret_id}: {e}")
+            logger.error(f"Failed to restore secret: {e}")
             return False
 
 
@@ -476,7 +476,7 @@ class AzureKeyVaultBackend(SecretsBackend):
             result = self.client.backup_secret(secret_name)
             return result
         except Exception as e:
-            logger.error(f"Failed to backup secret {secret_name}: {e}")
+            logger.error(f"Failed to backup secret: {e}")
             raise
 
     def restore_secret(self, backup: bytes) -> str:
@@ -496,7 +496,7 @@ class AzureKeyVaultBackend(SecretsBackend):
             self.client.purge_deleted_secret(secret_name)
             return True
         except Exception as e:
-            logger.error(f"Failed to purge secret {secret_name}: {e}")
+            logger.error(f"Failed to purge secret: {e}")
             return False
 
 

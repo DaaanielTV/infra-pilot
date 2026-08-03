@@ -20,6 +20,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_TAG: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     name: Build and Push Images
@@ -62,6 +65,9 @@ jobs:
     if: ${{ github.event.inputs.environment == 'staging' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     environment: staging
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v5
@@ -93,6 +99,9 @@ jobs:
     environment:
       name: production
       url: https://api.infra-pilot.example.com
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v5
@@ -129,6 +138,8 @@ jobs:
     needs: [deploy-staging, deploy-production]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/github-script@v9
         with:

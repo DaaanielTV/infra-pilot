@@ -228,6 +228,27 @@ const APP_HEALTH = {
   metrics,
 };
 
+// API key hashing: uses a slow KDF (scrypt) with a per-key random salt so a
+// database leak does not allow offline brute-forcing of stored key hashes.
+const API_KEY_HASH_PREFIX = 'scrypt:';
+const API_KEY_SALT_BYTES = 16;
+const API_KEY_HASH_BYTES = 64;
+
+function hashApiKey(rawKey: string): string {
+  const salt = crypto.randomBytes(API_KEY_SALT_BYTES);
+  const hash = crypto.scryptSync(rawKey, salt, API_KEY_HASH_BYTES);
+  return `${API_KEY_HASH_PREFIX}${salt.toString('hex')}:${hash.toString('hex')}`;
+}
+
+function apiKeyMatches(rawKey: string, storedHash: string | null | undefined): boolean {
+  if (!storedHash || !storedHash.startsWith(API_KEY_HASH_PREFIX)) return false;
+  const parts = storedHash.substring(API_KEY_HASH_PREFIX.length).split(':');
+  if (parts.length !== 2) return false;
+  const expected = Buffer.from(parts[1], 'hex');
+  const actual = crypto.scryptSync(rawKey, Buffer.from(parts[0], 'hex'), expected.length);
+  return crypto.timingSafeEqual(actual, expected);
+}
+
 /**
  * Auth middleware: Verify JWT token from Authorization header and attach user to request.
  * @param req - Express request
@@ -246,15 +267,15 @@ const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  const keyHash = crypto.createHash('sha256').update(token).digest('hex');
+  const keyPrefix = token.substring(0, 10);
   const { data: apiKeyRow } = await supabase
     .from('api_keys')
-    .select('user_id')
-    .eq('key_hash', keyHash)
+    .select('user_id, key_hash')
+    .eq('key_prefix', keyPrefix)
     .eq('revoked', false)
     .maybeSingle();
 
-  if (apiKeyRow) {
+  if (apiKeyRow && apiKeyMatches(token, apiKeyRow.key_hash)) {
     (req as any).user = { id: apiKeyRow.user_id };
     return next();
   }
@@ -1317,22 +1338,22 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'api_key is required' });
   }
 
-  const keyHash = crypto.createHash('sha256').update(api_key).digest('hex');
+  const keyPrefix = api_key.substring(0, 10);
   const { data, error } = await supabase
     .from('api_keys')
-    .select('user_id')
-    .eq('key_hash', keyHash)
+    .select('id, user_id, key_hash')
+    .eq('key_prefix', keyPrefix)
     .eq('revoked', false)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error || !data || !apiKeyMatches(api_key, data.key_hash)) {
     return res.status(401).json({ error: 'Invalid API key' });
   }
 
   await supabase
     .from('api_keys')
     .update({ last_used_at: new Date().toISOString() })
-    .eq('key_hash', keyHash);
+    .eq('id', data.id);
 
   res.json({ token: api_key, user_id: data.user_id });
 });
@@ -3712,7 +3733,7 @@ app.post('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, role, expire_days } = req.body;
   const rawKey = `ip_${crypto.randomBytes(24).toString('hex')}`;
-  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+  const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.substring(0, 10);
   const expiresAt = expire_days ? new Date(Date.now() + expire_days * 86400000).toISOString() : null;
   const { data, error } = await supabase.from('api_keys').insert({ user_id: userId, name, key_hash: keyHash, key_prefix: keyPrefix, role: role || 'user', expires_at: expiresAt }).select('id, name, key_prefix, role, expires_at').single();

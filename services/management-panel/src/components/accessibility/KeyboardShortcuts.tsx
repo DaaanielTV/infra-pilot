@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useIntl } from 'react-intl';
 
 const SHORTCUTS: Record<string, { key: string; route: string; description: string }> = {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Server, Archive } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 interface SearchResult {
   id: string;

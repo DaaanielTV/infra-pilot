@@ -1,5 +1,5 @@
 import { Component, useEffect, useState, useCallback, useMemo } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { IntlProvider } from 'react-intl';
 import { Toaster } from 'sonner';
 import { apiClient } from './lib/api';

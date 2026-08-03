@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { apiClient } from '../lib/api';
 import { ServerPreset, JAVA_VERSIONS } from '../lib/types';
 import { toast } from 'sonner';

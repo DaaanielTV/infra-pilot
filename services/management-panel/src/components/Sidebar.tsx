@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { useConfig } from "../lib/types";

@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { apiClient } from "../lib/api";

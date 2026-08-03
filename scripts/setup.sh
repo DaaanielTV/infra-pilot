@@ -40,7 +40,6 @@ done
 cd "$ROOT_DIR"
 
 SERVICES=(
-  "services/service-core"
   "services/orchestrator-agent"
   "services/discord-service"
   "services/management-panel"
@@ -64,8 +63,6 @@ MISSING_DEPS=0
 check_command git || MISSING_DEPS=1
 if ! check_command docker; then warn "Docker not found - using local setup"; fi
 
-if ! check_command java; then warn "Java not found - skipping service-core setup"; fi
-if ! check_command mvn; then warn "Maven not found - skipping service-core setup"; fi
 if ! check_command python3; then warn "Python 3 not found - skipping orchestrator-agent setup"; fi
 if ! check_command node; then warn "Node.js not found - skipping Node.js services setup"; fi
 if ! check_command npm; then warn "npm not found - skipping Node.js services setup"; fi

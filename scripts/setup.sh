@@ -78,8 +78,8 @@ info "Validating infrastructure files..."
 INFRA_FILES=(
   "docker-compose.yml"
   ".env.example"
-  "infrastructure/prometheus/prometheus.yml"
-  "infrastructure/grafana/provisioning/datasources/prometheus.yml"
+  "infra/monitoring/prometheus/prometheus.yml"
+  "infra/monitoring/grafana/provisioning/datasources/prometheus.yml"
 )
 for file in "${INFRA_FILES[@]}"; do
   if [ -f "$file" ]; then

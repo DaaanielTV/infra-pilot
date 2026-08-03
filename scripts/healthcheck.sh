@@ -88,7 +88,11 @@ check_file "$ROOT_DIR/services/management-panel/.env.example" "management-panel 
 echo ""
 echo "--- Docker Service Checks ---"
 if [ "$DRY_RUN" = true ]; then
-  info "Dry-run mode: skipping live Docker service checks"
+  if [ "$JSON_OUTPUT" = true ]; then
+    echo "Dry-run mode: skipping live Docker service checks" >&2
+  else
+    info "Dry-run mode: skipping live Docker service checks"
+  fi
 else
   check_docker_service "infra-pilot-postgres" "PostgreSQL" && OK=$((OK + 1)) || WARN=$((WARN + 1))
   check_docker_service "infra-pilot-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))

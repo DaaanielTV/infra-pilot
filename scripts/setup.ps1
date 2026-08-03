@@ -25,7 +25,6 @@ function CheckCommand($cmd, $name) {
 }
 
 $Services = @(
-    "services/service-core",
     "services/orchestrator-agent",
     "services/discord-service",
     "services/management-panel"
@@ -48,8 +47,8 @@ Info "Validating infrastructure files..."
 $InfraFiles = @(
     "docker-compose.yml",
     ".env.example",
-    "infrastructure/prometheus/prometheus.yml",
-    "infrastructure/grafana/provisioning/datasources/prometheus.yml"
+    "infra/monitoring/prometheus/prometheus.yml",
+    "infra/monitoring/grafana/provisioning/datasources/prometheus.yml"
 )
 foreach ($file in $InfraFiles) {
     $path = Join-Path $RootDir $file

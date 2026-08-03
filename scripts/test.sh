@@ -35,7 +35,6 @@ TEST_SERVICES=(
   "services/orchestrator-agent"
   "services/discord-service"
   "services/management-panel"
-  "services/service-core"
 )
 
 SHOW_COVERAGE=false
@@ -79,7 +78,7 @@ run_pytest_suite() {
 }
 
 if [ "$OFFLINE" = true ]; then
-  info "Offline mode enabled: Java Maven tests will be skipped"
+  info "Offline mode enabled: network-dependent test steps will be skipped"
 fi
 
 for service in "${TEST_SERVICES[@]}"; do
@@ -152,38 +151,6 @@ for service in "${TEST_SERVICES[@]}"; do
       fi
     else
       warn "No package.json found"
-      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-    fi
-
-  elif [[ "$SERVICE_NAME" == "service-core" ]]; then
-    if [ "$OFFLINE" = true ]; then
-      warn "Offline mode: skipping Maven tests"
-      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-    elif [ -f "pom.xml" ]; then
-      if command -v mvn &> /dev/null; then
-        info "Running Maven tests..."
-        set +e
-        if [ "$SHOW_COVERAGE" = true ]; then
-          mvn test jacoco:report -q
-        else
-          mvn test -q
-        fi
-        rc=$?
-        set -e
-
-        if [ "$rc" -eq 0 ]; then
-          success "Tests passed for $SERVICE_NAME"
-          PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-          error "Tests failed for $SERVICE_NAME"
-          FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-      else
-        warn "Maven not available, skipping tests"
-        SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-      fi
-    else
-      warn "No pom.xml found"
       SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
     fi
   fi

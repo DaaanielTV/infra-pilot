@@ -7,10 +7,12 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 info()    { echo -e "${BLUE}${1}${NC}"; }
 success() { echo -e "${GREEN}${1}${NC}"; }
+warn()    { echo -e "${YELLOW}${1}${NC}" >&2; }
 error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
@@ -70,11 +72,21 @@ for stage in "${stage_list[@]}"; do
       cmd=("bash" "$ROOT_DIR/scripts/test.sh")
       [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
     lint)
-      cmd=("bash" "$ROOT_DIR/tools/lint-all.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
+      if [ -f "$ROOT_DIR/tools/lint-all.sh" ]; then
+        cmd=("bash" "$ROOT_DIR/tools/lint-all.sh")
+        [ "$OFFLINE" = true ] && cmd+=("--offline")
+      else
+        warn "tools/lint-all.sh not found - skipping lint stage"
+        continue
+      fi ;;
     integration)
-      cmd=("bash" "$ROOT_DIR/tools/run-all-tests.sh")
-      [ "$OFFLINE" = true ] && cmd+=("--offline") ;;
+      if [ -f "$ROOT_DIR/tools/run-all-tests.sh" ]; then
+        cmd=("bash" "$ROOT_DIR/tools/run-all-tests.sh")
+        [ "$OFFLINE" = true ] && cmd+=("--offline")
+      else
+        warn "tools/run-all-tests.sh not found - skipping integration stage"
+        continue
+      fi ;;
     "")
       continue ;;
     *)

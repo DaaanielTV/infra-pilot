@@ -7,11 +7,13 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 success() { echo -e "${GREEN}${1}${NC}"; }
 warn()    { echo -e "${YELLOW}${1}${NC}"; }
 error()   { echo -e "${RED}${1}${NC}" >&2; }
+info()    { echo -e "${BLUE}${1}${NC}"; }
 
 usage() {
   cat <<EOF
@@ -22,6 +24,7 @@ Usage: $(basename "$0") [OPTIONS]
 Options:
   --json     Output results as JSON
   --strict   Exit with error if any warnings are present
+  --dry-run  Skip live Docker service checks (validation only)
   --help     Show this help message
 EOF
   exit 0
@@ -29,11 +32,13 @@ EOF
 
 JSON_OUTPUT=false
 STRICT=false
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --json) JSON_OUTPUT=true; shift ;;
     --strict) STRICT=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
     --help) usage ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
@@ -74,7 +79,6 @@ echo ""
 echo "--- File Checks ---"
 check_file "$ROOT_DIR/.env.example" ".env example present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/docker-compose.yml" "docker compose config present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_file "$ROOT_DIR/services/service-core/pom.xml" "service-core Maven manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/orchestrator-agent/requirements.txt" "orchestrator-agent Python manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/management-panel/package.json" "management-panel Node manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 check_file "$ROOT_DIR/services/discord-service/package.json" "discord-service package manifest present" && OK=$((OK + 1)) || WARN=$((WARN + 1))
@@ -83,11 +87,19 @@ check_file "$ROOT_DIR/services/management-panel/.env.example" "management-panel 
 
 echo ""
 echo "--- Docker Service Checks ---"
-check_docker_service "infra-pilot-postgres" "PostgreSQL" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_docker_service "infra-pilot-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_docker_service "infra-pilot-management-panel" "Management Panel" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_docker_service "infra-pilot-orchestrator" "Orchestrator Agent" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-check_docker_service "infra-pilot-discord" "Discord Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+if [ "$DRY_RUN" = true ]; then
+  if [ "$JSON_OUTPUT" = true ]; then
+    echo "Dry-run mode: skipping live Docker service checks" >&2
+  else
+    info "Dry-run mode: skipping live Docker service checks"
+  fi
+else
+  check_docker_service "infra-pilot-postgres" "PostgreSQL" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-pilot-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-pilot-management-panel" "Management Panel" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-pilot-orchestrator" "Orchestrator Agent" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-pilot-discord" "Discord Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+fi
 
 if [ "$JSON_OUTPUT" = true ]; then
   printf '{"script":"healthcheck","ok":%s,"warn":%s}\n' "$OK" "$WARN"

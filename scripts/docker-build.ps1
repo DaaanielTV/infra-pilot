@@ -24,7 +24,6 @@ if (!$Registry) { $Registry = $env:REGISTRY }
 Info "Using version tag: $version"
 
 $Services = @(
-    "services/service-core",
     "services/orchestrator-agent",
     "services/discord-service",
     "services/management-panel"

@@ -25,7 +25,7 @@ All via environment variables, loaded by `config.py`:
 | `DB_PASSWORD` | `CHANGE_ME` | PostgreSQL password |
 | `DB_NAME` | `infra_pilot` | PostgreSQL database |
 | `GITOPS_WEBHOOK_PORT` | `8500` | Webhook/API server port |
-| `FEDERATION_API_TOKEN` | `""` | Shared secret for federation peers (empty = no auth) |
+| `FEDERATION_API_TOKEN` | `""` | Shared secret for federation peers (required in production; `/api/` fails closed without it) |
 | `AUTO_SCALE_COOLDOWN_MINUTES` | `5` | Minutes between auto-scale actions |
 | `AUTO_SCALE_CPU_THRESHOLD` | `80.0` | CPU % threshold for auto-scaling |
 | `AUTO_SCALE_MEMORY_THRESHOLD` | `80.0` | Memory % threshold for auto-scaling |

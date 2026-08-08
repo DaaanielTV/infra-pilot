@@ -238,11 +238,32 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
         """Check Bearer token on federation API routes.
 
-        Returns ``None`` if the token is valid (or auth is disabled),
-        otherwise a 401 response.
+        Fails closed in production: without a configured
+        ``FEDERATION_API_TOKEN`` every ``/api/`` route refuses traffic.
+        In other environments a missing token logs a warning and allows
+        requests so local development stays usable.
+
+        Returns ``None`` if the token is valid (or auth is explicitly
+        disabled in a non-production environment), otherwise a 503/401.
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
+            environment = os.getenv(
+                "NODE_ENV", os.getenv("ENVIRONMENT", "development")
+            )
+            if environment == "production":
+                return web.json_response(
+                    {
+                        "error": "auth not configured",
+                        "message": "FEDERATION_API_TOKEN is required in production",
+                    },
+                    status=503,
+                )
+            logger.warning(
+                "FEDERATION_API_TOKEN is not set; /api/ routes are unauthenticated "
+                "in %s environment. Set a token before deploying to production.",
+                environment,
+            )
             return None
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], api_token):

@@ -3,11 +3,18 @@
 import hashlib
 import hmac
 import os
+import time
 import unittest
 from unittest.mock import AsyncMock
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+
+from webhook_server import (
+    WEBHOOK_REPLAY_WINDOW_SECONDS,
+    _delivery_is_fresh,
+    _seen_deliveries,
+)
 
 
 def make_request_with_headers(headers: dict, body: bytes = b'{"event":"push"}'):
@@ -28,6 +35,7 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
         self.guard = verify_github_signature
         self.secret = "test-secret"
         os.environ["GITHUB_WEBHOOK_SECRET"] = self.secret
+        self.delivery_id = f"delivery-{time.monotonic_ns()}"
 
     async def asyncTearDown(self):
         os.environ.pop("GITHUB_WEBHOOK_SECRET", None)
@@ -50,9 +58,16 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
             "sha256=" + hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
         )
 
+    def headers(self, **extra) -> dict:
+        return {"X-GitHub-Delivery": self.delivery_id, **extra}
+
     async def test_rejects_missing_signature(self):
         client = await self.build_client({}, b"")
-        resp = await client.post("/webhook/github", data=b"")
+        resp = await client.post(
+            "/webhook/github",
+            data=b"",
+            headers=self.headers(),
+        )
         self.assertEqual(resp.status, 401)
 
     async def test_rejects_wrong_signature(self):
@@ -62,18 +77,41 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
         resp = await client.post(
             "/webhook/github",
             data=b"payload",
-            headers={"X-Hub-Signature-256": "sha256=deadbeef"},
+            headers=self.headers(**{"X-Hub-Signature-256": "sha256=deadbeef"}),
         )
         self.assertEqual(resp.status, 401)
 
     async def test_accepts_valid_signature(self):
         body = b'{"event":"push"}'
         sig = self.valid_signature(body)
-        client = await self.build_client({"X-Hub-Signature-256": sig}, body)
+        client = await self.build_client(
+            self.headers(**{"X-Hub-Signature-256": sig}), body
+        )
+        resp = await client.post(
+            "/webhook/github",
+            data=body,
+            headers=self.headers(**{"X-Hub-Signature-256": sig}),
+        )
+        self.assertEqual(resp.status, 200)
+
+    async def test_rejects_missing_delivery_id(self):
+        body = b'{"event":"push"}'
+        sig = self.valid_signature(body)
+        client = await self.build_client({}, body)
         resp = await client.post(
             "/webhook/github", data=body, headers={"X-Hub-Signature-256": sig}
         )
-        self.assertEqual(resp.status, 200)
+        self.assertEqual(resp.status, 401)
+
+    async def test_rejects_replayed_delivery_id(self):
+        body = b'{"event":"push"}'
+        sig = self.valid_signature(body)
+        client = await self.build_client({}, body)
+        headers = self.headers(**{"X-Hub-Signature-256": sig})
+        first = await client.post("/webhook/github", data=body, headers=headers)
+        self.assertEqual(first.status, 200)
+        replay = await client.post("/webhook/github", data=body, headers=headers)
+        self.assertEqual(replay.status, 401)
 
 
 class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
@@ -99,26 +137,61 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
         self.addAsyncCleanup(client.close)
         return client
 
+    def headers(self, **extra) -> dict:
+        return {
+            "Authorization": "Bearer test-token",
+            "X-Timestamp": str(int(time.time())),
+            **extra,
+        }
+
     async def test_rejects_missing_token(self):
         client = await self.build_client({})
-        resp = await client.post("/webhook/gitops", data=b"{}")
+        resp = await client.post(
+            "/webhook/gitops", data=b"{}", headers={"X-Timestamp": "0"}
+        )
         self.assertEqual(resp.status, 401)
 
     async def test_rejects_wrong_token(self):
         client = await self.build_client({"Authorization": "Bearer nope"})
         resp = await client.post(
-            "/webhook/gitops", data=b"{}", headers={"Authorization": "Bearer nope"}
+            "/webhook/gitops",
+            data=b"{}",
+            headers={"Authorization": "Bearer nope", "X-Timestamp": "0"},
         )
         self.assertEqual(resp.status, 401)
 
     async def test_accepts_valid_token(self):
-        client = await self.build_client({"Authorization": "Bearer test-token"})
+        client = await self.build_client(self.headers())
+        resp = await client.post("/webhook/gitops", data=b"{}", headers=self.headers())
+        self.assertEqual(resp.status, 200)
+
+    async def test_rejects_missing_timestamp(self):
+        client = await self.build_client({})
         resp = await client.post(
             "/webhook/gitops",
             data=b"{}",
             headers={"Authorization": "Bearer test-token"},
         )
-        self.assertEqual(resp.status, 200)
+        self.assertEqual(resp.status, 401)
+
+    async def test_rejects_stale_timestamp(self):
+        stale = str(int(time.time()) - WEBHOOK_REPLAY_WINDOW_SECONDS - 60)
+        client = await self.build_client({})
+        resp = await client.post(
+            "/webhook/gitops",
+            data=b"{}",
+            headers={"Authorization": "Bearer test-token", "X-Timestamp": stale},
+        )
+        self.assertEqual(resp.status, 401)
+
+    async def test_rejects_malformed_timestamp(self):
+        client = await self.build_client({})
+        resp = await client.post(
+            "/webhook/gitops",
+            data=b"{}",
+            headers={"Authorization": "Bearer test-token", "X-Timestamp": "soon"},
+        )
+        self.assertEqual(resp.status, 401)
 
 
 class FailClosedTest(unittest.IsolatedAsyncioTestCase):
@@ -145,6 +218,18 @@ class FailClosedTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 503)
         resp = await client.post("/webhook/gitops", data=b"{}")
         self.assertEqual(resp.status, 503)
+
+
+class DeliveryDedupTest(unittest.IsolatedAsyncioTestCase):
+    async def test_delivery_id_accepted_then_rejected(self):
+        delivery_id = f"delivery-{time.monotonic_ns()}"
+        self.assertTrue(_delivery_is_fresh(delivery_id))
+        self.assertFalse(_delivery_is_fresh(delivery_id))
+
+    async def test_distinct_delivery_ids_accepted(self):
+        _seen_deliveries.clear()
+        self.assertTrue(_delivery_is_fresh("a-1"))
+        self.assertTrue(_delivery_is_fresh("a-2"))
 
 
 if __name__ == "__main__":

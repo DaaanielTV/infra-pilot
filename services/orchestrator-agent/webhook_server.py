@@ -10,6 +10,7 @@ import hmac
 import logging
 import os
 import sys
+import time
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -172,17 +173,61 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
+WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))
+
+# Delivery IDs seen within the replay window, used to reject replayed
+# GitHub webhooks. Bounded by evicting entries older than the window.
+_seen_deliveries: set[str] = set()
+_last_delivery_prune = time.monotonic()
+
+
+def _delivery_is_fresh(delivery_id: str) -> bool:
+    """Return True if the delivery ID has not been seen recently."""
+    global _last_delivery_prune
+    now = time.monotonic()
+    if now - _last_delivery_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
+        _seen_deliveries.clear()
+        _last_delivery_prune = now
+    if delivery_id in _seen_deliveries:
+        return False
+    _seen_deliveries.add(delivery_id)
+    return True
+
+
+def _timestamp_is_fresh(timestamp: str) -> bool:
+    """Check an epoch-seconds header against the replay window.
+
+    Rejects malformed or out-of-window values so replayed requests
+    carrying an old timestamp fail closed.
+    """
+    try:
+        sent = int(timestamp)
+    except (TypeError, ValueError):
+        return False
+    now = time.time()
+    return abs(now - sent) <= WEBHOOK_REPLAY_WINDOW_SECONDS
+
+
 async def verify_github_signature(
     request: web.Request, handler: Callable[[web.Request], object]
 ) -> web.Response:
     """Verify GitHub webhook HMAC-SHA256 signature (X-Hub-Signature-256).
 
     Fails closed: without a configured GITHUB_WEBHOOK_SECRET the route
-    refuses all traffic instead of accepting unsigned requests.
+    refuses all traffic instead of accepting unsigned requests. Each
+    X-GitHub-Delivery ID is accepted only once, which blocks replay of
+    a captured signed request.
     """
     secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     if not secret:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
+    delivery_id = request.headers.get("X-GitHub-Delivery", "")
+    if not delivery_id or not _delivery_is_fresh(delivery_id):
+        logger.warning(
+            "Rejected webhook with missing or replayed delivery ID from %s",
+            request.remote,
+        )
+        return web.json_response({"error": "invalid webhook delivery"}, status=401)
     body = await request.read()
     signature = request.headers.get("X-Hub-Signature-256", "")
     expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
@@ -201,6 +246,8 @@ async def verify_gitops_token(
 
     Fails closed: without a configured GITOPS_WEBHOOK_TOKEN the route
     refuses all traffic instead of accepting unauthenticated requests.
+    An X-Timestamp header within the replay window is required so a
+    captured request cannot be replayed later.
     """
     token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
     if not token:
@@ -209,6 +256,13 @@ async def verify_gitops_token(
     if not (auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], token)):
         logger.warning("Rejected webhook with invalid token from %s", request.remote)
         return web.json_response({"error": "unauthorized"}, status=401)
+    timestamp = request.headers.get("X-Timestamp", "")
+    if not _timestamp_is_fresh(timestamp):
+        logger.warning(
+            "Rejected webhook with missing or stale timestamp from %s",
+            request.remote,
+        )
+        return web.json_response({"error": "stale webhook"}, status=401)
     return await handler(request)
 
 

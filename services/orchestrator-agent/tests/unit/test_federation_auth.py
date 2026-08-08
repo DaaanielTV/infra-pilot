@@ -10,7 +10,6 @@ import unittest
 from types import SimpleNamespace
 
 from aiohttp.test_utils import TestClient, TestServer
-
 from webhook_server import build_webhook_app
 
 BOT = SimpleNamespace(get_cog=lambda name: None)

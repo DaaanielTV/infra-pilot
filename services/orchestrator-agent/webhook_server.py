@@ -19,7 +19,6 @@ from typing import Any, Callable, Optional
 import psutil
 from aiohttp import web
 from discord.ext import commands
-
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
@@ -302,9 +301,7 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
-            environment = os.getenv(
-                "NODE_ENV", os.getenv("ENVIRONMENT", "development")
-            )
+            environment = os.getenv("NODE_ENV", os.getenv("ENVIRONMENT", "development"))
             if environment == "production":
                 return web.json_response(
                     {

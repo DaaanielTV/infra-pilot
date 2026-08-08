@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
-
 from webhook_server import (
     WEBHOOK_REPLAY_WINDOW_SECONDS,
     _delivery_is_fresh,

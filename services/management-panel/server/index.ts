@@ -11,6 +11,7 @@ import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
+import { sanitizeAuditValue } from './audit-sanitize.js';
 
 /**
  * Run a command as a child process and capture stdout/stderr.
@@ -302,8 +303,8 @@ async function logAudit(userId: string, action: string, entityType: string, enti
         action,
         entity_type: entityType,
         entity_id: entityId,
-        old_value: oldValue ? JSON.stringify(oldValue) : null,
-        new_value: newValue ? JSON.stringify(newValue) : null,
+        old_value: oldValue ? JSON.stringify(sanitizeAuditValue(oldValue)) : null,
+        new_value: newValue ? JSON.stringify(sanitizeAuditValue(newValue)) : null,
         ip_address: ipAddress || null,
       });
   } catch (err) {

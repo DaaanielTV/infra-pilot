@@ -78,4 +78,6 @@ checked at last audit (170 routes).
 ## Update History
 
 - 2026-08-08: initial matrix; federated `/api/` made fail-closed in
-  production; runbooks GET and 2FA setup/verify-setup/disable flagged.
+  production; runbooks GET and 2FA setup/verify-setup/disable flagged
+  and fixed; audit payloads centrally sanitized (no tokens, secrets,
+  env vars or webhook URLs in audit events).

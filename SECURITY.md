@@ -52,9 +52,9 @@ get a fix before any other work.
 |-----------|-----|------------------|-------|
 | `GET /health`, `GET /api/health` | Anyone | Check liveness | No sensitive data returned |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
-| `POST /webhook/github` | GitHub | Trigger GitOps deploys | `X-Hub-Signature-256` HMAC-SHA256 over raw body; **fail closed** (503) if secret unset |
-| `POST /webhook/gitops` | CI/CD systems | Trigger GitOps deploys | `Authorization: Bearer <GITOPS_WEBHOOK_TOKEN>`; **fail closed** (503) if unset |
+| `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `Authorization: Bearer <GITOPS_WEBHOOK_TOKEN>` + `X-Timestamp` replay window; **fail closed** (503) if unset |
 | `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check |
+| `POST /api/v1/deployments`, `GET /api/v1/providers` | CLI / management panel | Trigger manifest reconciliation | Federation token (fails closed in production); optional `user_id`+`org_id` checked against `manifest:deploy` permission |
 | `/api/v1/rbac/*` | RBAC-authorized principals | Manage roles/orgs/memberships | RBAC engine + per-project scoping |
 | Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN` |
 | `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists |

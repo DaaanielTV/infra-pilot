@@ -1,6 +1,7 @@
 """Integration tests for the deployment API on the webhook server."""
 
 import os
+import time
 import unittest
 import importlib
 from datetime import datetime
@@ -9,6 +10,7 @@ from types import SimpleNamespace
 from aiohttp.test_utils import TestClient, TestServer
 
 os.environ["FEDERATION_API_TOKEN"] = "test-federation-token"
+os.environ["GITOPS_WEBHOOK_TOKEN"] = "test-gitops-token"
 
 from compute.base import (  # noqa: E402
     ComputeProvider,
@@ -221,3 +223,32 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         body = await resp.json()
         self.assertIn("docker", body["providers"])
         self.assertIn("fake", body["providers"])
+
+    async def test_gitops_webhook_requires_valid_token(self):
+        resp = await self.client.post(
+            "/webhook/gitops", json={"manifest": make_manifest("m-gh")}
+        )
+        self.assertEqual(resp.status, 401)
+
+        resp = await self.client.post(
+            "/webhook/gitops",
+            json={"manifest": make_manifest("m-gh")},
+            headers={
+                "Authorization": "Bearer wrong-token",
+                "X-Timestamp": str(int(time.time())),
+            },
+        )
+        self.assertEqual(resp.status, 401)
+
+    async def test_gitops_webhook_runs_reconcile(self):
+        resp = await self.client.post(
+            "/webhook/gitops",
+            json={"manifest": make_manifest("m-gitops")},
+            headers={
+                "Authorization": "Bearer test-gitops-token",
+                "X-Timestamp": str(int(time.time())),
+            },
+        )
+        self.assertEqual(resp.status, 200)
+        body = await resp.json()
+        self.assertEqual(body["manifest_name"], "m-gitops")

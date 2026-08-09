@@ -169,8 +169,9 @@ Rules are managed via the `AutoScaler` Discord cog (`/scaling-rules`, `/scaling-
 | GET | `/health` | Health check (no auth) |
 | GET | `/metrics` | Prometheus metrics (no auth) |
 | GET | `/api/v1/federation/status` | Federation peer status (requires `FEDERATION_API_TOKEN`) |
-| POST | `/webhook/github/{deploy_id}` | GitHub webhook receiver |
-| POST | `/webhook/gitops` | GitOps sync webhook |
+| GET | `/api/v1/providers` | Registered compute providers (requires `FEDERATION_API_TOKEN`) |
+| POST | `/api/v1/deployments` | Reconcile a manifest on demand (requires `FEDERATION_API_TOKEN`, optional RBAC check) |
+| POST | `/webhook/gitops` | GitOps push webhook — reconcile a manifest (Bearer `GITOPS_WEBHOOK_TOKEN` + `X-Timestamp`) |
 
 ## Database
 

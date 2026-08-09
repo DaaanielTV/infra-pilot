@@ -420,21 +420,12 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     app.router.add_post("/api/v1/deployments", deployment_apply)
     app.router.add_get("/api/v1/providers", deployment_providers)
 
-    cog = bot_instance.get_cog("GitDeployer")
-    if cog:
+    # GitOps push webhook: converge toward the manifest sent in the body.
+    # Runs the same reconcile path as POST /api/v1/deployments, guarded by
+    # a Bearer token + replay window instead of the federation token.
+    async def gitops_webhook(request: web.Request) -> web.Response:
+        return await verify_gitops_token(request, deployment_apply)
 
-        async def github_webhook(request: web.Request) -> web.Response:
-            return await verify_github_signature(request, cog.handle_webhook)
-
-        app.router.add_post("/webhook/github/{deploy_id}", github_webhook)
-        app.router.add_post("/webhook/github", github_webhook)
-
-    gitops_cog = bot_instance.get_cog("GitOpsSync")
-    if gitops_cog:
-
-        async def gitops_webhook(request: web.Request) -> web.Response:
-            return await verify_gitops_token(request, gitops_cog.handle_webhook)
-
-        app.router.add_post("/webhook/gitops", gitops_webhook)
+    app.router.add_post("/webhook/gitops", gitops_webhook)
 
     return app

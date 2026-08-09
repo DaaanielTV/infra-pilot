@@ -237,11 +237,11 @@ export const GitDeployManager = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">Webhook URL:</span>
-              <span className="text-green-400 font-mono text-xs break-all ml-2">http://your-host:8500/webhook/github/{selectedDep.id}</span>
+              <span className="text-green-400 font-mono text-xs break-all ml-2">http://your-host:8500/webhook/gitops</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Secret:</span>
-              <span className="text-amber-400 font-mono text-xs">{selectedDep.webhookSecret}</span>
+              <span className="text-slate-400">Auth:</span>
+              <span className="text-amber-400 font-mono text-xs">Bearer GITOPS_WEBHOOK_TOKEN + X-Timestamp header</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Repository:</span>

@@ -2743,6 +2743,55 @@ const setDeployments = async (deployments: any[]): Promise<void> => {
     .upsert({ key: 'git_deployments', value: deployments }, { onConflict: 'key' });
 };
 
+// Orchestrator forwarding: only active when ORCHESTRATOR_API_TOKEN is set.
+// Without it the panel keeps its store-only behavior, so local setups and
+// the existing test suite are unaffected.
+const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL || 'http://localhost:8500';
+const ORCHESTRATOR_API_TOKEN = process.env.ORCHESTRATOR_API_TOKEN || '';
+
+const buildManifestFromDeployment = (d: any): any => ({
+  api_version: 'v1',
+  kind: 'InfraFile',
+  metadata: { name: d.name, environment: 'production' },
+  spec: {
+    instances: [
+      {
+        name: d.containerId || d.name,
+        provider: 'docker',
+        image: d.image || 'ubuntu:22.04',
+        cpu: d.cpu ?? 1.0,
+        memory_mb: d.memory_mb ?? 512,
+        storage_gb: d.storage_gb ?? 10,
+        env: {
+          GIT_REPO: d.repoUrl,
+          GIT_BRANCH: d.branch || 'main',
+        },
+      },
+    ],
+  },
+});
+
+const forwardDeploymentToOrchestrator = async (deployment: any): Promise<any | null> => {
+  if (!ORCHESTRATOR_API_TOKEN) return null;
+  try {
+    const resp = await axios.post(
+      `${ORCHESTRATOR_URL}/api/v1/deployments`,
+      {
+        manifest: buildManifestFromDeployment(deployment),
+        dry_run: !!deployment.dryRun,
+      },
+      {
+        headers: { Authorization: `Bearer ${ORCHESTRATOR_API_TOKEN}` },
+        timeout: 30000,
+      }
+    );
+    return resp.data;
+  } catch (err: any) {
+    console.error('Orchestrator deployment forward failed:', err?.message || err);
+    return null;
+  }
+};
+
 app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
@@ -2756,7 +2805,7 @@ app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
 
 app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { name, repoUrl, branch, containerId, targetDir, installCommand, restartCommand } = req.body;
+  const { name, repoUrl, branch, containerId, targetDir, installCommand, restartCommand, dryRun } = req.body;
 
   if (!name || !repoUrl) {
     return res.status(400).json({ error: 'name and repoUrl are required' });
@@ -2776,6 +2825,7 @@ app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => 
       installCommand: installCommand || '',
       restartCommand: restartCommand || '',
       enabled: true,
+      dryRun: !!dryRun,
       webhookSecret: crypto.randomBytes(20).toString('hex'),
       createdAt: new Date().toISOString(),
       history: [],
@@ -2783,6 +2833,10 @@ app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => 
     deployments.push(newDeployment);
     await setDeployments(deployments);
     await logAudit(userId, 'deployment:create', 'deployment', newDeployment.id, null, { name, repoUrl });
+    const orchestration = await forwardDeploymentToOrchestrator(newDeployment);
+    if (orchestration) {
+      newDeployment.orchestration = orchestration;
+    }
     res.status(201).json(newDeployment);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create deployment' });

@@ -124,8 +124,10 @@ managementPanel:
   service:
     port: 3000
   env:
-    - name: API_URL
+    - name: ORCHESTRATOR_URL
       value: "http://infra-pilot-orchestrator:8500"
+    - name: ORCHESTRATOR_API_TOKEN
+      value: "CHANGE_ME"
     - name: SUPABASE_URL
       value: ""
     - name: SUPABASE_ANON_KEY

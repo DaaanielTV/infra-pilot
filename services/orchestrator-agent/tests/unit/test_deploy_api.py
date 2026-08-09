@@ -1,9 +1,9 @@
 """Integration tests for the deployment API on the webhook server."""
 
+import importlib
 import os
 import time
 import unittest
-import importlib
 from datetime import datetime
 from types import SimpleNamespace
 

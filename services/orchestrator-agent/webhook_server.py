@@ -17,6 +17,7 @@ from typing import Any, Callable, Optional
 
 import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
 import psutil
+import rbac_store
 from aiohttp import web
 from compute.registry import ProviderRegistry
 from discord.ext import commands
@@ -77,7 +78,9 @@ async def rbac_role_create(request: web.Request) -> web.Response:
     role = Role(
         name=name, permissions=permissions, description=str(body.get("description", ""))
     )
-    return web.json_response(_serialize_rbac(rbac_engine.create_role(role)), status=201)
+    created = rbac_engine.create_role(role)
+    await rbac_store.persist_role(created)
+    return web.json_response(_serialize_rbac(created), status=201)
 
 
 async def rbac_org_create(request: web.Request) -> web.Response:
@@ -102,7 +105,12 @@ async def rbac_org_create(request: web.Request) -> web.Response:
         name=name,
         owner_user_id=owner_user_id,
     )
-    return web.json_response(_serialize_rbac(rbac_engine.create_org(org)), status=201)
+    created = rbac_engine.create_org(org)
+    await rbac_store.persist_org(created)
+    owner_membership = rbac_engine.list_members(org.id)
+    if owner_membership:
+        await rbac_store.persist_membership(owner_membership[0])
+    return web.json_response(_serialize_rbac(created), status=201)
 
 
 async def rbac_orgs_for_user(request: web.Request) -> web.Response:
@@ -140,6 +148,7 @@ async def rbac_role_assign(request: web.Request) -> web.Response:
         project_id=str(body.get("project_id", "")),
         granted_by=str(body.get("granted_by", "api")),
     )
+    await rbac_store.persist_membership(membership)
     return web.json_response(_serialize_rbac(membership), status=201)
 
 
@@ -264,6 +273,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
     Args:
         bot_instance: The Discord bot instance to attach webhook routes from.
     """
+    await rbac_store.load_rbac_state(rbac_engine)
     app = build_webhook_app(bot_instance)
     runner = web.AppRunner(app)
     await runner.setup()

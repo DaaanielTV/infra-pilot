@@ -14,7 +14,7 @@ class TestConfigDefaults:
     def test_default_api_url(self):
         from cli.ipilot.config import DEFAULT_CONFIG
 
-        assert DEFAULT_CONFIG["api_url"] == "http://localhost:8080"
+        assert DEFAULT_CONFIG["api_url"] == "http://localhost:3001"
 
     def test_default_api_url_from_env(self):
         import importlib
@@ -42,7 +42,7 @@ class TestLoadConfig:
                 from cli.ipilot.config import load_config
 
                 config = load_config()
-                assert config["api_url"] == "http://localhost:8080"
+                assert config["api_url"] == "http://localhost:3001"
 
     def test_load_config_merges_with_defaults(self, tmp_path):
         config_dir = tmp_path / ".ipilot"
@@ -58,7 +58,7 @@ class TestLoadConfig:
                 config = load_config()
                 assert config["api_key"] == "test-key"
                 assert config["token"] == "test-token"
-                assert config["api_url"] == "http://localhost:8080"
+                assert config["api_url"] == "http://localhost:3001"
 
     def test_load_config_invalid_json(self, tmp_path):
         config_dir = tmp_path / ".ipilot"
@@ -70,7 +70,7 @@ class TestLoadConfig:
                 from cli.ipilot.config import load_config
 
                 config = load_config()
-                assert config["api_url"] == "http://localhost:8080"
+                assert config["api_url"] == "http://localhost:3001"
 
 
 class TestSaveConfig:

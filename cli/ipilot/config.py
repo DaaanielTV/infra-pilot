@@ -14,7 +14,7 @@ ENV_API_URL = "IPILOT_API_URL"
 ENV_TOKEN = "IPILOT_TOKEN"
 ENV_OUTPUT = "IPILOT_OUTPUT"
 
-DEFAULT_API_URL = "http://localhost:8080"
+DEFAULT_API_URL = "http://localhost:3001"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "api_url": os.environ.get(ENV_API_URL, DEFAULT_API_URL),

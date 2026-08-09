@@ -265,23 +265,26 @@ class ApiClient:
             },
         )
 
-    def deploy(self, server_id: str, branch: str) -> Any:
+    def deploy(
+        self, server_id: str, branch: str, repo_url: Optional[str] = None
+    ) -> Any:
         """Deploy a branch to a server.
 
         Args:
             server_id: The server ID.
             branch: The branch name to deploy.
+            repo_url: Optional git repository URL (fallback to server ID).
         """
         return self._request(
             "POST",
             "/deployments",
             {
                 "name": f"deploy-{server_id}",
-                "repoUrl": branch,
+                "repoUrl": repo_url or server_id,
                 "branch": branch,
                 "containerId": server_id,
             },
-        )  # TODO: backend expects name + repoUrl (git URL); branch alone is insufficient – verify
+        )
 
     def health_check(self) -> Any:
         """Check API health."""

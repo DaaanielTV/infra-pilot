@@ -1,7 +1,7 @@
 import typer
 
 from ...client import ApiClient
-from ...config import load_config
+from ...config import DEFAULT_API_URL, load_config
 from ...output.formatters import print_output
 
 app = typer.Typer(help="Deployment")
@@ -9,9 +9,7 @@ app = typer.Typer(help="Deployment")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(
-        config.get("api_url", "http://localhost:8080"), config.get("token")
-    )
+    return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
 
 
 @app.command()
@@ -19,6 +17,9 @@ def deploy(
     ctx: typer.Context,
     server: str = typer.Argument(..., help="Server ID or name"),
     branch: str = typer.Argument(..., help="Branch to deploy"),
+    repo_url: str = typer.Option(
+        None, "--repo-url", "-r", help="Git repository URL to deploy"
+    ),
     template: str = typer.Option(
         None, "--template", "-t", help="Deployment template to use"
     ),
@@ -37,7 +38,7 @@ def deploy(
             template, server, server=server, variables={"branch": branch}
         )
     else:
-        result = client.deploy(server, branch)
+        result = client.deploy(server, branch, repo_url)
     print_output(result, ctx.obj.get("output", "table"))
 
 

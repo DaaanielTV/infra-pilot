@@ -81,7 +81,9 @@ def cmd_backup_create(args):
 
 
 def cmd_deploy(args):
-    result = get_client().deploy(args.server, args.branch)
+    result = get_client().deploy(
+        args.server, args.branch, getattr(args, "repo_url", None)
+    )
     print_output(result, args.output)
 
 
@@ -405,6 +407,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy = sub.add_parser("deploy", help="Deploy a branch to a server")
     p_deploy.add_argument("server", help="Server ID or name")
     p_deploy.add_argument("branch", help="Branch to deploy")
+    p_deploy.add_argument(
+        "--repo-url", help="Git repository URL (defaults to the server ID)"
+    )
 
     p_config = sub.add_parser("config", help="Configuration management")
     p_config_sub = p_config.add_subparsers(dest="subcommand")

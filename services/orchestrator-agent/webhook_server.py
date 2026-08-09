@@ -15,14 +15,16 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Optional
 
+import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
 import psutil
 from aiohttp import web
+from compute.registry import ProviderRegistry
 from discord.ext import commands
-
+from manifest.engine import ManifestEngine
+from manifest.schema import InfraFile
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
-
 # The federation API token holder acts as platform administrator for the
 # RBAC management API. Tenant users are represented by memberships inside
 # the engine and never authenticate over the wire.
@@ -170,6 +172,50 @@ async def rbac_org_members(request: web.Request) -> web.Response:
         return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
     members = rbac_engine.list_members(org_id, request.query.get("project_id", ""))
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
+
+
+async def deployment_apply(request: web.Request) -> web.Response:
+    """Reconcile a manifest on demand (POST /api/v1/deployments).
+
+    Body: ``{"manifest": {...InfraFile...}, "dry_run": bool,
+    "user_id": str, "org_id": str}``.  When ``user_id`` and ``org_id``
+    are supplied the caller must hold the ``manifest:deploy`` permission
+    in that organization; without them the federation token holder
+    acts as a platform administrator.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    manifest_data = body.get("manifest")
+    if not isinstance(manifest_data, dict) or not manifest_data:
+        return web.json_response({"error": "manifest object is required"}, status=400)
+    dry_run = bool(body.get("dry_run", False))
+    user_id = body.get("user_id")
+    org_id = body.get("org_id")
+    if user_id:
+        if not org_id:
+            return web.json_response(
+                {"error": "org_id is required when user_id is provided"}, status=400
+            )
+        if not rbac_engine.has_permission(
+            user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
+        ):
+            return web.json_response(
+                {"error": "manifest:deploy permission required"}, status=403
+            )
+    try:
+        desired = InfraFile.from_dict(manifest_data)
+    except Exception as exc:
+        return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
+    result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
+    status = 200 if not result.errors else 207
+    return web.json_response(_serialize_rbac(result), status=status)
+
+
+async def deployment_providers(request: web.Request) -> web.Response:
+    """List registered compute providers (GET /api/v1/providers)."""
+    return web.json_response({"providers": ProviderRegistry.list_providers()})
 
 
 async def verify_github_signature(
@@ -371,6 +417,8 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     app.router.add_post("/api/v1/rbac/assign", rbac_role_assign)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
+    app.router.add_post("/api/v1/deployments", deployment_apply)
+    app.router.add_get("/api/v1/providers", deployment_providers)
 
     cog = bot_instance.get_cog("GitDeployer")
     if cog:

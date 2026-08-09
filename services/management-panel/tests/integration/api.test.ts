@@ -37,6 +37,18 @@ describe('management-panel API integration contract', () => {
     assert.equal(response.status, 401);
   });
 
+  it('requires auth to list runbooks', async () => {
+    const response = await request(server, 'GET', '/api/runbooks');
+    assert.equal(response.status, 401);
+  });
+
+  it('requires auth to set up, confirm or disable 2FA', async () => {
+    for (const path of ['/api/auth/2fa/setup', '/api/auth/2fa/verify-setup', '/api/auth/2fa/disable']) {
+      const response = await request(server, 'POST', path, {});
+      assert.equal(response.status, 401, `${path} should require auth`);
+    }
+  });
+
   it('filters apps by the authenticated owner', async () => {
     const response = await request(server, 'GET', '/api/apps', undefined, 'token');
     assert.equal(response.status, 200);

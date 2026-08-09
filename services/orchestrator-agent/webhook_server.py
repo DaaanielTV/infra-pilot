@@ -10,6 +10,7 @@ import hmac
 import logging
 import os
 import sys
+import time
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -21,8 +22,6 @@ import rbac_store
 from aiohttp import web
 from compute.registry import ProviderRegistry
 from discord.ext import commands
-from manifest.engine import ManifestEngine
-from manifest.schema import InfraFile
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
@@ -183,48 +182,39 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
-async def deployment_apply(request: web.Request) -> web.Response:
-    """Reconcile a manifest on demand (POST /api/v1/deployments).
+WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))
 
-    Body: ``{"manifest": {...InfraFile...}, "dry_run": bool,
-    "user_id": str, "org_id": str}``.  When ``user_id`` and ``org_id``
-    are supplied the caller must hold the ``manifest:deploy`` permission
-    in that organization; without them the federation token holder
-    acts as a platform administrator.
+# Delivery IDs seen within the replay window, used to reject replayed
+# GitHub webhooks. Bounded by evicting entries older than the window.
+_seen_deliveries: set[str] = set()
+_last_delivery_prune = time.monotonic()
+
+
+def _delivery_is_fresh(delivery_id: str) -> bool:
+    """Return True if the delivery ID has not been seen recently."""
+    global _last_delivery_prune
+    now = time.monotonic()
+    if now - _last_delivery_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
+        _seen_deliveries.clear()
+        _last_delivery_prune = now
+    if delivery_id in _seen_deliveries:
+        return False
+    _seen_deliveries.add(delivery_id)
+    return True
+
+
+def _timestamp_is_fresh(timestamp: str) -> bool:
+    """Check an epoch-seconds header against the replay window.
+
+    Rejects malformed or out-of-window values so replayed requests
+    carrying an old timestamp fail closed.
     """
     try:
-        body = await request.json()
-    except Exception:
-        return web.json_response({"error": "invalid JSON body"}, status=400)
-    manifest_data = body.get("manifest")
-    if not isinstance(manifest_data, dict) or not manifest_data:
-        return web.json_response({"error": "manifest object is required"}, status=400)
-    dry_run = bool(body.get("dry_run", False))
-    user_id = body.get("user_id")
-    org_id = body.get("org_id")
-    if user_id:
-        if not org_id:
-            return web.json_response(
-                {"error": "org_id is required when user_id is provided"}, status=400
-            )
-        if not rbac_engine.has_permission(
-            user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
-        ):
-            return web.json_response(
-                {"error": "manifest:deploy permission required"}, status=403
-            )
-    try:
-        desired = InfraFile.from_dict(manifest_data)
-    except Exception as exc:
-        return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
-    result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
-    status = 200 if not result.errors else 207
-    return web.json_response(_serialize_rbac(result), status=status)
-
-
-async def deployment_providers(request: web.Request) -> web.Response:
-    """List registered compute providers (GET /api/v1/providers)."""
-    return web.json_response({"providers": ProviderRegistry.list_providers()})
+        sent = int(timestamp)
+    except (TypeError, ValueError):
+        return False
+    now = time.time()
+    return abs(now - sent) <= WEBHOOK_REPLAY_WINDOW_SECONDS
 
 
 async def verify_github_signature(
@@ -233,11 +223,20 @@ async def verify_github_signature(
     """Verify GitHub webhook HMAC-SHA256 signature (X-Hub-Signature-256).
 
     Fails closed: without a configured GITHUB_WEBHOOK_SECRET the route
-    refuses all traffic instead of accepting unsigned requests.
+    refuses all traffic instead of accepting unsigned requests. Each
+    X-GitHub-Delivery ID is accepted only once, which blocks replay of
+    a captured signed request.
     """
     secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     if not secret:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
+    delivery_id = request.headers.get("X-GitHub-Delivery", "")
+    if not delivery_id or not _delivery_is_fresh(delivery_id):
+        logger.warning(
+            "Rejected webhook with missing or replayed delivery ID from %s",
+            request.remote,
+        )
+        return web.json_response({"error": "invalid webhook delivery"}, status=401)
     body = await request.read()
     signature = request.headers.get("X-Hub-Signature-256", "")
     expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
@@ -256,6 +255,8 @@ async def verify_gitops_token(
 
     Fails closed: without a configured GITOPS_WEBHOOK_TOKEN the route
     refuses all traffic instead of accepting unauthenticated requests.
+    An X-Timestamp header within the replay window is required so a
+    captured request cannot be replayed later.
     """
     token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
     if not token:
@@ -264,6 +265,13 @@ async def verify_gitops_token(
     if not (auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], token)):
         logger.warning("Rejected webhook with invalid token from %s", request.remote)
         return web.json_response({"error": "unauthorized"}, status=401)
+    timestamp = request.headers.get("X-Timestamp", "")
+    if not _timestamp_is_fresh(timestamp):
+        logger.warning(
+            "Rejected webhook with missing or stale timestamp from %s",
+            request.remote,
+        )
+        return web.json_response({"error": "stale webhook"}, status=401)
     return await handler(request)
 
 
@@ -294,11 +302,30 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
         """Check Bearer token on federation API routes.
 
-        Returns ``None`` if the token is valid (or auth is disabled),
-        otherwise a 401 response.
+        Fails closed in production: without a configured
+        ``FEDERATION_API_TOKEN`` every ``/api/`` route refuses traffic.
+        In other environments a missing token logs a warning and allows
+        requests so local development stays usable.
+
+        Returns ``None`` if the token is valid (or auth is explicitly
+        disabled in a non-production environment), otherwise a 503/401.
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
+            environment = os.getenv("NODE_ENV", os.getenv("ENVIRONMENT", "development"))
+            if environment == "production":
+                return web.json_response(
+                    {
+                        "error": "auth not configured",
+                        "message": "FEDERATION_API_TOKEN is required in production",
+                    },
+                    status=503,
+                )
+            logger.warning(
+                "FEDERATION_API_TOKEN is not set; /api/ routes are unauthenticated "
+                "in %s environment. Set a token before deploying to production.",
+                environment,
+            )
             return None
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], api_token):

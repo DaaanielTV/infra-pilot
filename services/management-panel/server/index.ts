@@ -11,6 +11,7 @@ import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
+import { sanitizeAuditValue } from './audit-sanitize.js';
 
 /**
  * Run a command as a child process and capture stdout/stderr.
@@ -302,8 +303,8 @@ async function logAudit(userId: string, action: string, entityType: string, enti
         action,
         entity_type: entityType,
         entity_id: entityId,
-        old_value: oldValue ? JSON.stringify(oldValue) : null,
-        new_value: newValue ? JSON.stringify(newValue) : null,
+        old_value: oldValue ? JSON.stringify(sanitizeAuditValue(oldValue)) : null,
+        new_value: newValue ? JSON.stringify(sanitizeAuditValue(newValue)) : null,
         ip_address: ipAddress || null,
       });
   } catch (err) {
@@ -1298,11 +1299,11 @@ async function forwardToIntegration(req: Request, res: Response, path: string) {
   }
 }
 
-app.post('/api/auth/2fa/setup', async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/setup', verifyAuth, async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/setup');
 });
 
-app.post('/api/auth/2fa/verify-setup', async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/verify-setup', verifyAuth, async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/verify-setup');
 });
 
@@ -1310,7 +1311,7 @@ app.post('/api/auth/2fa/verify', async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/verify');
 });
 
-app.post('/api/auth/2fa/disable', async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/disable', verifyAuth, async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/disable');
 });
 
@@ -4017,7 +4018,7 @@ app.post('/api/organizations', verifyAuth, async (req: Request, res: Response) =
 // Runbook API Routes
 // ============================================================================
 
-app.get('/api/runbooks', async (req: Request, res: Response) => {
+app.get('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
   const { data, error } = await supabase.from('runbooks').select('*').order('name');
   if (error) return res.status(500).json({ error: error.message });
   const builtinRunbooks = [

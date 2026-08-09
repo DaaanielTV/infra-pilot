@@ -184,7 +184,7 @@ def test_select_winner_skips_ineligible():
 def test_is_ci_green_with_no_checks():
     fake = FakeGh(ci_rollup=[])
     pr_voting.run_gh = fake
-    assert pr_voting.is_ci_green("owner/repo", 1) is True
+    assert pr_voting.is_ci_green("owner/repo", 1) is False
 
 
 def test_is_ci_green_pass_on_success_check():
@@ -211,10 +211,10 @@ def test_is_ci_green_false_on_failed_status_context():
     assert pr_voting.is_ci_green("owner/repo", 1) is False
 
 
-def test_is_ci_green_unreadable_status_returns_true():
+def test_is_ci_green_unreadable_status_returns_false():
     fake = FakeGh(fail_prefixes=[["pr", "view"]])
     pr_voting.run_gh = fake
-    assert pr_voting.is_ci_green("owner/repo", 1) is True
+    assert pr_voting.is_ci_green("owner/repo", 1) is False
 
 
 # ── main (end to end) ────────────────────────────────────────────────

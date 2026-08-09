@@ -53,12 +53,22 @@ jobs:
           filters: |
             cli:
               - 'cli/**'
+              - 'requirements.txt'
+              - 'setup.py'
+              - 'pyproject.toml'
+              - 'Makefile'
+              - 'pytest.ini'
+              - 'bandit.yaml'
+              - '.pre-commit-config.yaml'
+              - '.isort.cfg'
+              - '.editorconfig'
             dashboard:
               - 'services/management-panel/**'
             discord:
               - 'services/discord-service/**'
             docs:
               - 'docs/**'
+              - 'wiki/**'
               - '*.md'
             infrastructure:
               - 'infra/**'
@@ -579,7 +589,7 @@ jobs:
         run: |
           for script in scripts/*.sh; do
             echo "Checking $script..."
-            bash -n "$script" || echo "Syntax error in $script"
+            bash -n "$script"
           done
       - name: Run health check test
         run: |

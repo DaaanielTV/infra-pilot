@@ -119,20 +119,21 @@ def is_ci_green(repo: str, number: int) -> bool:
     """Return True when every status check on the PR has passed.
 
     PRs without any checks, or where the check list cannot be read, are
-    treated as green so the vote never blocks on tooling issues.
+    treated as NOT green: merging code that was never validated would
+    defeat the purpose of the CI gates.
     """
     proc = run_gh(
         ["pr", "view", str(number), "--repo", repo, "--json", "statusCheckRollup"],
         check=False,
     )
     if proc.returncode != 0:
-        return True
+        return False
     try:
         rollup = json.loads(proc.stdout).get("statusCheckRollup") or []
     except json.JSONDecodeError:
-        return True
+        return False
     if not rollup:
-        return True
+        return False
     for check in rollup:
         conclusion = check.get("conclusion")
         if conclusion is None:

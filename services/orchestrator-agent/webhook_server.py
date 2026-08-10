@@ -22,6 +22,8 @@ import rbac_store
 from aiohttp import web
 from compute.registry import ProviderRegistry
 from discord.ext import commands
+from manifest.engine import ManifestEngine
+from manifest.schema import InfraFile
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
@@ -182,25 +184,75 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
+async def deployment_apply(request: web.Request) -> web.Response:
+    """Reconcile a manifest on demand (POST /api/v1/deployments).
+
+    Body: ``{"manifest": {...InfraFile...}, "dry_run": bool,
+    "user_id": str, "org_id": str}``.  When ``user_id`` and ``org_id``
+    are supplied the caller must hold the ``manifest:deploy`` permission
+    in that organization; without them the federation token holder
+    acts as a platform administrator.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    manifest_data = body.get("manifest")
+    if not isinstance(manifest_data, dict) or not manifest_data:
+        return web.json_response({"error": "manifest object is required"}, status=400)
+    dry_run = bool(body.get("dry_run", False))
+    user_id = body.get("user_id")
+    org_id = body.get("org_id")
+    if user_id:
+        if not org_id:
+            return web.json_response(
+                {"error": "org_id is required when user_id is provided"}, status=400
+            )
+        if not rbac_engine.has_permission(
+            user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
+        ):
+            return web.json_response(
+                {"error": "manifest:deploy permission required"}, status=403
+            )
+    try:
+        desired = InfraFile.from_dict(manifest_data)
+    except Exception as exc:
+        return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
+    result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
+    status = 200 if not result.errors else 207
+    return web.json_response(_serialize_rbac(result), status=status)
+
+
+async def deployment_providers(request: web.Request) -> web.Response:
+    """List registered compute providers (GET /api/v1/providers)."""
+    return web.json_response({"providers": ProviderRegistry.list_providers()})
+
+
 WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))
 
-# Delivery IDs seen within the replay window, used to reject replayed
-# GitHub webhooks. Bounded by evicting entries older than the window.
+# Identities seen within the replay window, used to reject replayed
+# requests. Bounded by evicting entries older than the window.
 _seen_deliveries: set[str] = set()
-_last_delivery_prune = time.monotonic()
+_seen_signatures: set[str] = set()
+_last_prune = time.monotonic()
+
+
+def _is_recently_seen(seen: set[str], identity: str) -> bool:
+    """Return True if the identity has not been seen recently."""
+    global _last_prune
+    now = time.monotonic()
+    if now - _last_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
+        seen.clear()
+        _last_prune = now
+    if identity in seen:
+        return False
+    seen.add(identity)
+    return True
 
 
 def _delivery_is_fresh(delivery_id: str) -> bool:
     """Return True if the delivery ID has not been seen recently."""
-    global _last_delivery_prune
-    now = time.monotonic()
-    if now - _last_delivery_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
-        _seen_deliveries.clear()
-        _last_delivery_prune = now
-    if delivery_id in _seen_deliveries:
-        return False
-    _seen_deliveries.add(delivery_id)
-    return True
+    return _is_recently_seen(_seen_deliveries, delivery_id)
 
 
 def _timestamp_is_fresh(timestamp: str) -> bool:

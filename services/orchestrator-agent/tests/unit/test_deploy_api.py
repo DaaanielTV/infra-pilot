@@ -1,6 +1,9 @@
 """Integration tests for the deployment API on the webhook server."""
 
+import hashlib
+import hmac
 import importlib
+import json
 import os
 import time
 import unittest
@@ -8,11 +11,7 @@ from datetime import datetime
 from types import SimpleNamespace
 
 from aiohttp.test_utils import TestClient, TestServer
-
-os.environ["FEDERATION_API_TOKEN"] = "test-federation-token"
-os.environ["GITOPS_WEBHOOK_TOKEN"] = "test-gitops-token"
-
-from compute.base import (  # noqa: E402
+from compute.base import (
     ComputeProvider,
     InstanceInfo,
     InstancePowerState,
@@ -21,8 +20,9 @@ from compute.base import (  # noqa: E402
     ProviderCapabilities,
     ProviderError,
 )
-from compute.registry import ProviderRegistry  # noqa: E402
-from webhook_server import build_webhook_app  # noqa: E402
+from compute.registry import ProviderRegistry
+from rbac import RBACEngine
+from webhook_server import build_webhook_app
 
 BOT = SimpleNamespace(get_cog=lambda name: None)
 AUTH = {"Authorization": "Bearer test-federation-token"}
@@ -83,9 +83,6 @@ class FakeProvider(ComputeProvider):
         return None
 
 
-ProviderRegistry.register(FakeProvider)
-
-
 def make_manifest(name: str, image: str = "nginx:1.25") -> dict:
     return {
         "api_version": "v1",
@@ -106,20 +103,43 @@ def make_manifest(name: str, image: str = "nginx:1.25") -> dict:
     }
 
 
+def make_gitops_headers(timestamp: str, body: bytes) -> dict:
+    """Build the signed GitOps webhook headers for the exact body bytes."""
+    digest = hmac.new(
+        b"test-gitops-token", f"{timestamp}\n".encode() + body, hashlib.sha256
+    ).hexdigest()
+    headers = {"X-Signature-256": "sha256=" + digest}
+    if timestamp:
+        headers["X-Timestamp"] = timestamp
+    return headers
+
+
 class DeployApiTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        os.environ["FEDERATION_API_TOKEN"] = "test-federation-token"
+        os.environ["GITOPS_WEBHOOK_TOKEN"] = "test-gitops-token"
+
         # Other test modules call ProviderRegistry.clear(), so re-register
         # the built-in provider (import re-run) and the fake one per test.
         import compute.docker_provider  # noqa: F401
 
         importlib.reload(compute.docker_provider)
         ProviderRegistry.register(FakeProvider)
+
+        # Start each test from a fresh RBAC engine so org/role state
+        # created by previous tests cannot leak into the next one.
+        import webhook_server
+
+        webhook_server.rbac_engine = RBACEngine()
+
         self.app = await build_webhook_app(BOT)
         self.client = TestClient(TestServer(self.app))
         await self.client.start_server()
         self.addAsyncCleanup(self.client.close)
 
     async def asyncTearDown(self):
+        os.environ.pop("FEDERATION_API_TOKEN", None)
+        os.environ.pop("GITOPS_WEBHOOK_TOKEN", None)
         ProviderRegistry._providers.pop("fake", None)
         ProviderRegistry._instances.pop("fake", None)
 
@@ -224,30 +244,38 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("docker", body["providers"])
         self.assertIn("fake", body["providers"])
 
-    async def test_gitops_webhook_requires_valid_token(self):
-        resp = await self.client.post(
-            "/webhook/gitops", json={"manifest": make_manifest("m-gh")}
-        )
+    async def test_gitops_webhook_requires_valid_signature(self):
+        body = json.dumps({"manifest": make_manifest("m-gh")}).encode()
+        resp = await self.client.post("/webhook/gitops", data=body)
         self.assertEqual(resp.status, 401)
 
         resp = await self.client.post(
             "/webhook/gitops",
-            json={"manifest": make_manifest("m-gh")},
-            headers={
-                "Authorization": "Bearer wrong-token",
-                "X-Timestamp": str(int(time.time())),
-            },
+            data=body,
+            headers=make_gitops_headers(str(int(time.time())), body)
+            | {"X-Signature-256": "sha256=deadbeef"},
         )
         self.assertEqual(resp.status, 401)
+
+    async def test_gitops_webhook_rejects_invalid_timestamps(self):
+        cases = [
+            {},  # missing timestamp
+            {"X-Timestamp": str(int(time.time()) - 3600)},  # stale
+            {"X-Timestamp": "not-a-number"},  # malformed
+        ]
+        for extra in cases:
+            body = json.dumps({"manifest": make_manifest("m-ts")}).encode()
+            timestamp = extra.get("X-Timestamp", "")
+            headers = make_gitops_headers(timestamp, body) | extra
+            resp = await self.client.post("/webhook/gitops", data=body, headers=headers)
+            self.assertEqual(resp.status, 401, f"timestamp={timestamp!r}")
 
     async def test_gitops_webhook_runs_reconcile(self):
+        body = json.dumps({"manifest": make_manifest("m-gitops")}).encode()
         resp = await self.client.post(
             "/webhook/gitops",
-            json={"manifest": make_manifest("m-gitops")},
-            headers={
-                "Authorization": "Bearer test-gitops-token",
-                "X-Timestamp": str(int(time.time())),
-            },
+            data=body,
+            headers=make_gitops_headers(str(int(time.time())), body),
         )
         self.assertEqual(resp.status, 200)
         body = await resp.json()

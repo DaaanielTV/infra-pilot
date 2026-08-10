@@ -6,10 +6,7 @@ from types import SimpleNamespace
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
-
-os.environ["FEDERATION_API_TOKEN"] = "test-federation-token"
-
-from webhook_server import build_webhook_app  # noqa: E402
+from webhook_server import build_webhook_app
 
 BOT = SimpleNamespace(get_cog=lambda name: None)
 AUTH = {"Authorization": "Bearer test-federation-token"}
@@ -17,11 +14,15 @@ AUTH = {"Authorization": "Bearer test-federation-token"}
 
 class RbacApiTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        os.environ["FEDERATION_API_TOKEN"] = "test-federation-token"
         self.app = await build_webhook_app(BOT)
         self.client = TestClient(TestServer(self.app))
         await self.client.start_server()
         self.addAsyncCleanup(self.client.close)
         self.org_id = None
+
+    async def asyncTearDown(self):
+        os.environ.pop("FEDERATION_API_TOKEN", None)
 
     async def create_org(self, owner: str, name: str) -> str:
         resp = await self.client.post(

@@ -30,7 +30,7 @@ finding and must be fixed or explicitly accepted.
 | `/api/v1/rbac/orgs/{org_id}/permissions` | GET | federation token | ok | |
 | `/api/v1/rbac/orgs/{org_id}/members` | GET | federation token | ok | |
 | `/webhook/github[/{deploy_id}]` | POST | HMAC-SHA256 | ok | Only mounted when `GitDeployer` cog is loaded |
-| `/webhook/gitops` | POST | Bearer token | ok | Only mounted when `GitOpsSync` cog is loaded |
+| `/webhook/gitops` | POST | HMAC-SHA256 (`GITOPS_WEBHOOK_TOKEN` over `X-Timestamp` + body) | ok | Mounted unconditionally; one signature per replay window |
 
 **Production default:** without `FEDERATION_API_TOKEN` every `/api/` route
 returns 503. In development a missing token logs a warning and allows

@@ -52,7 +52,7 @@ get a fix before any other work.
 |-----------|-----|------------------|-------|
 | `GET /health`, `GET /api/health` | Anyone | Check liveness | No sensitive data returned |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
-| `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `Authorization: Bearer <GITOPS_WEBHOOK_TOKEN>` + `X-Timestamp` replay window; **fail closed** (503) if unset |
+| `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `X-Signature-256` = HMAC-SHA256 of `X-Timestamp` + body (`GITOPS_WEBHOOK_TOKEN`), one signature per replay window; **fail closed** (503) if unset |
 | `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check |
 | `POST /api/v1/deployments`, `GET /api/v1/providers` | CLI / management panel | Trigger manifest reconciliation | Federation token (fails closed in production); optional `user_id`+`org_id` checked against `manifest:deploy` permission |
 | `/api/v1/rbac/*` | RBAC-authorized principals | Manage roles/orgs/memberships | RBAC engine + per-project scoping |

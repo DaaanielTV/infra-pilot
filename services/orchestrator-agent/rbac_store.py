@@ -5,7 +5,8 @@ roles and role assignments into the tables created by
 ``integration.init_database_tables`` so state survives restarts.
 
 Every function fails soft: when the database is unavailable the change
-is logged and the in-memory state still applies.
+is logged, the ``rbac_persist_failures_total`` metric is incremented and
+the in-memory state still applies.
 """
 
 import json
@@ -14,6 +15,18 @@ import logging
 import db
 
 logger = logging.getLogger(__name__)
+
+# Failures are counted so a database outage cannot silently degrade the
+# API into a no-persistence mode. Exposed on /metrics as
+# rbac_persist_failures_total by webhook_server.metrics.
+rbac_persist_failures = 0
+
+
+def _record_persistence_failure(what: str, exc: Exception) -> None:
+    """Log a suppressed persistence failure and bump the failure metric."""
+    global rbac_persist_failures
+    rbac_persist_failures += 1
+    logger.warning("Failed to persist %s: %s", what, exc)
 
 
 async def persist_org(org) -> None:
@@ -41,7 +54,7 @@ async def persist_org(org) -> None:
             org.updated_at,
         )
     except Exception as exc:
-        logger.warning("Failed to persist org %s: %s", org.id, exc)
+        _record_persistence_failure(f"org {org.id}", exc)
 
 
 async def persist_role(role) -> None:
@@ -64,11 +77,17 @@ async def persist_role(role) -> None:
             role.description,
         )
     except Exception as exc:
-        logger.warning("Failed to persist role %s: %s", role.name, exc)
+        _record_persistence_failure(f"role {role.name}", exc)
 
 
 async def persist_membership(membership) -> None:
-    """Insert a role assignment row (best-effort)."""
+    """Upsert a role assignment row (best-effort).
+
+    The assignment identity is (user_id, org_id, project_id) via the
+    ``uq_role_assignment`` unique index, so re-assigning a role updates
+    the existing row instead of inserting duplicates. Loading restores
+    exactly one current Membership per assignment.
+    """
     try:
         pool = await db.get_pool()
         await pool.execute(
@@ -91,11 +110,8 @@ async def persist_membership(membership) -> None:
             membership.expires_at,
         )
     except Exception as exc:
-        logger.warning(
-            "Failed to persist membership %s@%s: %s",
-            membership.user_id,
-            membership.org_id,
-            exc,
+        _record_persistence_failure(
+            f"membership {membership.user_id}@{membership.org_id}", exc
         )
 
 
@@ -105,7 +121,7 @@ async def delete_org(org_id: str) -> None:
         pool = await db.get_pool()
         await pool.execute("DELETE FROM organizations WHERE id = $1", org_id)
     except Exception as exc:
-        logger.warning("Failed to delete org %s: %s", org_id, exc)
+        _record_persistence_failure(f"org delete {org_id}", exc)
 
 
 async def delete_role(name: str) -> None:
@@ -114,7 +130,7 @@ async def delete_role(name: str) -> None:
         pool = await db.get_pool()
         await pool.execute("DELETE FROM roles WHERE name = $1", name)
     except Exception as exc:
-        logger.warning("Failed to delete role %s: %s", name, exc)
+        _record_persistence_failure(f"role delete {name}", exc)
 
 
 async def delete_membership(user_id: str, org_id: str, project_id: str = "") -> None:
@@ -131,9 +147,7 @@ async def delete_membership(user_id: str, org_id: str, project_id: str = "") -> 
             None if not project_id else project_id,
         )
     except Exception as exc:
-        logger.warning(
-            "Failed to delete membership %s@%s: %s", user_id, org_id, exc
-        )
+        _record_persistence_failure(f"membership delete {user_id}@{org_id}", exc)
 
 
 async def load_rbac_state(engine) -> None:

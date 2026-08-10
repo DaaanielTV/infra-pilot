@@ -108,9 +108,12 @@ async def rbac_org_create(request: web.Request) -> web.Response:
     )
     created = rbac_engine.create_org(org)
     await rbac_store.persist_org(created)
-    owner_membership = rbac_engine.list_members(org.id)
+    owner_membership = next(
+        (m for m in rbac_engine.list_members(org.id) if m.user_id == owner_user_id),
+        None,
+    )
     if owner_membership:
-        await rbac_store.persist_membership(owner_membership[0])
+        await rbac_store.persist_membership(owner_membership)
     return web.json_response(_serialize_rbac(created), status=201)
 
 

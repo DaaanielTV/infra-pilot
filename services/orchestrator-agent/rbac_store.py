@@ -99,6 +99,43 @@ async def persist_membership(membership) -> None:
         )
 
 
+async def delete_org(org_id: str) -> None:
+    """Delete an organization row and its cascade (best-effort)."""
+    try:
+        pool = await db.get_pool()
+        await pool.execute("DELETE FROM organizations WHERE id = $1", org_id)
+    except Exception as exc:
+        logger.warning("Failed to delete org %s: %s", org_id, exc)
+
+
+async def delete_role(name: str) -> None:
+    """Delete a custom role row (best-effort)."""
+    try:
+        pool = await db.get_pool()
+        await pool.execute("DELETE FROM roles WHERE name = $1", name)
+    except Exception as exc:
+        logger.warning("Failed to delete role %s: %s", name, exc)
+
+
+async def delete_membership(user_id: str, org_id: str, project_id: str = "") -> None:
+    """Delete a role assignment row (best-effort)."""
+    try:
+        pool = await db.get_pool()
+        await pool.execute(
+            """
+            DELETE FROM role_assignments
+            WHERE user_id = $1 AND org_id = $2 AND project_id IS NOT DISTINCT FROM $3
+            """,
+            user_id,
+            org_id,
+            None if not project_id else project_id,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to delete membership %s@%s: %s", user_id, org_id, exc
+        )
+
+
 async def load_rbac_state(engine) -> None:
     """Load persisted orgs/roles/assignments into the engine (best-effort).
 

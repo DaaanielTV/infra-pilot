@@ -13,6 +13,7 @@ from webhook_server import (
     WEBHOOK_REPLAY_WINDOW_SECONDS,
     _delivery_is_fresh,
     _seen_deliveries,
+    _seen_signatures,
 )
 
 
@@ -118,10 +119,12 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
         from main import verify_gitops_token
 
         self.guard = verify_gitops_token
-        os.environ["GITOPS_WEBHOOK_TOKEN"] = "test-token"
+        self.secret = "test-token"
+        os.environ["GITOPS_WEBHOOK_TOKEN"] = self.secret
 
     async def asyncTearDown(self):
         os.environ.pop("GITOPS_WEBHOOK_TOKEN", None)
+        _seen_signatures.clear()
 
     async def build_client(self, headers: dict):
         app = web.Application()
@@ -136,10 +139,20 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
         self.addAsyncCleanup(client.close)
         return client
 
-    def headers(self, **extra) -> dict:
+    def signature(self, body: bytes, timestamp: str, secret: str = "") -> str:
+        secret = secret or self.secret
+        return (
+            "sha256="
+            + hmac.new(
+                secret.encode(), f"{timestamp}\n".encode() + body, hashlib.sha256
+            ).hexdigest()
+        )
+
+    def headers(self, body: bytes, **extra) -> dict:
+        timestamp = str(int(time.time()))
         return {
-            "Authorization": "Bearer test-token",
-            "X-Timestamp": str(int(time.time())),
+            "X-Timestamp": timestamp,
+            "X-Signature-256": self.signature(body, timestamp),
             **extra,
         }
 
@@ -150,47 +163,84 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(resp.status, 401)
 
-    async def test_rejects_wrong_token(self):
-        client = await self.build_client({"Authorization": "Bearer nope"})
+    async def test_rejects_wrong_secret(self):
+        body = b"{}"
+        timestamp = str(int(time.time()))
+        headers = {
+            "X-Timestamp": timestamp,
+            "X-Signature-256": self.signature(body, timestamp, secret="nope"),
+        }
+        client = await self.build_client(headers)
+        resp = await client.post("/webhook/gitops", data=body, headers=headers)
+        self.assertEqual(resp.status, 401)
+
+    async def test_accepts_valid_signature(self):
+        body = b"{}"
+        client = await self.build_client(self.headers(body))
+        resp = await client.post(
+            "/webhook/gitops", data=body, headers=self.headers(body)
+        )
+        self.assertEqual(resp.status, 200)
+
+    async def test_rejects_tampered_body(self):
+        body = b'{"manifest": {"a": 1}}'
+        headers = self.headers(body)
+        client = await self.build_client(headers)
         resp = await client.post(
             "/webhook/gitops",
-            data=b"{}",
-            headers={"Authorization": "Bearer nope", "X-Timestamp": "0"},
+            data=b'{"manifest": {"a": 2}}',
+            headers=headers,
         )
         self.assertEqual(resp.status, 401)
 
-    async def test_accepts_valid_token(self):
-        client = await self.build_client(self.headers())
-        resp = await client.post("/webhook/gitops", data=b"{}", headers=self.headers())
-        self.assertEqual(resp.status, 200)
-
-    async def test_rejects_missing_timestamp(self):
+    async def test_rejects_missing_signature(self):
         client = await self.build_client({})
         resp = await client.post(
             "/webhook/gitops",
             data=b"{}",
-            headers={"Authorization": "Bearer test-token"},
+            headers={"Authorization": "Bearer test-token", "X-Timestamp": "1"},
+        )
+        self.assertEqual(resp.status, 401)
+
+    async def test_rejects_missing_timestamp(self):
+        body = b"{}"
+        client = await self.build_client({})
+        resp = await client.post(
+            "/webhook/gitops",
+            data=body,
+            headers={"X-Signature-256": self.signature(body, "")},
         )
         self.assertEqual(resp.status, 401)
 
     async def test_rejects_stale_timestamp(self):
+        body = b"{}"
         stale = str(int(time.time()) - WEBHOOK_REPLAY_WINDOW_SECONDS - 60)
+        headers = {
+            "X-Timestamp": stale,
+            "X-Signature-256": self.signature(body, stale),
+        }
         client = await self.build_client({})
-        resp = await client.post(
-            "/webhook/gitops",
-            data=b"{}",
-            headers={"Authorization": "Bearer test-token", "X-Timestamp": stale},
-        )
+        resp = await client.post("/webhook/gitops", data=body, headers=headers)
         self.assertEqual(resp.status, 401)
 
     async def test_rejects_malformed_timestamp(self):
+        body = b"{}"
+        headers = {
+            "X-Timestamp": "soon",
+            "X-Signature-256": self.signature(body, "soon"),
+        }
         client = await self.build_client({})
-        resp = await client.post(
-            "/webhook/gitops",
-            data=b"{}",
-            headers={"Authorization": "Bearer test-token", "X-Timestamp": "soon"},
-        )
+        resp = await client.post("/webhook/gitops", data=body, headers=headers)
         self.assertEqual(resp.status, 401)
+
+    async def test_rejects_replayed_signature(self):
+        body = b"{}"
+        headers = self.headers(body)
+        client = await self.build_client(headers)
+        first = await client.post("/webhook/gitops", data=body, headers=headers)
+        self.assertEqual(first.status, 200)
+        replay = await client.post("/webhook/gitops", data=body, headers=headers)
+        self.assertEqual(replay.status, 401)
 
 
 class FailClosedTest(unittest.IsolatedAsyncioTestCase):

@@ -35,6 +35,10 @@ class RBACEngine:
         self._memberships: List[Membership] = []
         self._roles: Dict[str, Role] = {}
 
+        self._seed_builtin_roles()
+
+    def _seed_builtin_roles(self) -> None:
+        """Initialize ``self._roles`` with the built-in Role instances."""
         for name, perms in BUILT_IN_ROLES.items():
             self._roles[name] = Role(
                 name=name,
@@ -251,3 +255,54 @@ class RBACEngine:
             "teams": {k: v.__dict__ for k, v in self._teams.items()},
             "memberships": [m.__dict__ for m in self._memberships],
         }
+
+    def restore(self, state: dict) -> None:
+        """Replace in-memory state with persisted state (startup load).
+
+        Re-seeds built-in roles, then applies persisted custom roles,
+        organizations and memberships. Expects plain dicts produced by
+        ``rbac_store.load_rbac_state``.
+        """
+        self._orgs = {
+            o["id"]: Organization(
+                id=o["id"],
+                name=o["name"],
+                owner_user_id=o["owner_user_id"],
+                created_at=o.get("created_at") or datetime.now(),
+                updated_at=o.get("updated_at") or datetime.now(),
+                settings=o.get("settings") or {},
+                is_active=o.get("is_active", True),
+            )
+            for o in state.get("orgs", [])
+        }
+        self._roles = {}
+        self._seed_builtin_roles()
+        for r in state.get("roles", []):
+            permissions: Set[Permission] = set()
+            for permission_name in r.get("permissions", []):
+                try:
+                    permissions.add(Permission(permission_name))
+                except ValueError:
+                    logger.warning(
+                        "Ignoring unknown permission %r on role %r",
+                        permission_name,
+                        r.get("name"),
+                    )
+            self._roles[r["name"]] = Role(
+                name=r["name"],
+                permissions=permissions,
+                is_builtin=bool(r.get("is_builtin", False)),
+                description=r.get("description", ""),
+            )
+        self._memberships = [
+            Membership(
+                user_id=m["user_id"],
+                org_id=m["org_id"],
+                project_id=m.get("project_id", ""),
+                role_name=m["role_name"],
+                granted_by=m.get("granted_by", ""),
+                granted_at=m.get("granted_at") or datetime.now(),
+                expires_at=m.get("expires_at"),
+            )
+            for m in state.get("memberships", [])
+        ]

@@ -16,13 +16,17 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Optional
 
+import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
 import psutil
+import rbac_store
 from aiohttp import web
+from compute.registry import ProviderRegistry
 from discord.ext import commands
+from manifest.engine import ManifestEngine
+from manifest.schema import InfraFile
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
-
 # The federation API token holder acts as platform administrator for the
 # RBAC management API. Tenant users are represented by memberships inside
 # the engine and never authenticate over the wire.
@@ -75,7 +79,9 @@ async def rbac_role_create(request: web.Request) -> web.Response:
     role = Role(
         name=name, permissions=permissions, description=str(body.get("description", ""))
     )
-    return web.json_response(_serialize_rbac(rbac_engine.create_role(role)), status=201)
+    created = rbac_engine.create_role(role)
+    await rbac_store.persist_role(created)
+    return web.json_response(_serialize_rbac(created), status=201)
 
 
 async def rbac_org_create(request: web.Request) -> web.Response:
@@ -100,7 +106,15 @@ async def rbac_org_create(request: web.Request) -> web.Response:
         name=name,
         owner_user_id=owner_user_id,
     )
-    return web.json_response(_serialize_rbac(rbac_engine.create_org(org)), status=201)
+    created = rbac_engine.create_org(org)
+    await rbac_store.persist_org(created)
+    owner_membership = next(
+        (m for m in rbac_engine.list_members(org.id) if m.user_id == owner_user_id),
+        None,
+    )
+    if owner_membership:
+        await rbac_store.persist_membership(owner_membership)
+    return web.json_response(_serialize_rbac(created), status=201)
 
 
 async def rbac_orgs_for_user(request: web.Request) -> web.Response:
@@ -138,6 +152,7 @@ async def rbac_role_assign(request: web.Request) -> web.Response:
         project_id=str(body.get("project_id", "")),
         granted_by=str(body.get("granted_by", "api")),
     )
+    await rbac_store.persist_membership(membership)
     return web.json_response(_serialize_rbac(membership), status=201)
 
 
@@ -172,25 +187,75 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
+async def deployment_apply(request: web.Request) -> web.Response:
+    """Reconcile a manifest on demand (POST /api/v1/deployments).
+
+    Body: ``{"manifest": {...InfraFile...}, "dry_run": bool,
+    "user_id": str, "org_id": str}``.  When ``user_id`` and ``org_id``
+    are supplied the caller must hold the ``manifest:deploy`` permission
+    in that organization; without them the federation token holder
+    acts as a platform administrator.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    manifest_data = body.get("manifest")
+    if not isinstance(manifest_data, dict) or not manifest_data:
+        return web.json_response({"error": "manifest object is required"}, status=400)
+    dry_run = bool(body.get("dry_run", False))
+    user_id = body.get("user_id")
+    org_id = body.get("org_id")
+    if user_id:
+        if not org_id:
+            return web.json_response(
+                {"error": "org_id is required when user_id is provided"}, status=400
+            )
+        if not rbac_engine.has_permission(
+            user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
+        ):
+            return web.json_response(
+                {"error": "manifest:deploy permission required"}, status=403
+            )
+    try:
+        desired = InfraFile.from_dict(manifest_data)
+    except Exception as exc:
+        return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
+    result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
+    status = 200 if not result.errors else 207
+    return web.json_response(_serialize_rbac(result), status=status)
+
+
+async def deployment_providers(request: web.Request) -> web.Response:
+    """List registered compute providers (GET /api/v1/providers)."""
+    return web.json_response({"providers": ProviderRegistry.list_providers()})
+
+
 WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))
 
-# Delivery IDs seen within the replay window, used to reject replayed
-# GitHub webhooks. Bounded by evicting entries older than the window.
+# Identities seen within the replay window, used to reject replayed
+# requests. Bounded by evicting entries older than the window.
 _seen_deliveries: set[str] = set()
-_last_delivery_prune = time.monotonic()
+_seen_signatures: set[str] = set()
+_last_prune = time.monotonic()
+
+
+def _is_recently_seen(seen: set[str], identity: str) -> bool:
+    """Return True if the identity has not been seen recently."""
+    global _last_prune
+    now = time.monotonic()
+    if now - _last_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
+        seen.clear()
+        _last_prune = now
+    if identity in seen:
+        return False
+    seen.add(identity)
+    return True
 
 
 def _delivery_is_fresh(delivery_id: str) -> bool:
     """Return True if the delivery ID has not been seen recently."""
-    global _last_delivery_prune
-    now = time.monotonic()
-    if now - _last_delivery_prune > WEBHOOK_REPLAY_WINDOW_SECONDS:
-        _seen_deliveries.clear()
-        _last_delivery_prune = now
-    if delivery_id in _seen_deliveries:
-        return False
-    _seen_deliveries.add(delivery_id)
-    return True
+    return _is_recently_seen(_seen_deliveries, delivery_id)
 
 
 def _timestamp_is_fresh(timestamp: str) -> bool:
@@ -241,20 +306,20 @@ async def verify_github_signature(
 async def verify_gitops_token(
     request: web.Request, handler: Callable[[web.Request], object]
 ) -> web.Response:
-    """Verify GitOps webhook Bearer token.
+    """Verify GitOps webhook signature.
 
     Fails closed: without a configured GITOPS_WEBHOOK_TOKEN the route
     refuses all traffic instead of accepting unauthenticated requests.
-    An X-Timestamp header within the replay window is required so a
-    captured request cannot be replayed later.
+    The ``X-Signature-256`` header must carry
+    ``sha256=<hex HMAC-SHA256(GITOPS_WEBHOOK_TOKEN, "{X-Timestamp}\\n{body}")>``
+    so the signature covers both the timestamp and the exact manifest
+    content. ``X-Timestamp`` must be within the replay window and each
+    signature is accepted only once, which blocks replay of a captured
+    request inside that window.
     """
     token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
     if not token:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
-    auth = request.headers.get("Authorization", "")
-    if not (auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], token)):
-        logger.warning("Rejected webhook with invalid token from %s", request.remote)
-        return web.json_response({"error": "unauthorized"}, status=401)
     timestamp = request.headers.get("X-Timestamp", "")
     if not _timestamp_is_fresh(timestamp):
         logger.warning(
@@ -262,6 +327,24 @@ async def verify_gitops_token(
             request.remote,
         )
         return web.json_response({"error": "stale webhook"}, status=401)
+    signature = request.headers.get("X-Signature-256", "")
+    if not signature.startswith("sha256="):
+        logger.warning(
+            "Rejected webhook with missing signature from %s", request.remote
+        )
+        return web.json_response({"error": "invalid webhook signature"}, status=401)
+    body = await request.read()
+    expected = hmac.new(
+        token.encode(), f"{timestamp}\n".encode() + body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(signature[7:], expected):
+        logger.warning(
+            "Rejected webhook with invalid signature from %s", request.remote
+        )
+        return web.json_response({"error": "invalid webhook signature"}, status=401)
+    if not _is_recently_seen(_seen_signatures, signature):
+        logger.warning("Rejected replayed webhook signature from %s", request.remote)
+        return web.json_response({"error": "replayed webhook"}, status=401)
     return await handler(request)
 
 
@@ -271,6 +354,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
     Args:
         bot_instance: The Discord bot instance to attach webhook routes from.
     """
+    await rbac_store.load_rbac_state(rbac_engine)
     app = build_webhook_app(bot_instance)
     runner = web.AppRunner(app)
     await runner.setup()
@@ -367,6 +451,10 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
             "# TYPE orchestrator_agent_info gauge",
             f'orchestrator_agent_info{{service="orchestrator-agent"}} 1',
             "",
+            "# HELP rbac_persist_failures_total RBAC persistence failures",
+            "# TYPE rbac_persist_failures_total counter",
+            f"rbac_persist_failures_total {rbac_store.rbac_persist_failures}",
+            "",
             "# HELP python_info Python runtime info",
             "# TYPE python_info gauge",
             f'python_info{{version="{pyver}"}} 1',
@@ -443,22 +531,16 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
     app.router.add_post("/api/v1/rbac/assign", rbac_role_assign)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
+    app.router.add_post("/api/v1/deployments", deployment_apply)
+    app.router.add_get("/api/v1/providers", deployment_providers)
 
-    cog = bot_instance.get_cog("GitDeployer")
-    if cog:
+    # GitOps push webhook: converge toward the manifest sent in the body.
+    # Runs the same reconcile path as POST /api/v1/deployments, guarded by
+    # an HMAC-SHA256 signature over the timestamp + body instead of the
+    # federation token.
+    async def gitops_webhook(request: web.Request) -> web.Response:
+        return await verify_gitops_token(request, deployment_apply)
 
-        async def github_webhook(request: web.Request) -> web.Response:
-            return await verify_github_signature(request, cog.handle_webhook)
-
-        app.router.add_post("/webhook/github/{deploy_id}", github_webhook)
-        app.router.add_post("/webhook/github", github_webhook)
-
-    gitops_cog = bot_instance.get_cog("GitOpsSync")
-    if gitops_cog:
-
-        async def gitops_webhook(request: web.Request) -> web.Response:
-            return await verify_gitops_token(request, gitops_cog.handle_webhook)
-
-        app.router.add_post("/webhook/gitops", gitops_webhook)
+    app.router.add_post("/webhook/gitops", gitops_webhook)
 
     return app

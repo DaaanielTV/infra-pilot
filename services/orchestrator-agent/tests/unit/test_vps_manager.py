@@ -113,7 +113,9 @@ def test_update_vps_config_changes_limits(monkeypatch, tmp_path):
     manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
     container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
 
-    updated = make_config(config_type, cpu_limit=2.0, memory_limit=1024, storage_limit=50)
+    updated = make_config(
+        config_type, cpu_limit=2.0, memory_limit=1024, storage_limit=50
+    )
     assert asyncio.run(manager.update_vps_config(container_id, updated)) is True
 
     stored = manager.vps_instances[container_id]["config"]

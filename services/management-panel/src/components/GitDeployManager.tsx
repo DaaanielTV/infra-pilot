@@ -237,12 +237,13 @@ export const GitDeployManager = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">Webhook URL:</span>
-              <span className="text-green-400 font-mono text-xs break-all ml-2">http://your-host:8500/webhook/github/{selectedDep.id}</span>
+              <span className="text-green-400 font-mono text-xs break-all ml-2">http://your-host:8500/webhook/gitops</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Secret:</span>
-              <span className="text-amber-400 font-mono text-xs">{selectedDep.webhookSecret}</span>
+              <span className="text-slate-400">Auth:</span>
+              <span className="text-amber-400 font-mono text-xs">HMAC-SHA256 of X-Timestamp + body (GITOPS_WEBHOOK_TOKEN)</span>
             </div>
+            <p className="text-xs text-slate-500">GitHub webhooks cannot send these headers directly — route pushes through a proxy that signs each request (see wiki/08-Security.md).</p>
             <div className="flex justify-between">
               <span className="text-slate-400">Repository:</span>
               <span className="text-white font-mono text-xs">{selectedDep.repoUrl}</span>

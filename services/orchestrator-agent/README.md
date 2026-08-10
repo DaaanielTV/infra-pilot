@@ -26,7 +26,7 @@ All via environment variables, loaded by `config.py`:
 | `DB_NAME` | `infra_pilot` | PostgreSQL database |
 | `GITOPS_WEBHOOK_PORT` | `8500` | Webhook/API server port |
 | `GITHUB_WEBHOOK_SECRET` | `""` | HMAC secret for `/webhook/github` (fail-closed if empty) |
-| `GITOPS_WEBHOOK_TOKEN` | `""` | Bearer token for `/webhook/gitops` (fail-closed if empty; requires fresh `X-Timestamp`) |
+| `GITOPS_WEBHOOK_TOKEN` | `""` | Shared secret for `/webhook/gitops` HMAC-SHA256 signatures (fail-closed if empty; requires fresh `X-Timestamp`) |
 | `WEBHOOK_REPLAY_WINDOW_SECONDS` | `300` | Replay window for webhook timestamps and delivery IDs |
 | `FEDERATION_API_TOKEN` | `""` | Shared secret for federation peers (required in production; `/api/` fails closed without it) |
 | `AUTO_SCALE_COOLDOWN_MINUTES` | `5` | Minutes between auto-scale actions |
@@ -171,9 +171,10 @@ Rules are managed via the `AutoScaler` Discord cog (`/scaling-rules`, `/scaling-
 |--------|------|-------------|
 | GET | `/health` | Health check (no auth) |
 | GET | `/metrics` | Prometheus metrics (no auth) |
-| GET | `/api/v1/federation/status` | Federation peer status (requires `FEDERATION_API_TOKEN`) |
-| POST | `/webhook/github/{deploy_id}` | GitHub webhook receiver |
-| POST | `/webhook/gitops` | GitOps sync webhook |
+| GET | `/api/v1/federation/status` | Federation peer status (requires `FEDERATION_API_TOKEN` in production) |
+| GET | `/api/v1/providers` | Registered compute providers (requires `FEDERATION_API_TOKEN` in production) |
+| POST | `/api/v1/deployments` | Reconcile a manifest on demand (requires `FEDERATION_API_TOKEN` in production, optional RBAC check) |
+| POST | `/webhook/gitops` | GitOps push webhook — reconcile a manifest (`X-Signature-256` = HMAC-SHA256 of `X-Timestamp` + body with `GITOPS_WEBHOOK_TOKEN`) |
 
 ## Database
 

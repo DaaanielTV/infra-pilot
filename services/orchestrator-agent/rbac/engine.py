@@ -276,18 +276,18 @@ class RBACEngine:
             for o in state.get("orgs", [])
         }
         self._roles = {}
-        for name, perms in BUILT_IN_ROLES.items():
-            self._roles[name] = Role(
-                name=name,
-                permissions=perms,
-                is_builtin=True,
-                description=f"Built-in {name} role",
-            )
+        self._seed_builtin_roles()
         for r in state.get("roles", []):
-            try:
-                permissions = {Permission(p) for p in r.get("permissions", [])}
-            except ValueError:
-                permissions = set()
+            permissions: Set[Permission] = set()
+            for permission_name in r.get("permissions", []):
+                try:
+                    permissions.add(Permission(permission_name))
+                except ValueError:
+                    logger.warning(
+                        "Ignoring unknown permission %r on role %r",
+                        permission_name,
+                        r.get("name"),
+                    )
             self._roles[r["name"]] = Role(
                 name=r["name"],
                 permissions=permissions,

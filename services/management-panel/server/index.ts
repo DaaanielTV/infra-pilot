@@ -2831,13 +2831,13 @@ app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => 
       createdAt: new Date().toISOString(),
       history: [],
     };
-    deployments.push(newDeployment);
-    await setDeployments(deployments);
-    await logAudit(userId, 'deployment:create', 'deployment', newDeployment.id, null, { name, repoUrl });
     const orchestration = await forwardDeploymentToOrchestrator(newDeployment);
     if (orchestration) {
       newDeployment.orchestration = orchestration;
     }
+    deployments.push(newDeployment);
+    await setDeployments(deployments);
+    await logAudit(userId, 'deployment:create', 'deployment', newDeployment.id, null, { name, repoUrl });
     res.status(201).json(newDeployment);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create deployment' });

@@ -1,11 +1,13 @@
 """Unit tests for RBAC persistence (rbac_store + engine.restore)."""
 
 import json
-import os
 import unittest
 
 from rbac import Membership, Organization, Permission, RBACEngine, Role
 from rbac_store import (
+    delete_membership,
+    delete_org,
+    delete_role,
     load_rbac_state,
     persist_membership,
     persist_org,
@@ -38,7 +40,9 @@ class FakePool:
         return self.member_rows
 
 
-class PersistTest(unittest.IsolatedAsyncioTestCase):
+class FakePoolTestCase(unittest.IsolatedAsyncioTestCase):
+    """Shared FakePool + db.get_pool patch, restored after each test."""
+
     def setUp(self):
         self.pool = FakePool()
 
@@ -57,6 +61,8 @@ class PersistTest(unittest.IsolatedAsyncioTestCase):
 
         db.get_pool = self._orig
 
+
+class PersistTest(FakePoolTestCase):
     async def test_persist_org_upserts_row(self):
         org = Organization(id="org-1", name="Acme", owner_user_id="u-1")
         await persist_org(org)
@@ -65,6 +71,19 @@ class PersistTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("INSERT INTO organizations", query)
         self.assertEqual(args[0], "org-1")
         self.assertEqual(args[1], "Acme")
+
+    async def test_persist_org_refreshes_mutable_fields_on_conflict(self):
+        org = Organization(id="org-1", name="Acme", owner_user_id="u-1")
+        await persist_org(org)
+        query, _ = self.pool.executes[0]
+        for column in (
+            "owner_user_id",
+            "settings",
+            "is_active",
+            "updated_at",
+            "EXCLUDED.name",
+        ):
+            self.assertIn(column, query)
 
     async def test_persist_org_fails_soft(self):
         self.pool.fail = True
@@ -91,11 +110,21 @@ class PersistTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args[0], "ops")
         self.assertEqual(json.loads(args[1]), ["manifest:deploy"])
 
-    async def test_persist_membership_inserts_row(self):
+    async def test_persist_role_refreshes_description_on_conflict(self):
+        role = Role(
+            name="ops", permissions={Permission.MANIFEST_DEPLOY}, is_builtin=False
+        )
+        await persist_role(role)
+        query, args = self.pool.executes[0]
+        self.assertIn("EXCLUDED.description", query)
+        self.assertEqual(args[3], "")
+
+    async def test_persist_membership_upserts_row(self):
         m = Membership(user_id="u-1", org_id="org-1", role_name="viewer")
         await persist_membership(m)
         query, args = self.pool.executes[0]
         self.assertIn("INSERT INTO role_assignments", query)
+        self.assertIn("ON CONFLICT", query)
         self.assertEqual(args[0], "u-1")
         self.assertEqual(args[3], "viewer")
 
@@ -104,26 +133,16 @@ class PersistTest(unittest.IsolatedAsyncioTestCase):
         m = Membership(user_id="u-1", org_id="org-1", role_name="viewer")
         await persist_membership(m)  # must not raise
 
+    async def test_delete_helpers_remove_rows(self):
+        await delete_org("org-1")
+        await delete_role("ops")
+        await delete_membership("u-1", "org-1")
+        self.assertEqual(len(self.pool.executes), 3)
+        for query, args in self.pool.executes:
+            self.assertIn("DELETE FROM", query)
 
-class LoadTest(unittest.IsolatedAsyncioTestCase):
-    def setUp(self):
-        self.pool = FakePool()
 
-        import db
-
-        self._orig = db.get_pool
-
-        async def fake_get_pool():
-            return self.pool
-
-        db.get_pool = fake_get_pool
-        self.addCleanup(self._restore_db)
-
-    def _restore_db(self):
-        import db
-
-        db.get_pool = self._orig
-
+class LoadTest(FakePoolTestCase):
     async def test_load_populates_engine(self):
         self.pool.org_rows = [
             {
@@ -172,18 +191,38 @@ class LoadTest(unittest.IsolatedAsyncioTestCase):
         await load_rbac_state(engine)  # must not raise
         self.assertEqual(engine.list_orgs_for_user("u-1"), [])
 
-    async def test_restore_ignores_invalid_permissions(self):
+    async def test_load_tolerates_malformed_permissions_json(self):
+        self.pool.role_rows = [
+            {
+                "name": "broken",
+                "permissions": "{not-valid-json",
+                "is_builtin": False,
+                "description": None,
+            }
+        ]
+        engine = RBACEngine()
+        await load_rbac_state(engine)  # must not raise
+        role = engine.get_role("broken")
+        self.assertIsNotNone(role)
+        self.assertEqual(role.permissions, set())
+
+    async def test_restore_filters_invalid_permissions_per_entry(self):
         engine = RBACEngine()
         engine.restore(
             {
                 "orgs": [],
-                "roles": [{"name": "weird", "permissions": ["not-a-permission"]}],
+                "roles": [
+                    {
+                        "name": "mixed",
+                        "permissions": ["manifest:deploy", "not-a-permission"],
+                    }
+                ],
                 "memberships": [],
             }
         )
-        role = engine.get_role("weird")
+        role = engine.get_role("mixed")
         self.assertIsNotNone(role)
-        self.assertEqual(role.permissions, set())
+        self.assertEqual(role.permissions, {Permission.MANIFEST_DEPLOY})
 
 
 if __name__ == "__main__":

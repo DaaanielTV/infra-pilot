@@ -126,8 +126,10 @@ managementPanel:
   env:
     - name: ORCHESTRATOR_URL
       value: "http://infra-pilot-orchestrator:8500"
-    - name: ORCHESTRATOR_API_TOKEN
-      value: "CHANGE_ME"
+    # ORCHESTRATOR_API_TOKEN is intentionally unset here: the panel only
+    # forwards deployments when it is configured. Set it via a Kubernetes
+    # Secret reference (e.g. secretKeyRef from a generated secret) instead
+    # of committing a placeholder token.
     - name: SUPABASE_URL
       value: ""
     - name: SUPABASE_ANON_KEY

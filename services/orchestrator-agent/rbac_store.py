@@ -150,17 +150,42 @@ async def delete_membership(user_id: str, org_id: str, project_id: str = "") -> 
         _record_persistence_failure(f"membership delete {user_id}@{org_id}", exc)
 
 
+_LOAD_BATCH_SIZE = 1000
+
+
+async def _fetch_paged(pool, query: str) -> list:
+    """Fetch every matching row in bounded batches (LIMIT/OFFSET)."""
+    rows = []
+    offset = 0
+    while True:
+        batch = await pool.fetch(f"{query} LIMIT {_LOAD_BATCH_SIZE} OFFSET {offset}")
+        rows.extend(batch)
+        if len(batch) < _LOAD_BATCH_SIZE:
+            return rows
+        offset += _LOAD_BATCH_SIZE
+
+
 async def load_rbac_state(engine) -> None:
     """Load persisted orgs/roles/assignments into the engine (best-effort).
 
     Intended to run once at startup against a fresh engine. When the
     database is unavailable the engine keeps its built-in roles only.
+    Queries use explicit column lists and bounded batches so schema
+    additions do not affect loading.
     """
     try:
         pool = await db.get_pool()
-        org_rows = await pool.fetch("SELECT * FROM organizations")
-        role_rows = await pool.fetch("SELECT * FROM roles")
-        member_rows = await pool.fetch("SELECT * FROM role_assignments")
+        org_rows = await _fetch_paged(
+            pool,
+            "SELECT id, name, owner_user_id, settings, is_active, created_at, updated_at FROM organizations",
+        )
+        role_rows = await _fetch_paged(
+            pool, "SELECT name, permissions, is_builtin, description FROM roles"
+        )
+        member_rows = await _fetch_paged(
+            pool,
+            "SELECT user_id, org_id, project_id, role_name, granted_by, granted_at, expires_at FROM role_assignments",
+        )
     except Exception as exc:
         logger.warning("Failed to load RBAC state: %s", exc)
         return
@@ -184,6 +209,7 @@ async def load_rbac_state(engine) -> None:
         try:
             permissions = json.loads(row["permissions"]) if row["permissions"] else []
         except (TypeError, ValueError):
+            logger.warning("Ignoring malformed permissions for role %s", row["name"])
             permissions = []
         roles.append(
             {

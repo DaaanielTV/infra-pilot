@@ -35,6 +35,10 @@ class RBACEngine:
         self._memberships: List[Membership] = []
         self._roles: Dict[str, Role] = {}
 
+        self._seed_builtin_roles()
+
+    def _seed_builtin_roles(self) -> None:
+        """Initialize ``self._roles`` with the built-in Role instances."""
         for name, perms in BUILT_IN_ROLES.items():
             self._roles[name] = Role(
                 name=name,

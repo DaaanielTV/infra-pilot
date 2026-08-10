@@ -27,6 +27,9 @@ async def persist_org(org) -> None:
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
+                owner_user_id = EXCLUDED.owner_user_id,
+                settings = EXCLUDED.settings,
+                is_active = EXCLUDED.is_active,
                 updated_at = EXCLUDED.updated_at
             """,
             org.id,
@@ -52,7 +55,8 @@ async def persist_role(role) -> None:
             INSERT INTO roles (name, permissions, is_builtin, description)
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (name) DO UPDATE SET
-                permissions = EXCLUDED.permissions
+                permissions = EXCLUDED.permissions,
+                description = EXCLUDED.description
             """,
             role.name,
             json.dumps(sorted(p.value for p in role.permissions)),
@@ -72,6 +76,11 @@ async def persist_membership(membership) -> None:
             INSERT INTO role_assignments
                 (user_id, org_id, project_id, role_name, granted_by, granted_at, expires_at)
             VALUES ($1, $2, NULLIF($3, ''), $4, NULLIF($5, ''), $6, $7)
+            ON CONFLICT (user_id, org_id, project_id) DO UPDATE SET
+                role_name = EXCLUDED.role_name,
+                granted_by = EXCLUDED.granted_by,
+                granted_at = EXCLUDED.granted_at,
+                expires_at = EXCLUDED.expires_at
             """,
             membership.user_id,
             membership.org_id,

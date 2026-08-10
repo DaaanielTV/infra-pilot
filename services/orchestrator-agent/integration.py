@@ -561,6 +561,7 @@ async def init_database_tables():
         """,
         "CREATE INDEX IF NOT EXISTS idx_role_user ON role_assignments(user_id);",
         "CREATE INDEX IF NOT EXISTS idx_role_org ON role_assignments(org_id);",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_role_assignment ON role_assignments (user_id, org_id, project_id) NULLS NOT DISTINCT;",
         """
         CREATE TABLE IF NOT EXISTS roles (
             name VARCHAR(50) PRIMARY KEY,

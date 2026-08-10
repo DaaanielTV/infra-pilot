@@ -306,20 +306,20 @@ async def verify_github_signature(
 async def verify_gitops_token(
     request: web.Request, handler: Callable[[web.Request], object]
 ) -> web.Response:
-    """Verify GitOps webhook Bearer token.
+    """Verify GitOps webhook signature.
 
     Fails closed: without a configured GITOPS_WEBHOOK_TOKEN the route
     refuses all traffic instead of accepting unauthenticated requests.
-    An X-Timestamp header within the replay window is required so a
-    captured request cannot be replayed later.
+    The ``X-Signature-256`` header must carry
+    ``sha256=<hex HMAC-SHA256(GITOPS_WEBHOOK_TOKEN, "{X-Timestamp}\\n{body}")>``
+    so the signature covers both the timestamp and the exact manifest
+    content. ``X-Timestamp`` must be within the replay window and each
+    signature is accepted only once, which blocks replay of a captured
+    request inside that window.
     """
     token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
     if not token:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
-    auth = request.headers.get("Authorization", "")
-    if not (auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], token)):
-        logger.warning("Rejected webhook with invalid token from %s", request.remote)
-        return web.json_response({"error": "unauthorized"}, status=401)
     timestamp = request.headers.get("X-Timestamp", "")
     if not _timestamp_is_fresh(timestamp):
         logger.warning(
@@ -327,6 +327,24 @@ async def verify_gitops_token(
             request.remote,
         )
         return web.json_response({"error": "stale webhook"}, status=401)
+    signature = request.headers.get("X-Signature-256", "")
+    if not signature.startswith("sha256="):
+        logger.warning(
+            "Rejected webhook with missing signature from %s", request.remote
+        )
+        return web.json_response({"error": "invalid webhook signature"}, status=401)
+    body = await request.read()
+    expected = hmac.new(
+        token.encode(), f"{timestamp}\n".encode() + body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(signature[7:], expected):
+        logger.warning(
+            "Rejected webhook with invalid signature from %s", request.remote
+        )
+        return web.json_response({"error": "invalid webhook signature"}, status=401)
+    if not _is_recently_seen(_seen_signatures, signature):
+        logger.warning("Rejected replayed webhook signature from %s", request.remote)
+        return web.json_response({"error": "replayed webhook"}, status=401)
     return await handler(request)
 
 
@@ -514,7 +532,8 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
 
     # GitOps push webhook: converge toward the manifest sent in the body.
     # Runs the same reconcile path as POST /api/v1/deployments, guarded by
-    # a Bearer token + replay window instead of the federation token.
+    # an HMAC-SHA256 signature over the timestamp + body instead of the
+    # federation token.
     async def gitops_webhook(request: web.Request) -> web.Response:
         return await verify_gitops_token(request, deployment_apply)
 

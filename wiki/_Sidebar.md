@@ -11,6 +11,7 @@
 - [Security](08-Security)
 - [FAQ](09-FAQ)
 - [Troubleshooting](10-Troubleshooting)
+- [Backup & Restore](12-Backup-Restore)
 
 ## Quick Links
 

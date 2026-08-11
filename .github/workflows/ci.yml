@@ -136,7 +136,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov
       - name: Run pytest for CLI
         run: |
-          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=35
+          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=40
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -290,6 +290,11 @@ jobs:
       service-path: services/discord-service
       image-name: ${{ github.repository }}/discord-service
       run-tests: true
+      test-command: npm run test:coverage
+      upload-coverage: true
+      coverage-files: ./services/discord-service/coverage/v8
+      coverage-flag: discord-service
+      coverage-name: discord-service-coverage
 
   # ── Orchestrator Agent (Python) ────────────────────────────────────
   orchestrator-lint:
@@ -375,6 +380,15 @@ jobs:
         run: |
           cd services/orchestrator-agent
           pytest -q
+      - name: Validate database migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
+        run: |
+          docker exec "${{ job.services.postgres.id }}" createdb -U test infra_pilot_test
+          cd services/orchestrator-agent
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:

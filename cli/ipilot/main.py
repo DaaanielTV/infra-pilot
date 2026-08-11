@@ -7,16 +7,14 @@ from typing import Any, Dict, List
 import typer
 import yaml
 
-from .core.cli import create_app, legacy_bridge
-from .core.command_registry import attach_to_app, discover_commands
+from . import commands  # noqa: F401  (registers all command groups)
+from .config import DEFAULT_API_URL
+from .core.cli import create_app
+from .core.command_registry import attach_to_app
 
 logger = logging.getLogger(__name__)
 
 app = create_app()
-
-import ipilot.commands  # noqa: E402, F811
-
-from .core.command_registry import attach_to_app  # noqa: E402
 
 attach_to_app(app)
 
@@ -33,7 +31,7 @@ def login(
 
     config = load_config(profile=ctx.obj.get("profile"))
     client = ApiClient(
-        config.get("api_url", "http://localhost:8080"),
+        config.get("api_url", DEFAULT_API_URL),
         config.get("token"),
     )
     result = client.login(api_key)
@@ -103,24 +101,6 @@ def batch(
         cmd = op.get("command", "")
         args = op.get("args", {})
         typer.echo(f"Running: ipilot {cmd} {args}")
-
-
-@app.command()
-def doctor(
-    ctx: typer.Context,
-    fix: bool = typer.Option(False, "--fix", help="Auto-fix issues"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
-):
-    """Run system diagnostics (alias for 'ipilot doctor doctor')."""
-    from typer.testing import CliRunner
-
-    from .commands.doctor import doctor as doctor_cmd
-
-    runner = CliRunner()
-    args = ["--fix" if fix else "", "--verbose" if verbose else ""]
-    args = [a for a in args if a]
-    result = runner.invoke(doctor_cmd, args)
-    typer.echo(result.output)
 
 
 @app.command()

@@ -151,22 +151,6 @@ class TestDocsCommand:
 
 class TestDoctorAliases:
     @staticmethod
-    def _fake_doctor_command():
-        import typer
-
-        calls = []
-        app = typer.Typer()
-
-        @app.command()
-        def fake_doctor(
-            fix: bool = typer.Option(False, "--fix"),
-            verbose: bool = typer.Option(False, "--verbose", "-v"),
-        ):
-            calls.append((fix, verbose))
-
-        return app, calls
-
-    @staticmethod
     def _fake_benchmark_command():
         import typer
 
@@ -197,15 +181,13 @@ class TestDoctorAliases:
 
         return app, calls
 
-    def test_doctor_alias_dispatches_to_doctor_command(self, runner, monkeypatch):
+    def test_doctor_dispatches_to_doctor_subcommand(self, runner):
         cli_runner, _ = runner
-        fake_doctor, calls = self._fake_doctor_command()
-        monkeypatch.setattr("cli.ipilot.commands.doctor.doctor", fake_doctor)
 
-        result = cli_runner.invoke(app, ["doctor", "--fix"])
+        result = cli_runner.invoke(app, ["doctor", "doctor", "--fix"])
 
         assert result.exit_code == 0
-        assert calls == [(True, False)]
+        assert "Python Version" in result.output
 
     def test_benchmark_alias_dispatches_to_benchmark_command(self, runner, monkeypatch):
         cli_runner, _ = runner

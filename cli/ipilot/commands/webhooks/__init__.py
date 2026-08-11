@@ -1,5 +1,6 @@
 """Webhook management - Create, list, test webhooks."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -25,7 +26,9 @@ def list(
     """List all webhooks."""
     client = _get_client(ctx)
     result = client.list_webhooks()
-    data = result if isinstance(result, list) else result.get("webhooks", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("webhooks", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -86,5 +89,5 @@ def logs(
     """View webhook delivery logs."""
     client = _get_client(ctx)
     result = client.get_webhook_logs(webhook_id)
-    data = result if isinstance(result, list) else result.get("logs", result)
+    data = result if isinstance(result, builtins.list) else result.get("logs", result)
     print_output(data, ctx.obj.get("output", "table"))

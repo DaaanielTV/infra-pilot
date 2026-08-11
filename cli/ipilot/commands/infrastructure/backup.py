@@ -1,3 +1,5 @@
+import builtins
+
 import typer
 
 from ...client import ApiClient
@@ -29,7 +31,9 @@ def list(
     """
     client = _get_client(ctx)
     result = client.list_backups(server)
-    data = result if isinstance(result, list) else result.get("backups", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("backups", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -101,7 +105,9 @@ def snapshots(
         print_output(result, ctx.obj.get("output", "table"))
         return
     result = client._get(f"/servers/{server}/snapshots")
-    data = result if isinstance(result, list) else result.get("snapshots", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("snapshots", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

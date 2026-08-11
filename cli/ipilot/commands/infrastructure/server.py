@@ -1,3 +1,5 @@
+import builtins
+
 import typer
 
 from ...client import ApiClient
@@ -29,7 +31,9 @@ def list(
     """
     client = _get_client(ctx)
     result = client.list_servers()
-    data = result if isinstance(result, list) else result.get("servers", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("servers", result)
+    )
     print_output(data, output or ctx.obj.get("output", "table"))
 
 

@@ -1,3 +1,5 @@
+import builtins
+
 import typer
 
 from ...client import ApiClient
@@ -50,7 +52,11 @@ def list(
     """List deployments"""
     client = _get_client(ctx)
     result = client._get("/deployments")
-    data = result if isinstance(result, list) else result.get("deployments", result)
+    data = (
+        result
+        if isinstance(result, builtins.list)
+        else result.get("deployments", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

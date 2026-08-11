@@ -7,11 +7,9 @@ from typing import Callable, Dict, Optional
 import typer
 
 from ..client import ApiClient
-from ..config import load_config
+from ..config import DEFAULT_API_URL, load_config
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_API_URL = "http://localhost:8080"
 
 
 def create_app() -> typer.Typer:

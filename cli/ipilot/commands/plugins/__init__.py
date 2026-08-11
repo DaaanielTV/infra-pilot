@@ -1,5 +1,6 @@
 """Plugin System - Plugin management."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -28,7 +29,9 @@ def list(
     """List available and installed plugins."""
     client = _get_client(ctx)
     result = client.list_plugins(installed_only=installed)
-    data = result if isinstance(result, list) else result.get("plugins", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("plugins", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

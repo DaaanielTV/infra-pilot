@@ -1,5 +1,6 @@
 """Deployment Templates - Node.js, Python, Docker Compose, Nginx, PostgreSQL, Redis, Traefik."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -39,7 +40,9 @@ def list(
     """List available deployment templates."""
     client = _get_client(ctx)
     result = client.list_templates(template_type=template_type)
-    data = result if isinstance(result, list) else result.get("templates", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("templates", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

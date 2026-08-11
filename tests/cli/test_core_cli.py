@@ -107,6 +107,31 @@ class TestGetClient:
         assert captured["base_url"] == "https://api.example.com"
         assert captured["token"] == "secret-token"
 
+    def test_fallback_url_matches_config_default(self, runner, monkeypatch):
+        """The client fallback must never diverge from the config default."""
+        from cli.ipilot.config import DEFAULT_API_URL
+        from cli.ipilot.core import cli as core_cli
+
+        captured = {}
+
+        class FakeClient:
+            def __init__(self, base_url=None, token=None):
+                captured["base_url"] = base_url
+                captured["token"] = token
+
+        monkeypatch.setattr("cli.ipilot.core.cli.ApiClient", FakeClient)
+        monkeypatch.setattr(
+            "cli.ipilot.core.cli.load_config",
+            lambda profile=None: {},
+        )
+
+        ctx = MagicMock()
+        ctx.obj.get.return_value = None
+
+        core_cli.get_client(ctx)
+
+        assert captured["base_url"] == DEFAULT_API_URL == "http://localhost:3001"
+
 
 class TestLegacyBridge:
     def test_dispatch_flat_command(self):

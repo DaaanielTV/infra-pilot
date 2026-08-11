@@ -12,3 +12,4 @@ typing-extensions==4.16.0
 requests==2.34.2
 croniter==6.2.4
 aiofiles==25.1.0
+alembic==1.19.1

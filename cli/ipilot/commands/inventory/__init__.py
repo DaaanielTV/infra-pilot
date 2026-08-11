@@ -1,5 +1,6 @@
 """Server Inventory - Metadata, tags, environment tracking."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -57,7 +58,9 @@ def list(
         params["provider"] = provider
 
     result = client.list_inventory(**params)
-    data = result if isinstance(result, list) else result.get("inventory", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("inventory", result)
+    )
     print_output(data, output or ctx.obj.get("output", "table"))
 
 

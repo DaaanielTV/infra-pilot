@@ -169,6 +169,8 @@ def _key_value_table(data: Dict) -> str:
     """
     if "error" in data:
         return f"Error: {data['error']}"
+    if not data:
+        return NO_DATA_MESSAGE
     max_key = max(len(k) for k in data)
     lines = []
     for k, v in data.items():

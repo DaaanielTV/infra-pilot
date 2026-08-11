@@ -1,5 +1,6 @@
 """Secret Management - Encrypted store, versioning, rotation, RBAC."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -26,7 +27,9 @@ def list(
     """List secrets."""
     client = _get_client(ctx)
     result = client.list_secrets(path=path)
-    data = result if isinstance(result, list) else result.get("secrets", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("secrets", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -79,7 +82,9 @@ def versions(
     """List versions of a secret."""
     client = _get_client(ctx)
     result = client.list_secret_versions(key)
-    data = result if isinstance(result, list) else result.get("versions", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("versions", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -104,7 +109,9 @@ def rotate(
         print_output(result, ctx.obj.get("output", "table"))
         return
     result = client.list_secrets_due_for_rotation()
-    data = result if isinstance(result, list) else result.get("secrets", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("secrets", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

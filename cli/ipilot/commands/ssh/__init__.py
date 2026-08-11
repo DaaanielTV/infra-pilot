@@ -1,5 +1,6 @@
 """SSH Session Management - Jump hosts, session recording, web terminal."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -28,7 +29,9 @@ def list(
     """List SSH sessions."""
     client = _get_client(ctx)
     result = client.list_ssh_sessions(status=status)
-    sessions = result if isinstance(result, list) else result.get("sessions", result)
+    sessions = (
+        result if isinstance(result, builtins.list) else result.get("sessions", result)
+    )
     print_output(sessions, ctx.obj.get("output", "table"))
 
 

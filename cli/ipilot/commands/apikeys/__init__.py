@@ -1,5 +1,6 @@
 """API Key management - Create, list, revoke API keys for programmatic access."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -25,7 +26,9 @@ def list(
     """List all API keys."""
     client = _get_client(ctx)
     result = client.list_api_keys()
-    data = result if isinstance(result, list) else result.get("api_keys", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("api_keys", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 

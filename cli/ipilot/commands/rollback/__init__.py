@@ -1,5 +1,6 @@
 """Undo/Rollback - Revert infrastructure changes."""
 
+import builtins
 from typing import Optional
 
 import typer
@@ -29,7 +30,9 @@ def list(
     """List recent changes available for rollback."""
     client = _get_client(ctx)
     result = client.list_changes(resource=resource, limit=limit)
-    data = result if isinstance(result, list) else result.get("changes", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("changes", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))
 
 
@@ -77,5 +80,7 @@ def history(
     result = client.get_change_history(
         resource_type=resource_type, resource_id=resource_id
     )
-    data = result if isinstance(result, list) else result.get("history", result)
+    data = (
+        result if isinstance(result, builtins.list) else result.get("history", result)
+    )
     print_output(data, ctx.obj.get("output", "table"))

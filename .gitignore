@@ -37,6 +37,9 @@ target/
 .env.*
 !.env.example
 
+# Database backups
+backups/
+
 # Debian/package artifacts
 *.deb
 *.gz

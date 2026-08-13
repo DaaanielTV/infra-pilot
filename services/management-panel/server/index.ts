@@ -53,6 +53,15 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { SERVER_PRESETS } from './presets.js';
 import openapiSpec from './openapi.js';
 import { analyzeConfiguration } from './config-advice-engine.js';
+import {
+  checkCpu,
+  checkDisk,
+  checkDns,
+  checkLocalApi,
+  checkMemory,
+  collectSystemInfo,
+  type DiagnosticCheck,
+} from './doctor.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -62,6 +71,39 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const execAsync = promisify(exec);
+
+/**
+ * Run real diagnostics. The optional `issue` filters to a category:
+ * connectivity | performance | disk. Without it, all checks run.
+ */
+async function runDiagnostics(issue?: string): Promise<{ status: string; summary: string; checks: DiagnosticCheck[]; system?: ReturnType<typeof collectSystemInfo> }> {
+  const checks: DiagnosticCheck[] = [];
+  const wants = (c: string) => !issue || issue === c;
+
+  if (wants('performance') || wants('connectivity')) checks.push(checkCpu());
+  if (wants('performance') || wants('connectivity')) checks.push(checkMemory());
+  if (wants('disk') || wants('performance')) checks.push(checkDisk());
+  if (wants('connectivity')) checks.push(await checkDns());
+  if (wants('connectivity')) {
+    const apiUrl = process.env.API_BASE_URL || `http://localhost:${port}`;
+    checks.push(await checkLocalApi(apiUrl));
+  }
+
+  const failed = checks.filter((c) => c.status === 'fail');
+  const warned = checks.filter((c) => c.status === 'warn');
+  const status = failed.length > 0 ? 'fail' : warned.length > 0 ? 'warn' : 'ok';
+  return {
+    status,
+    summary:
+      status === 'ok'
+        ? 'All checks passed'
+        : status === 'warn'
+          ? `${warned.length} warning(s), ${failed.length} failure(s)`
+          : `${failed.length} failure(s) detected`,
+    checks,
+    system: collectSystemInfo(),
+  };
+}
 
 /**
  * Execute a Docker action (start/stop/restart) on a container by app ID.
@@ -3974,23 +4016,14 @@ app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: 
 
 app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
   const { issue } = req.body;
-  const issues = {
-    connectivity: { status: 'checking', checks: [{ name: 'DNS Resolution', status: 'ok' }, { name: 'API Connection', status: 'ok' }, { name: 'Internet Access', status: 'ok' }] },
-    performance: { status: 'checking', checks: [{ name: 'CPU Usage', status: 'ok', value: '23%' }, { name: 'Memory Usage', status: 'warn', value: '78%' }, { name: 'Disk I/O', status: 'ok', value: '15ms' }] },
-    disk: { status: 'checking', checks: [{ name: 'Disk Space', status: 'ok', value: '42% used' }, { name: 'Inode Usage', status: 'ok', value: '12%' }, { name: 'Disk Health', status: 'ok', value: 'PASSED' }] },
-  };
-  const result = issues[issue as keyof typeof issues] || {
-    status: 'ok', summary: 'System appears healthy', checks: [
-      { name: 'CPU', status: 'ok', value: `${(Math.random() * 60 + 10).toFixed(1)}%` },
-      { name: 'Memory', status: 'ok', value: `${(Math.random() * 40 + 30).toFixed(1)}%` },
-      { name: 'Disk', status: 'ok', value: `${(Math.random() * 30 + 20).toFixed(1)}%` },
-    ],
-  };
-  res.json(result);
+  const checks = await runDiagnostics(issue as string | undefined);
+  res.json(checks);
 });
 
 app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: Response) => {
-  res.json({ status: 'diagnosing', server: req.params.server, issue: req.body.issue || 'general' });
+  const { issue } = req.body;
+  const checks = await runDiagnostics(issue as string | undefined);
+  res.json({ server: req.params.server, ...checks });
 });
 
 // ============================================================================

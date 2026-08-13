@@ -13,6 +13,7 @@ const TicketSystem = require('./modules/ticketSystem');
 const TicketCommands = require('./modules/ticketCommands');
 const StatsCommands = require('./modules/statsCommands');
 const RoleManager = require('./modules/roleManager');
+const VPSCommands = require('./modules/vpsCommands');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -155,6 +156,7 @@ async function registerCommands() {
     { name: 'status', description: 'Server status commands', type: 1, options: [{ name: 'widget', description: 'Create a status widget', type: 1 }, { name: 'info', description: 'Show live server status', type: 1 }] },
     { name: 'role', description: 'Role management commands', type: 1, options: [{ name: 'info', description: 'Show role hierarchy info', type: 1 }] },
     { name: 'report', description: 'Report bot commands', type: 1, options: [{ name: 'send', description: 'Send a report to this channel', type: 1, options: [{ name: 'type', description: 'Report type', type: 3, required: false, choices: [{ name: 'Executive Summary', value: 'executive-summary' }, { name: 'Cost Report', value: 'cost' }, { name: 'Performance Report', value: 'performance' }, { name: 'Incident Report', value: 'incidents' }] }] }] },
+    ...VPSCommands.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -167,6 +169,7 @@ async function registerCommands() {
 client.once('ready', async () => {
   console.log(`[Discord] Bot online as ${client.user.tag}`);
   await registerCommands();
+  vpsManager.ensureTables().catch(() => {});
   serverStatus.initialize(client);
 });
 
@@ -193,6 +196,15 @@ client.on('interactionCreate', async (interaction) => {
       );
       const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Wähle den Typ des Servers, den du erstellen möchtest:').setColor('#007bff');
       return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    }
+    if (VPSCommands.isParsed(interaction.commandName)) {
+      return VPSCommands.handle(interaction).catch((error) => {
+        console.error(`[VPSCommands] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
     }
     ticketCommands.handleCommand(interaction);
     statsCommands.handleCommand(interaction);

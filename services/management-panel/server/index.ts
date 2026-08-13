@@ -65,6 +65,7 @@ import {
 import { runBenchmark } from './benchmark.js';
 import { buildReport, reportToCsv, reportToPdf } from './reports.js';
 import { buildPlan } from './assistant.js';
+import { executeGraphQL } from './graphql.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -4346,13 +4347,21 @@ app.get('/api/sso/providers', async (req: Request, res: Response) => {
 
 app.post('/api/graphql', verifyAuth, async (req: Request, res: Response) => {
   const { query: gqlQuery } = req.body;
-  if (!gqlQuery) return res.status(400).json({ error: 'Query is required' });
-  res.json({
-    data: {
-      message: 'GraphQL endpoint ready. Full GraphQL support available with dedicated server.',
-      note: 'Use /api/* REST endpoints for full functionality. GraphQL will be expanded in a future release.',
+  if (!gqlQuery || typeof gqlQuery !== 'string') {
+    return res.status(400).json({ error: 'Query is required' });
+  }
+  const userId = (req as any).user.id;
+  const result = await executeGraphQL(gqlQuery, {
+    userId,
+    query: async (table, args) => {
+      let builder = supabase.from(table).select('*');
+      for (const [key, value] of Object.entries(args || {})) {
+        builder = builder.eq(key, value);
+      }
+      return builder.limit(100) as any;
     },
   });
+  res.json(result);
 });
 
 // Global error handling middleware

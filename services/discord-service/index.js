@@ -16,6 +16,8 @@ const RoleManager = require('./modules/roleManager');
 const VPSCommands = require('./modules/vpsCommands');
 const Monitoring = require('./modules/monitoring');
 const HealthChecks = require('./modules/healthChecks');
+const BackupScheduler = require('./modules/backupScheduler');
+const AlertManager = require('./modules/alertManager');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -161,6 +163,7 @@ async function registerCommands() {
     ...VPSCommands.toSpec(),
     ...Monitoring.toSpec(),
     ...HealthChecks.toSpec(),
+    ...AlertManager.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -177,6 +180,8 @@ client.once('ready', async () => {
   serverStatus.initialize(client);
   Monitoring.init(client);
   HealthChecks.init(client);
+  BackupScheduler.init(client);
+  AlertManager.init(client);
   Monitoring.updatePresence();
 });
 
@@ -225,6 +230,15 @@ client.on('interactionCreate', async (interaction) => {
     if (HealthChecks.isParsed(interaction.commandName)) {
       return HealthChecks.handle(interaction).catch((error) => {
         console.error(`[HealthChecks] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (AlertManager.isParsed(interaction.commandName)) {
+      return AlertManager.handle(interaction).catch((error) => {
+        console.error(`[AlertManager] ${interaction.commandName} failed:`, error);
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: '❌ An error occurred while running this command.' });
         }

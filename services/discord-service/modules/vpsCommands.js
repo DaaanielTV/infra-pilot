@@ -47,7 +47,10 @@ const COMMAND_SPECS = [
   {
     name: 'backup',
     description: 'Create a backup of a VPS instance',
-    options: [{ name: 'container_id', description: 'Container ID or name', type: 3, required: true }],
+    options: [
+      { name: 'container_id', description: 'Container ID or name', type: 3, required: true },
+      { name: 'retention', description: 'daily/weekly/monthly', type: 3, required: false },
+    ],
   },
   {
     name: 'backuplist',
@@ -189,9 +192,13 @@ async function handle(interaction) {
     }
     case 'backup': {
       const input = options.getString('container_id');
+      const retention = options.getString('retention') || 'daily';
       const owned = await vpsManager.resolveContainerForUser(interaction.user.id, input);
       if (!owned) return interaction.editReply({ content: '❌ VPS not found for your account' });
-      const backupId = await vpsManager.createBackup(owned.container_id);
+      if (!['daily', 'weekly', 'monthly'].includes(retention)) {
+        return interaction.editReply({ content: '❌ Retention must be daily/weekly/monthly' });
+      }
+      const backupId = await vpsManager.createBackup(owned.container_id, retention);
       if (!backupId) return interaction.editReply({ content: '❌ Failed to create backup' });
       const embed = new EmbedBuilder()
         .setTitle('Backup Created')

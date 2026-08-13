@@ -58,13 +58,42 @@ function findTool(text: string): AssistantTool | null {
   return matches[0].tool;
 }
 
-/** Find a likely app id/name in the text, or the first part that looks like one. */
-function findTarget(text: string): string | undefined {
+/**
+ * Resolve the target of the request: try app names/ids present in the text,
+ * then quoted strings, then a trailing word or UUID.
+ */
+function resolveTarget(
+  text: string,
+  apps: { id: string; name: string }[],
+): { app?: { id: string; name: string }; rawTarget?: string } {
   const idMatch = text.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/);
-  if (idMatch) return idMatch[0];
+  if (idMatch) {
+    const app = apps.find((a) => a.id === idMatch[0]);
+    return app ? { app, rawTarget: idMatch[0] } : { rawTarget: idMatch[0] };
+  }
+
+  const byName = apps.find((a) =>
+    text.includes(a.name.toLowerCase()),
+  );
+  if (byName) return { app: byName, rawTarget: byName.name };
+
   const quoted = text.match(/"([^"]+)"/) || text.match(/'([^']+)'/);
-  if (quoted) return quoted[1];
-  return undefined;
+  if (quoted) {
+    const rawTarget = quoted[1];
+    const app = apps.find(
+      (a) => a.id === rawTarget || a.name.toLowerCase() === rawTarget.toLowerCase(),
+    );
+    return app ? { app, rawTarget } : { rawTarget };
+  }
+
+  const words = text.split(' ').filter((w) => w.length > 2);
+  for (const word of words) {
+    const app = apps.find(
+      (a) => a.name.toLowerCase() === word || a.id === word,
+    );
+    if (app) return { app, rawTarget: word };
+  }
+  return {};
 }
 
 /**
@@ -77,22 +106,19 @@ export function buildPlan(
 ): AssistantPlan {
   const text = normalize(request);
   const tool = findTool(text) || 'status';
-  const target = findTarget(text);
-  const app = target
-    ? apps.find((a) => a.id === target || a.name.toLowerCase() === target.toLowerCase())
-    : undefined;
-  const appId = app ? app.id : target;
-  const unknownTarget = target && !app && !/^[0-9a-f-]{36}$/.test(target);
+  const { app, rawTarget } = resolveTarget(text, apps);
+  const appId = app ? app.id : rawTarget;
+  const unknownTarget = rawTarget && !app && !/^[0-9a-f-]{36}$/.test(rawTarget);
 
   if (unknownTarget) {
     return {
       intent: tool,
       requires_approval: false,
       actions: [],
-      message: `I couldn't find an app named "${target}". I searched your registered apps.`,
+      message: `I couldn't find an app named "${rawTarget}". I searched your registered apps.`,
     };
   }
-  if (!app && target && /^[0-9a-f-]{36}$/.test(target)) {
+  if (!app && rawTarget && /^[0-9a-f-]{36}$/.test(rawTarget)) {
     return {
       intent: tool,
       requires_approval: true,
@@ -101,7 +127,7 @@ export function buildPlan(
     };
   }
 
-  const label = app ? `"${app.name}"` : (target || 'the system');
+  const label = app ? `"${app.name}"` : (rawTarget || 'the system');
   if (tool === 'benchmark' && !app) {
     return {
       intent: 'benchmark',

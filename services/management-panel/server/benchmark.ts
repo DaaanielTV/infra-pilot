@@ -8,6 +8,7 @@ import os from 'os';
 import fs from 'fs/promises';
 import path from 'path';
 import { promises as fsp } from 'fs';
+import { randomBytes } from 'crypto';
 
 export interface CpuSample {
   idleMs: number;
@@ -31,7 +32,7 @@ export const defaultSampler: Sampler = {
       totalMs:
         cpu.times.idle + cpu.times.user + cpu.times.nice + cpu.times.sys + cpu.times.irq,
     })),
-  randomBytes: (size: number) => require('crypto').randomBytes(size),
+  randomBytes: (size: number) => randomBytes(size),
   writeFile: (p, data) => fsp.writeFile(p, data),
   unlink: (p) => fsp.unlink(p),
   resolve: (hostname: string) => import('dns/promises').then((m) => m.resolve(hostname)),

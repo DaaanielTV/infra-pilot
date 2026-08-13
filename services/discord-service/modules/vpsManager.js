@@ -303,6 +303,15 @@ async function execInContainer(containerId, command) {
   return exec(containerId, command);
 }
 
+async function executeCommand(containerId, command) {
+  try {
+    await exec(containerId, command);
+    return { success: true, error: null };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   ensureTables,
   createVps,
@@ -319,4 +328,5 @@ module.exports = {
   resolveContainerForUser,
   getContainersForUser,
   execInContainer,
+  executeCommand,
 };

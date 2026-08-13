@@ -58,6 +58,15 @@ function findTool(text: string): AssistantTool | null {
   return matches[0].tool;
 }
 
+const STOPWORDS = new Set([
+  'please', 'show', 'what', 'with', 'for', 'the', 'a', 'an', 'and', 'my', 'to',
+  'run', 'do', 'get', 'me', 'you', 'can', 'could', 'would', 'want', 'need', 'check', 'now',
+]);
+
+function isToolWord(word: string): boolean {
+  return Object.values(TOOL_ALIASES).some((aliases) => aliases.includes(word));
+}
+
 /**
  * Resolve the target of the request: try app names/ids present in the text,
  * then quoted strings, then a trailing word or UUID.
@@ -86,13 +95,20 @@ function resolveTarget(
     return app ? { app, rawTarget } : { rawTarget };
   }
 
-  const words = text.split(' ').filter((w) => w.length > 2);
+  const words = text.split(' ').filter(
+    (w) =>
+      w.length > 2 &&
+      !isToolWord(w) &&
+      !STOPWORDS.has(w) &&
+      !apps.some((a) => a.name.toLowerCase() === w),
+  );
   for (const word of words) {
     const app = apps.find(
       (a) => a.name.toLowerCase() === word || a.id === word,
     );
     if (app) return { app, rawTarget: word };
   }
+  if (words.length === 1) return { rawTarget: words[0] };
   return {};
 }
 

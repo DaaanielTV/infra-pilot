@@ -23,6 +23,77 @@ def _get_client(ctx: typer.Context) -> ApiClient:
     )
 
 
+def _memory_usage() -> Dict[str, Any]:
+    """Return real memory usage without external dependencies."""
+    try:
+        with open("/proc/meminfo", "r") as f:
+            meminfo = {}
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    meminfo[parts[0].strip()] = int(parts[1].strip().split()[0])
+        total_kb = meminfo.get("MemTotal", 0)
+        available_kb = meminfo.get("MemAvailable", meminfo.get("MemFree", 0))
+        if total_kb > 0:
+            used_pct = (1 - available_kb / total_kb) * 100
+            return {
+                "total_gb": round(total_kb / 1024 / 1024, 2),
+                "available_gb": round(available_kb / 1024 / 1024, 2),
+                "used_pct": round(used_pct, 1),
+            }
+    except (OSError, IOError):
+        pass
+    if sys.platform == "win32":
+        import ctypes
+
+        class MemoryStatusEx(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MemoryStatusEx()
+        status.dwLength = ctypes.sizeof(MemoryStatusEx)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+            return {
+                "total_gb": round(status.ullTotalPhys / 1024 / 1024 / 1024, 2),
+                "available_gb": round(status.ullAvailPhys / 1024 / 1024 / 1024, 2),
+                "used_pct": round(status.dwMemoryLoad, 1),
+            }
+    return {"total_gb": 0, "available_gb": 0, "used_pct": 0}
+
+
+def _disk_usage(path: str = "/") -> Dict[str, Any]:
+    """Return real disk usage for the given path."""
+    usage = shutil.disk_usage(path)
+    used_pct = (usage.used / usage.total) * 100 if usage.total else 0
+    return {
+        "path": path,
+        "total_gb": round(usage.total / 1024 / 1024 / 1024, 2),
+        "used_gb": round(usage.used / 1024 / 1024 / 1024, 2),
+        "free_gb": round(usage.free / 1024 / 1024 / 1024, 2),
+        "used_pct": round(used_pct, 1),
+    }
+
+
+def _load_average() -> Optional[Dict[str, float]]:
+    """Real load average, or None on platforms without os.getloadavg."""
+    if hasattr(os, "getloadavg"):
+        try:
+            load = os.getloadavg()
+            return {"1m": round(load[0], 2), "5m": round(load[1], 2), "15m": round(load[2], 2)}
+        except OSError:
+            return None
+    return None
+
+
 @app.command()
 def doctor(
     ctx: typer.Context,
@@ -75,6 +146,40 @@ def doctor(
             "detail": ssh_path or "not found (optional)",
         }
     )
+
+    mem = _memory_usage()
+    if mem.get("total_gb"):
+        mem_status = "warn" if mem["used_pct"] > 80 else "ok"
+        checks.append(
+            {
+                "check": "Memory",
+                "status": mem_status,
+                "detail": f"{mem['used_pct']}% used ({mem['available_gb']} GB free of {mem['total_gb']} GB)",
+            }
+        )
+    else:
+        checks.append({"check": "Memory", "status": "warn", "detail": "could not read memory info"})
+
+    disk = _disk_usage("/")
+    checks.append(
+        {
+            "check": "Disk",
+            "status": "warn" if disk["used_pct"] > 85 else "ok",
+            "detail": f"{disk['used_pct']}% used ({disk['free_gb']} GB free of {disk['total_gb']} GB on {disk['path']})",
+        }
+    )
+
+    load = _load_average()
+    if load:
+        checks.append(
+            {
+                "check": "Load Average",
+                "status": "warn" if load["1m"] > os.cpu_count() or 0 else "ok",
+                "detail": f"1m={load['1m']} 5m={load['5m']} 15m={load['15m']}",
+            }
+        )
+    else:
+        checks.append({"check": "Load Average", "status": "warn", "detail": "not available on this platform"})
 
     config = load_config()
     if config:

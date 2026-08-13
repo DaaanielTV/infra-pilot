@@ -54,7 +54,7 @@ async function ensureTable() {
 
 function generatePassword(length = 24) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  return Array.from(crypto.randomBytes(length)).map((b) => chars[b % chars.length]).join('');
+  return Array.from({ length }, () => chars[crypto.randomInt(0, chars.length)]).join('');
 }
 
 async function createDatabase(dbName, userId, appId = null) {

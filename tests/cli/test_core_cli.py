@@ -1,6 +1,5 @@
-"""Unit tests for cli.ipilot.core.cli: app creation and legacy bridge."""
+"""Unit tests for cli.ipilot.core.cli: app creation and client loading."""
 
-import argparse
 from unittest.mock import MagicMock
 
 import pytest
@@ -131,56 +130,3 @@ class TestGetClient:
         core_cli.get_client(ctx)
 
         assert captured["base_url"] == DEFAULT_API_URL == "http://localhost:3001"
-
-
-class TestLegacyBridge:
-    def test_dispatch_flat_command(self):
-        from cli.ipilot.core.cli import LegacyBridge
-
-        bridge = LegacyBridge()
-        calls = []
-        bridge.add_flat("ping", lambda args: calls.append(("ping", args)))
-        args = argparse.Namespace(host="localhost")
-
-        bridge.dispatch("ping", None, args)
-
-        assert calls == [("ping", args)]
-
-    def test_dispatch_grouped_subcommand(self):
-        from cli.ipilot.core.cli import LegacyBridge
-
-        bridge = LegacyBridge()
-        calls = []
-        bridge.add_group(
-            "server", {"list": lambda args: calls.append(("server:list", args))}
-        )
-        args = argparse.Namespace()
-
-        bridge.dispatch("server", "list", args)
-
-        assert calls == [("server:list", args)]
-
-    def test_unknown_command_raises_exit(self):
-        import typer
-
-        from cli.ipilot.core.cli import LegacyBridge
-
-        bridge = LegacyBridge()
-        args = argparse.Namespace()
-
-        with pytest.raises(typer.Exit) as exc_info:
-            bridge.dispatch("nope", None, args)
-        assert exc_info.value.exit_code == 1
-
-    def test_unknown_subcommand_raises_exit(self):
-        import typer
-
-        from cli.ipilot.core.cli import LegacyBridge
-
-        bridge = LegacyBridge()
-        bridge.add_group("server", {"list": lambda args: None})
-        args = argparse.Namespace()
-
-        with pytest.raises(typer.Exit) as exc_info:
-            bridge.dispatch("server", "delete-all", args)
-        assert exc_info.value.exit_code == 1

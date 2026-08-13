@@ -63,6 +63,7 @@ import {
   type DiagnosticCheck,
 } from './doctor.js';
 import { runBenchmark } from './benchmark.js';
+import { buildReport, reportToCsv, reportToPdf } from './reports.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -2298,39 +2299,37 @@ app.get('/api/reports', verifyAuth, async (req: Request, res: Response) => {
   const startDate = req.query.start_date as string;
   const endDate = req.query.end_date as string;
   try {
-    const { data: apps } = await supabase.from('docker_apps').select('id').eq('user_id', userId);
-    if (!apps || apps.length === 0) return res.json({ metrics: [], backups: [], alerts: [] });
-
-    const appIds = apps.map(a => a.id);
-    const since = startDate || new Date(Date.now() - 30 * 86400000).toISOString();
-    const until = endDate || new Date().toISOString();
-
-    const [metricsRes, backupsRes, alertsRes] = await Promise.all([
-      supabase.from('server_metrics').select('*').in('app_id', appIds).gte('recorded_at', since).lte('recorded_at', until).order('recorded_at', { ascending: false }).limit(500),
-      supabase.from('backup_status').select('*, backup_jobs!inner(app_id)').in('backup_jobs.app_id', appIds).gte('started_at', since).lte('started_at', until).order('started_at', { ascending: false }).limit(500),
-      supabase.from('alert_history').select('*').gte('triggered_at', since).lte('triggered_at', until).order('triggered_at', { ascending: false }).limit(500),
-    ]);
-
-    res.json({
-      metrics: metricsRes.data || [],
-      backups: backupsRes.data || [],
-      alerts: alertsRes.data || [],
-    });
+    const report = await buildReport(supabase, userId, startDate, endDate);
+    res.json(report);
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate report' });
   }
 });
 
 app.get('/api/reports/export', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const startDate = req.query.start_date as string;
+  const endDate = req.query.end_date as string;
   const format = req.query.format as string;
-  if (format === 'csv') {
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
-    res.send('metric,value,timestamp\nCPU,23,2024-01-01\nMemory,45,2024-01-01');
-  } else {
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
-    res.send(Buffer.from('PDF placeholder'));
+  try {
+    const report = await buildReport(supabase, userId, startDate, endDate);
+    if (format === 'csv') {
+      const csv = reportToCsv(report);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
+      res.send(csv);
+    } else if (format === 'pdf') {
+      const pdf = reportToPdf(report);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
+      res.send(pdf);
+    } else if (format === 'json') {
+      res.json(report);
+    } else {
+      res.status(400).json({ error: 'Unsupported format. Use csv, pdf or json.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to export report' });
   }
 });
 

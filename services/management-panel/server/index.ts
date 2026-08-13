@@ -64,6 +64,7 @@ import {
 } from './doctor.js';
 import { runBenchmark } from './benchmark.js';
 import { buildReport, reportToCsv, reportToPdf } from './reports.js';
+import { buildPlan } from './assistant.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -4196,33 +4197,104 @@ app.post('/api/runbooks/:id/execute', verifyAuth, async (req: Request, res: Resp
 // ============================================================================
 
 app.post('/api/assistant/analyze', verifyAuth, async (req: Request, res: Response) => {
-  const { query, context } = req.body;
-  const plan = [
-    { step: 1, action: 'analyze', description: `Analyzing request: ${query}` },
-    { step: 2, action: 'plan', description: 'Creating execution plan based on analysis' },
-    { step: 3, action: 'approval_required', description: 'Plan ready for review - ask user for confirmation' },
-  ];
-  res.json({ analysis: plan, requires_approval: true, message: `I'll help you: ${query}` });
+  const userId = (req as any).user.id;
+  const { query } = req.body;
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'query is required' });
+  }
+  const { data: apps } = await supabase
+    .from('docker_apps')
+    .select('id, name')
+    .eq('user_id', userId);
+  const plan = buildPlan(query, (apps || []).map((a: any) => ({ id: a.id, name: a.name })));
+  res.json({ analysis: plan, plan_id: `plan-${crypto.randomUUID()}`, requires_approval: plan.requires_approval, message: plan.message });
 });
 
 app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Response) => {
-  const { plan_id, approved } = req.body;
+  const userId = (req as any).user.id;
+  const { plan: planBody, approved } = req.body;
   if (!approved) return res.json({ status: 'cancelled', message: 'Execution cancelled by user' });
-  const result = {
-    status: 'executed',
-    steps: [
-      { step: 'analyze', status: 'completed' },
-      { step: 'plan', status: 'completed' },
-      { step: 'execute', status: 'completed', output: 'All actions completed successfully' },
-    ],
-  };
-  res.json(result);
+  if (!planBody || !Array.isArray(planBody.actions) || planBody.actions.length === 0) {
+    return res.status(400).json({ error: 'A plan with actions is required' });
+  }
+
+  const steps: { tool: string; appId?: string; status: string; output?: string }[] = [];
+  try {
+    for (const action of planBody.actions) {
+      const { tool, appId } = action;
+      try {
+        if (tool === 'start' || tool === 'stop' || tool === 'restart') {
+          const docker = await dockerAction(appId, tool);
+          await supabase
+            .from('docker_apps')
+            .update({ status: tool === 'stop' ? 'stopped' : 'running' })
+            .eq('id', appId)
+            .eq('user_id', userId);
+          steps.push({ tool, appId, status: 'completed', output: docker.output });
+          await logAudit(userId, `assistant:${tool}`, 'app', appId);
+        } else if (tool === 'status') {
+          const { data: app } = await supabase
+            .from('docker_apps')
+            .select('id, name, status, image')
+            .eq('id', appId)
+            .eq('user_id', userId)
+            .single();
+          if (!app) throw new Error('App not found');
+          steps.push({ tool, appId, status: 'completed', output: `${app.name}: ${app.status} (${app.image})` });
+        } else if (tool === 'logs') {
+          const { data: app } = await supabase
+            .from('docker_apps')
+            .select('id, container_id')
+            .eq('id', appId)
+            .eq('user_id', userId)
+            .single();
+          if (!app || !app.container_id) throw new Error('App has no container');
+          const { stdout, stderr } = await runCommand('docker', ['logs', '--tail', '50', String(app.container_id)]);
+          steps.push({ tool, appId, status: 'completed', output: stdout || stderr });
+        } else if (tool === 'benchmark') {
+          const result = await runBenchmark(10);
+          await supabase.from('benchmark_results').insert({
+            server_id: appId || null,
+            benchmark_type: appId ? 'container' : 'local',
+            duration_seconds: 10,
+            cpu_score: result.cpu_avg_pct,
+            memory_score: result.memory_used_pct,
+            disk_score: result.disk_write_mbps,
+            overall_score: result.cpu_avg_pct + result.memory_used_pct,
+            raw_data: result.measurements,
+          });
+          steps.push({ tool, appId, status: 'completed', output: `cpu=${result.cpu_avg_pct}% mem=${result.memory_used_pct}% disk=${result.disk_write_mbps}MiB/s` });
+          await logAudit(userId, 'assistant:benchmark', 'app', appId);
+        } else {
+          throw new Error(`Unsupported tool: ${tool}`);
+        }
+      } catch (err: any) {
+        steps.push({ tool, appId, status: 'failed', output: err.message || String(err) });
+        break;
+      }
+    }
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Assistant execution failed', details: err.message || String(err) });
+  }
+
+  const failed = steps.some((s) => s.status === 'failed');
+  res.json({ status: failed ? 'failed' : 'executed', steps });
 });
 
 app.post('/api/assistant/chat', verifyAuth, async (req: Request, res: Response) => {
   const { message, conversation_id } = req.body;
-  const response = `I understand you want to: ${message}. I can help with infrastructure management, deployments, monitoring, and more. Use /plan to create an execution plan.`;
-  res.json({ response, conversation_id: conversation_id || 'new' });
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'message is required' });
+  }
+  const { data: apps } = await supabase
+    .from('docker_apps')
+    .select('id, name')
+    .eq('user_id', (req as any).user.id);
+  const plan = buildPlan(message, (apps || []).map((a: any) => ({ id: a.id, name: a.name })));
+  const response =
+    plan.message ||
+    `I can help with infrastructure management, deployments, monitoring and more.`;
+  res.json({ response, conversation_id: conversation_id || 'new', plan });
 });
 
 // ============================================================================

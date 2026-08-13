@@ -54,7 +54,6 @@ jobs:
             cli:
               - 'cli/**'
               - 'requirements.txt'
-              - 'setup.py'
               - 'pyproject.toml'
               - 'Makefile'
               - 'pytest.ini'

@@ -1,26 +1,9 @@
-const { Pool } = require('pg');
+const { query } = require('./db');
 const { docker, inspect, stats, exec } = require('./docker');
-
-let _dbPool = null;
-
-function getDbPool() {
-  if (!_dbPool) {
-    _dbPool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT, 10) || 5432,
-      user: process.env.DB_USER || 'infra_pilot',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'infra_pilot',
-      max: 5,
-    });
-  }
-  return _dbPool;
-}
 
 async function ensureTables() {
   try {
-    const pool = getDbPool();
-    await pool.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS vps_containers (
         container_id VARCHAR(255) PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
@@ -29,13 +12,13 @@ async function ensureTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await pool.query(
+    await query(
       "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;"
     );
-    await pool.query(
+    await query(
       "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'running';"
     );
-    await pool.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS backup_rotation (
         id SERIAL PRIMARY KEY,
         container_id VARCHAR(255) NOT NULL,
@@ -56,7 +39,7 @@ function now() {
 
 async function addToDatabase(userId, containerId, name, sshCommand = '') {
   try {
-    await getDbPool().query(
+    await query(
       `INSERT INTO vps_containers
        (container_id, user_id, container_name, ssh_command, status)
        VALUES ($1, $2, $3, $4, 'running')
@@ -70,7 +53,7 @@ async function addToDatabase(userId, containerId, name, sshCommand = '') {
 
 async function removeFromDatabase(containerId) {
   try {
-    await getDbPool().query('DELETE FROM vps_containers WHERE container_id = $1', [containerId]);
+    await query('DELETE FROM vps_containers WHERE container_id = $1', [containerId]);
   } catch (err) {
     console.error('[VPSManager] removeFromDatabase failed:', err.message);
   }
@@ -78,7 +61,7 @@ async function removeFromDatabase(containerId) {
 
 async function getContainersForUser(userId) {
   try {
-    const result = await getDbPool().query(
+    const result = await query(
       'SELECT container_id, container_name, ssh_command, status, created_at FROM vps_containers WHERE user_id = $1',
       [userId]
     );
@@ -138,7 +121,7 @@ async function deleteVps(containerId) {
 
 async function setStatus(containerId, status) {
   try {
-    await getDbPool().query(
+    await query(
       'UPDATE vps_containers SET status = $2 WHERE container_id = $1',
       [containerId, status]
     );
@@ -228,7 +211,7 @@ async function createBackup(containerId, retentionType = 'daily') {
     const backupName = `${info.Name.replace(/^\//, '')}_backup_${timestamp}`;
     await docker(['commit', containerId, backupName], { timeout: 300000 });
     try {
-      await getDbPool().query(
+      await query(
         `INSERT INTO backup_rotation (container_id, image_id, name, retention_type)
          VALUES ($1, $2, $3, $4)`,
         [containerId, backupName, backupName, retentionType]
@@ -248,13 +231,13 @@ async function applyRetention(containerId) {
   try {
     const retention = JSON.parse(process.env.BACKUP_RETENTION || '{"daily": 7, "weekly": 4, "monthly": 6}');
     for (const [type, maxCount] of Object.entries(retention)) {
-      const result = await getDbPool().query(
+      const result = await query(
         'SELECT id FROM backup_rotation WHERE container_id = $1 AND retention_type = $2 ORDER BY created_at DESC',
         [containerId, type]
       );
       if (result.rows.length > maxCount) {
         const ids = result.rows.slice(maxCount).map((r) => r.id);
-        await getDbPool().query('DELETE FROM backup_rotation WHERE id = ANY($1)', [ids]);
+        await query('DELETE FROM backup_rotation WHERE id = ANY($1)', [ids]);
       }
     }
   } catch (err) {
@@ -264,7 +247,7 @@ async function applyRetention(containerId) {
 
 async function listBackups(containerId) {
   try {
-    const result = await getDbPool().query(
+    const result = await query(
       'SELECT * FROM backup_rotation WHERE container_id = $1 ORDER BY created_at DESC',
       [containerId]
     );
@@ -285,7 +268,7 @@ async function restoreBackup(containerId, backupId) {
   try {
     let imageRef = backupId;
     if (!/^[a-f0-9]{12,64}$/.test(backupId)) {
-      const result = await getDbPool().query(
+      const result = await query(
         'SELECT image_id FROM backup_rotation WHERE container_id = $1 AND id = $2',
         [containerId, backupId]
       );

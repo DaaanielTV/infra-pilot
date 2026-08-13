@@ -14,6 +14,8 @@ const TicketCommands = require('./modules/ticketCommands');
 const StatsCommands = require('./modules/statsCommands');
 const RoleManager = require('./modules/roleManager');
 const VPSCommands = require('./modules/vpsCommands');
+const Monitoring = require('./modules/monitoring');
+const HealthChecks = require('./modules/healthChecks');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -157,6 +159,8 @@ async function registerCommands() {
     { name: 'role', description: 'Role management commands', type: 1, options: [{ name: 'info', description: 'Show role hierarchy info', type: 1 }] },
     { name: 'report', description: 'Report bot commands', type: 1, options: [{ name: 'send', description: 'Send a report to this channel', type: 1, options: [{ name: 'type', description: 'Report type', type: 3, required: false, choices: [{ name: 'Executive Summary', value: 'executive-summary' }, { name: 'Cost Report', value: 'cost' }, { name: 'Performance Report', value: 'performance' }, { name: 'Incident Report', value: 'incidents' }] }] }] },
     ...VPSCommands.toSpec(),
+    ...Monitoring.toSpec(),
+    ...HealthChecks.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -171,6 +175,9 @@ client.once('ready', async () => {
   await registerCommands();
   vpsManager.ensureTables().catch(() => {});
   serverStatus.initialize(client);
+  Monitoring.init(client);
+  HealthChecks.init(client);
+  Monitoring.updatePresence();
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -200,6 +207,24 @@ client.on('interactionCreate', async (interaction) => {
     if (VPSCommands.isParsed(interaction.commandName)) {
       return VPSCommands.handle(interaction).catch((error) => {
         console.error(`[VPSCommands] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (Monitoring.isParsed(interaction.commandName)) {
+      return Monitoring.handle(interaction).catch((error) => {
+        console.error(`[Monitoring] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (HealthChecks.isParsed(interaction.commandName)) {
+      return HealthChecks.handle(interaction).catch((error) => {
+        console.error(`[HealthChecks] ${interaction.commandName} failed:`, error);
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: '❌ An error occurred while running this command.' });
         }

@@ -42,7 +42,6 @@ fill() {
 
 fill POSTGRES_PASSWORD "$(gen_secret)"
 fill JWT_SECRET "$(gen_secret)"
-fill DISCORD_BOT_TOKEN "$(gen_secret)"
 fill DISCORD_TOKEN "$(gen_secret)"
 fill PTERODACTYL_API_KEY "$(gen_secret)"
 

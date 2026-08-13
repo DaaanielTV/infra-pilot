@@ -53,6 +53,19 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { SERVER_PRESETS } from './presets.js';
 import openapiSpec from './openapi.js';
 import { analyzeConfiguration } from './config-advice-engine.js';
+import {
+  checkCpu,
+  checkDisk,
+  checkDns,
+  checkLocalApi,
+  checkMemory,
+  collectSystemInfo,
+  type DiagnosticCheck,
+} from './doctor.js';
+import { runBenchmark } from './benchmark.js';
+import { buildReport, reportToCsv, reportToPdf } from './reports.js';
+import { buildPlan } from './assistant.js';
+import { executeGraphQL } from './graphql.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -62,6 +75,39 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const execAsync = promisify(exec);
+
+/**
+ * Run real diagnostics. The optional `issue` filters to a category:
+ * connectivity | performance | disk. Without it, all checks run.
+ */
+async function runDiagnostics(issue?: string): Promise<{ status: string; summary: string; checks: DiagnosticCheck[]; system?: ReturnType<typeof collectSystemInfo> }> {
+  const checks: DiagnosticCheck[] = [];
+  const wants = (c: string) => !issue || issue === c;
+
+  if (wants('performance') || wants('connectivity')) checks.push(checkCpu());
+  if (wants('performance') || wants('connectivity')) checks.push(checkMemory());
+  if (wants('disk') || wants('performance')) checks.push(checkDisk());
+  if (wants('connectivity')) checks.push(await checkDns());
+  if (wants('connectivity')) {
+    const apiUrl = process.env.API_BASE_URL || `http://localhost:${port}`;
+    checks.push(await checkLocalApi(apiUrl));
+  }
+
+  const failed = checks.filter((c) => c.status === 'fail');
+  const warned = checks.filter((c) => c.status === 'warn');
+  const status = failed.length > 0 ? 'fail' : warned.length > 0 ? 'warn' : 'ok';
+  return {
+    status,
+    summary:
+      status === 'ok'
+        ? 'All checks passed'
+        : status === 'warn'
+          ? `${warned.length} warning(s), ${failed.length} failure(s)`
+          : `${failed.length} failure(s) detected`,
+    checks,
+    system: collectSystemInfo(),
+  };
+}
 
 /**
  * Execute a Docker action (start/stop/restart) on a container by app ID.
@@ -2255,39 +2301,37 @@ app.get('/api/reports', verifyAuth, async (req: Request, res: Response) => {
   const startDate = req.query.start_date as string;
   const endDate = req.query.end_date as string;
   try {
-    const { data: apps } = await supabase.from('docker_apps').select('id').eq('user_id', userId);
-    if (!apps || apps.length === 0) return res.json({ metrics: [], backups: [], alerts: [] });
-
-    const appIds = apps.map(a => a.id);
-    const since = startDate || new Date(Date.now() - 30 * 86400000).toISOString();
-    const until = endDate || new Date().toISOString();
-
-    const [metricsRes, backupsRes, alertsRes] = await Promise.all([
-      supabase.from('server_metrics').select('*').in('app_id', appIds).gte('recorded_at', since).lte('recorded_at', until).order('recorded_at', { ascending: false }).limit(500),
-      supabase.from('backup_status').select('*, backup_jobs!inner(app_id)').in('backup_jobs.app_id', appIds).gte('started_at', since).lte('started_at', until).order('started_at', { ascending: false }).limit(500),
-      supabase.from('alert_history').select('*').gte('triggered_at', since).lte('triggered_at', until).order('triggered_at', { ascending: false }).limit(500),
-    ]);
-
-    res.json({
-      metrics: metricsRes.data || [],
-      backups: backupsRes.data || [],
-      alerts: alertsRes.data || [],
-    });
+    const report = await buildReport(supabase, userId, startDate, endDate);
+    res.json(report);
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate report' });
   }
 });
 
 app.get('/api/reports/export', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const startDate = req.query.start_date as string;
+  const endDate = req.query.end_date as string;
   const format = req.query.format as string;
-  if (format === 'csv') {
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
-    res.send('metric,value,timestamp\nCPU,23,2024-01-01\nMemory,45,2024-01-01');
-  } else {
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
-    res.send(Buffer.from('PDF placeholder'));
+  try {
+    const report = await buildReport(supabase, userId, startDate, endDate);
+    if (format === 'csv') {
+      const csv = reportToCsv(report);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
+      res.send(csv);
+    } else if (format === 'pdf') {
+      const pdf = reportToPdf(report);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
+      res.send(pdf);
+    } else if (format === 'json') {
+      res.json(report);
+    } else {
+      res.status(400).json({ error: 'Unsupported format. Use csv, pdf or json.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to export report' });
   }
 });
 
@@ -3952,45 +3996,88 @@ app.post('/api/templates/init', verifyAuth, async (req: Request, res: Response) 
 // ============================================================================
 
 app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response) => {
-  const { duration } = req.body;
-  const cpus = os.cpus();
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const loadAvg = os.loadavg();
-  const result = {
-    cpu: { cores: cpus.length, model: cpus[0]?.model || 'unknown', speed: cpus[0]?.speed || 0 },
-    memory: { total_gb: (totalMem / 1024 / 1024 / 1024).toFixed(2), free_gb: (freeMem / 1024 / 1024 / 1024).toFixed(2), used_pct: ((1 - freeMem / totalMem) * 100).toFixed(1) },
-    load: { '1m': loadAvg[0]?.toFixed(2), '5m': loadAvg[1]?.toFixed(2), '15m': loadAvg[2]?.toFixed(2) },
-    hostname: os.hostname(),
-    platform: os.platform(),
-    uptime_hours: (os.uptime() / 3600).toFixed(1),
-  };
-  res.json(result);
+  const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
+  const result = await runBenchmark(duration);
+  const { error } = await supabase.from('benchmark_results').insert({
+    server_id: null,
+    benchmark_type: 'local',
+    duration_seconds: duration,
+    cpu_score: result.cpu_avg_pct,
+    memory_score: result.memory_used_pct,
+    disk_score: result.disk_write_mbps,
+    overall_score: result.cpu_avg_pct + result.memory_used_pct,
+    raw_data: result.measurements,
+  });
+  if (error) {
+    res.status(500).json({ error: 'Benchmark ran, but result could not be stored', details: error.message, result });
+    return;
+  }
+  res.json({ status: 'completed', ...result });
 });
 
 app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: Response) => {
-  res.json({ status: 'benchmark_scheduled', server: req.params.server, duration: req.body.duration || 10 });
+  const { server } = req.params;
+  const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
+  const { data: app, error } = await supabase
+    .from('docker_apps')
+    .select('id, container_id')
+    .eq('id', server)
+    .single();
+  if (error || !app || !app.container_id) {
+    res.status(404).json({ error: 'App not found or has no container' });
+    return;
+  }
+  const containerId = String(app.container_id);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(containerId)) {
+    res.status(400).json({ error: 'Invalid container_id format' });
+    return;
+  }
+  try {
+    const [result, dockerStats] = await Promise.all([
+      runBenchmark(duration),
+      runCommand('docker', ['stats', '--no-stream', '--format', '{{.Name}}|{{.CPUPerc}}|{{.MemPerc}}', containerId]),
+    ]);
+    const { stdout } = dockerStats;
+    const [name, cpuPerc, memPerc] = stdout.trim().split('|');
+    const container = {
+      name: name || containerId,
+      cpu_pct: Number(String(cpuPerc || '').replace('%', '')) || 0,
+      memory_pct: Number(String(memPerc || '').replace('%', '')) || 0,
+    };
+    const { error: insertError } = await supabase.from('benchmark_results').insert({
+      server_id: server,
+      benchmark_type: 'container',
+      duration_seconds: duration,
+      cpu_score: container.cpu_pct,
+      memory_score: container.memory_pct,
+      disk_score: result.disk_write_mbps,
+      overall_score: container.cpu_pct + container.memory_pct,
+      raw_data: { ...result.measurements, container },
+    });
+    if (insertError) {
+      res.status(500).json({ error: 'Benchmark ran, but result could not be stored', details: insertError.message, result, container });
+      return;
+    }
+    res.json({ status: 'completed', server, container, ...result });
+  } catch (err: any) {
+    if (err.message?.includes('docker') || err.code === 'ENOENT') {
+      res.status(502).json({ error: 'Docker is not available', details: err.message });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to benchmark container', details: err.message || String(err) });
+  }
 });
 
 app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
   const { issue } = req.body;
-  const issues = {
-    connectivity: { status: 'checking', checks: [{ name: 'DNS Resolution', status: 'ok' }, { name: 'API Connection', status: 'ok' }, { name: 'Internet Access', status: 'ok' }] },
-    performance: { status: 'checking', checks: [{ name: 'CPU Usage', status: 'ok', value: '23%' }, { name: 'Memory Usage', status: 'warn', value: '78%' }, { name: 'Disk I/O', status: 'ok', value: '15ms' }] },
-    disk: { status: 'checking', checks: [{ name: 'Disk Space', status: 'ok', value: '42% used' }, { name: 'Inode Usage', status: 'ok', value: '12%' }, { name: 'Disk Health', status: 'ok', value: 'PASSED' }] },
-  };
-  const result = issues[issue as keyof typeof issues] || {
-    status: 'ok', summary: 'System appears healthy', checks: [
-      { name: 'CPU', status: 'ok', value: `${(Math.random() * 60 + 10).toFixed(1)}%` },
-      { name: 'Memory', status: 'ok', value: `${(Math.random() * 40 + 30).toFixed(1)}%` },
-      { name: 'Disk', status: 'ok', value: `${(Math.random() * 30 + 20).toFixed(1)}%` },
-    ],
-  };
-  res.json(result);
+  const checks = await runDiagnostics(issue as string | undefined);
+  res.json(checks);
 });
 
 app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: Response) => {
-  res.json({ status: 'diagnosing', server: req.params.server, issue: req.body.issue || 'general' });
+  const { issue } = req.body;
+  const checks = await runDiagnostics(issue as string | undefined);
+  res.json({ server: req.params.server, ...checks });
 });
 
 // ============================================================================
@@ -4111,33 +4198,104 @@ app.post('/api/runbooks/:id/execute', verifyAuth, async (req: Request, res: Resp
 // ============================================================================
 
 app.post('/api/assistant/analyze', verifyAuth, async (req: Request, res: Response) => {
-  const { query, context } = req.body;
-  const plan = [
-    { step: 1, action: 'analyze', description: `Analyzing request: ${query}` },
-    { step: 2, action: 'plan', description: 'Creating execution plan based on analysis' },
-    { step: 3, action: 'approval_required', description: 'Plan ready for review - ask user for confirmation' },
-  ];
-  res.json({ analysis: plan, requires_approval: true, message: `I'll help you: ${query}` });
+  const userId = (req as any).user.id;
+  const { query } = req.body;
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'query is required' });
+  }
+  const { data: apps } = await supabase
+    .from('docker_apps')
+    .select('id, name')
+    .eq('user_id', userId);
+  const plan = buildPlan(query, (apps || []).map((a: any) => ({ id: a.id, name: a.name })));
+  res.json({ analysis: plan, plan_id: `plan-${crypto.randomUUID()}`, requires_approval: plan.requires_approval, message: plan.message });
 });
 
 app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Response) => {
-  const { plan_id, approved } = req.body;
+  const userId = (req as any).user.id;
+  const { plan: planBody, approved } = req.body;
   if (!approved) return res.json({ status: 'cancelled', message: 'Execution cancelled by user' });
-  const result = {
-    status: 'executed',
-    steps: [
-      { step: 'analyze', status: 'completed' },
-      { step: 'plan', status: 'completed' },
-      { step: 'execute', status: 'completed', output: 'All actions completed successfully' },
-    ],
-  };
-  res.json(result);
+  if (!planBody || !Array.isArray(planBody.actions) || planBody.actions.length === 0) {
+    return res.status(400).json({ error: 'A plan with actions is required' });
+  }
+
+  const steps: { tool: string; appId?: string; status: string; output?: string }[] = [];
+  try {
+    for (const action of planBody.actions) {
+      const { tool, appId } = action;
+      try {
+        if (tool === 'start' || tool === 'stop' || tool === 'restart') {
+          const docker = await dockerAction(appId, tool);
+          await supabase
+            .from('docker_apps')
+            .update({ status: tool === 'stop' ? 'stopped' : 'running' })
+            .eq('id', appId)
+            .eq('user_id', userId);
+          steps.push({ tool, appId, status: 'completed', output: docker.output });
+          await logAudit(userId, `assistant:${tool}`, 'app', appId);
+        } else if (tool === 'status') {
+          const { data: app } = await supabase
+            .from('docker_apps')
+            .select('id, name, status, image')
+            .eq('id', appId)
+            .eq('user_id', userId)
+            .single();
+          if (!app) throw new Error('App not found');
+          steps.push({ tool, appId, status: 'completed', output: `${app.name}: ${app.status} (${app.image})` });
+        } else if (tool === 'logs') {
+          const { data: app } = await supabase
+            .from('docker_apps')
+            .select('id, container_id')
+            .eq('id', appId)
+            .eq('user_id', userId)
+            .single();
+          if (!app || !app.container_id) throw new Error('App has no container');
+          const { stdout, stderr } = await runCommand('docker', ['logs', '--tail', '50', String(app.container_id)]);
+          steps.push({ tool, appId, status: 'completed', output: stdout || stderr });
+        } else if (tool === 'benchmark') {
+          const result = await runBenchmark(10);
+          await supabase.from('benchmark_results').insert({
+            server_id: appId || null,
+            benchmark_type: appId ? 'container' : 'local',
+            duration_seconds: 10,
+            cpu_score: result.cpu_avg_pct,
+            memory_score: result.memory_used_pct,
+            disk_score: result.disk_write_mbps,
+            overall_score: result.cpu_avg_pct + result.memory_used_pct,
+            raw_data: result.measurements,
+          });
+          steps.push({ tool, appId, status: 'completed', output: `cpu=${result.cpu_avg_pct}% mem=${result.memory_used_pct}% disk=${result.disk_write_mbps}MiB/s` });
+          await logAudit(userId, 'assistant:benchmark', 'app', appId);
+        } else {
+          throw new Error(`Unsupported tool: ${tool}`);
+        }
+      } catch (err: any) {
+        steps.push({ tool, appId, status: 'failed', output: err.message || String(err) });
+        break;
+      }
+    }
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Assistant execution failed', details: err.message || String(err) });
+  }
+
+  const failed = steps.some((s) => s.status === 'failed');
+  res.json({ status: failed ? 'failed' : 'executed', steps });
 });
 
 app.post('/api/assistant/chat', verifyAuth, async (req: Request, res: Response) => {
   const { message, conversation_id } = req.body;
-  const response = `I understand you want to: ${message}. I can help with infrastructure management, deployments, monitoring, and more. Use /plan to create an execution plan.`;
-  res.json({ response, conversation_id: conversation_id || 'new' });
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'message is required' });
+  }
+  const { data: apps } = await supabase
+    .from('docker_apps')
+    .select('id, name')
+    .eq('user_id', (req as any).user.id);
+  const plan = buildPlan(message, (apps || []).map((a: any) => ({ id: a.id, name: a.name })));
+  const response =
+    plan.message ||
+    `I can help with infrastructure management, deployments, monitoring and more.`;
+  res.json({ response, conversation_id: conversation_id || 'new', plan });
 });
 
 // ============================================================================
@@ -4189,13 +4347,21 @@ app.get('/api/sso/providers', async (req: Request, res: Response) => {
 
 app.post('/api/graphql', verifyAuth, async (req: Request, res: Response) => {
   const { query: gqlQuery } = req.body;
-  if (!gqlQuery) return res.status(400).json({ error: 'Query is required' });
-  res.json({
-    data: {
-      message: 'GraphQL endpoint ready. Full GraphQL support available with dedicated server.',
-      note: 'Use /api/* REST endpoints for full functionality. GraphQL will be expanded in a future release.',
+  if (!gqlQuery || typeof gqlQuery !== 'string') {
+    return res.status(400).json({ error: 'Query is required' });
+  }
+  const userId = (req as any).user.id;
+  const result = await executeGraphQL(gqlQuery, {
+    userId,
+    query: async (table, args) => {
+      let builder = supabase.from(table).select('*');
+      for (const [key, value] of Object.entries(args || {})) {
+        builder = builder.eq(key, value);
+      }
+      return builder.limit(100) as any;
     },
   });
+  res.json(result);
 });
 
 // Global error handling middleware

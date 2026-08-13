@@ -7,8 +7,12 @@ import {
   runBenchmark,
 } from '../../server/benchmark.ts';
 
+let fakeTime = 0;
 const fakeSampler = {
-  now: () => 0,
+  now: () => {
+    fakeTime += 1000;
+    return fakeTime;
+  },
   cpuTimes: () => [{ idleMs: 10, totalMs: 100 }],
   randomBytes: (size: number) => Buffer.alloc(size, 0x61),
   writeFile: async () => undefined,

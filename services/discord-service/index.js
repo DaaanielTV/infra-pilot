@@ -22,6 +22,8 @@ const TaskScheduler = require('./modules/taskScheduler');
 const Maintenance = require('./modules/maintenance');
 const TemplateManager = require('./modules/templateManager');
 const ResourcePools = require('./modules/resourcePools');
+const DbManager = require('./modules/dbManager');
+const LegacyCommands = require('./modules/legacyCommands');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -172,6 +174,8 @@ async function registerCommands() {
     ...Maintenance.toSpec(),
     ...TemplateManager.toSpec(),
     ...ResourcePools.toSpec(),
+    ...DbManager.toSpec(),
+    ...LegacyCommands.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -284,6 +288,24 @@ client.on('interactionCreate', async (interaction) => {
     if (ResourcePools.isParsed(interaction.commandName)) {
       return ResourcePools.handle(interaction).catch((error) => {
         console.error(`[ResourcePools] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (DbManager.isParsed(interaction.commandName)) {
+      return DbManager.handle(interaction).catch((error) => {
+        console.error(`[DbManager] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (LegacyCommands.isParsed(interaction.commandName)) {
+      return LegacyCommands.handle(interaction).catch((error) => {
+        console.error(`[LegacyCommands] ${interaction.commandName} failed:`, error);
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: '❌ An error occurred while running this command.' });
         }

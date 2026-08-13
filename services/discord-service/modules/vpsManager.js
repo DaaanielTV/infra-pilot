@@ -329,4 +329,5 @@ module.exports = {
   getContainersForUser,
   execInContainer,
   executeCommand,
+  addToDatabase,
 };

@@ -62,6 +62,7 @@ import {
   collectSystemInfo,
   type DiagnosticCheck,
 } from './doctor.js';
+import { runBenchmark } from './benchmark.js';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -3994,24 +3995,76 @@ app.post('/api/templates/init', verifyAuth, async (req: Request, res: Response) 
 // ============================================================================
 
 app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response) => {
-  const { duration } = req.body;
-  const cpus = os.cpus();
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const loadAvg = os.loadavg();
-  const result = {
-    cpu: { cores: cpus.length, model: cpus[0]?.model || 'unknown', speed: cpus[0]?.speed || 0 },
-    memory: { total_gb: (totalMem / 1024 / 1024 / 1024).toFixed(2), free_gb: (freeMem / 1024 / 1024 / 1024).toFixed(2), used_pct: ((1 - freeMem / totalMem) * 100).toFixed(1) },
-    load: { '1m': loadAvg[0]?.toFixed(2), '5m': loadAvg[1]?.toFixed(2), '15m': loadAvg[2]?.toFixed(2) },
-    hostname: os.hostname(),
-    platform: os.platform(),
-    uptime_hours: (os.uptime() / 3600).toFixed(1),
-  };
-  res.json(result);
+  const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
+  const result = await runBenchmark(duration);
+  const { error } = await supabase.from('benchmark_results').insert({
+    server_id: null,
+    benchmark_type: 'local',
+    duration_seconds: duration,
+    cpu_score: result.cpu_avg_pct,
+    memory_score: result.memory_used_pct,
+    disk_score: result.disk_write_mbps,
+    overall_score: result.cpu_avg_pct + result.memory_used_pct,
+    raw_data: result.measurements,
+  });
+  if (error) {
+    res.status(500).json({ error: 'Benchmark ran, but result could not be stored', details: error.message, result });
+    return;
+  }
+  res.json({ status: 'completed', ...result });
 });
 
 app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: Response) => {
-  res.json({ status: 'benchmark_scheduled', server: req.params.server, duration: req.body.duration || 10 });
+  const { server } = req.params;
+  const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
+  const { data: app, error } = await supabase
+    .from('docker_apps')
+    .select('id, container_id')
+    .eq('id', server)
+    .single();
+  if (error || !app || !app.container_id) {
+    res.status(404).json({ error: 'App not found or has no container' });
+    return;
+  }
+  const containerId = String(app.container_id);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(containerId)) {
+    res.status(400).json({ error: 'Invalid container_id format' });
+    return;
+  }
+  try {
+    const [result, dockerStats] = await Promise.all([
+      runBenchmark(duration),
+      runCommand('docker', ['stats', '--no-stream', '--format', '{{.Name}}|{{.CPUPerc}}|{{.MemPerc}}', containerId]),
+    ]);
+    const { stdout } = dockerStats;
+    const [name, cpuPerc, memPerc] = stdout.trim().split('|');
+    const container = {
+      name: name || containerId,
+      cpu_pct: Number(String(cpuPerc || '').replace('%', '')) || 0,
+      memory_pct: Number(String(memPerc || '').replace('%', '')) || 0,
+    };
+    const { error: insertError } = await supabase.from('benchmark_results').insert({
+      server_id: server,
+      benchmark_type: 'container',
+      duration_seconds: duration,
+      cpu_score: container.cpu_pct,
+      memory_score: container.memory_pct,
+      disk_score: result.disk_write_mbps,
+      overall_score: container.cpu_pct + container.memory_pct,
+      raw_data: { ...result.measurements, container },
+    });
+    if (insertError) {
+      res.status(500).json({ error: 'Benchmark ran, but result could not be stored', details: insertError.message, result, container });
+      return;
+    }
+    res.json({ status: 'completed', server, container, ...result });
+  } catch (err: any) {
+    if (err.message?.includes('docker') || err.code === 'ENOENT') {
+      res.status(502).json({ error: 'Docker is not available', details: err.message });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to benchmark container', details: err.message || String(err) });
+  }
 });
 
 app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {

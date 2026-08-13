@@ -102,7 +102,7 @@ Usage-based billing engine:
 - `meter.py` — `UsageMeter`: polls compute providers for CPU/RAM/network/storage usage, records to `usage_records` table
 - `billing_engine.py` — `BillingEngine`: aggregates usage records into invoices, applies pricing tiers, generates totals
 
-Pricing is configurable per-org via `pricing_tiers` table. Prepaid balances are handled by `cogs/prepaid_billing.py`.
+Pricing is configurable per-org via `pricing_tiers` table. Prepaid balances are handled by the Discord service (`/earncredit`, `/bal`, `/renew`).
 
 ### healing/ — Self-Healing & Auto-Remediation
 
@@ -123,7 +123,7 @@ Physical location tracking and cross-region management:
 - `region.py` — `Region`, `Datacenter` data models with capacity tracking and utilization %
 - `federation.py` — `Federation` class: peer registration, REST-proxied instance operations, heartbeat monitoring
 
-Peers authenticate via Bearer tokens validated by the `federation_auth_middleware` in `main.py`.
+Peers authenticate via Bearer tokens validated by the `federation_auth_middleware` in `webhook_server.py`.
 
 ### scaling/ — Auto-Scaling
 
@@ -131,39 +131,21 @@ Resource-based auto-scaling:
 
 - `engine.py` — `ScalingEngine`: evaluates `scaling_rules` DB table, queries live stats via `VPSManager.get_vps_stats()`, scales CPU/memory via `update_vps_config()`, consecutive breach counting, cooldown enforcement
 
-Rules are managed via the `AutoScaler` Discord cog (`/scaling-rules`, `/scaling-rule-create`, etc.).
+Rules are managed via the Discord service (JS bot, `/scaling-rules`, `/scaling-rule-create`, etc.).
 
 ### Core Infrastructure
 
 | File | Purpose |
 |------|---------|
-| `main.py` | Entry point: Discord bot setup, cog loading, webhook/API server, auto-scale & healing wiring |
+| `main.py` | Entry point: DB migrations, webhook/API server, auto-scale & healing wiring |
 | `config.py` | Central config from environment variables |
 | `vps_manager.py` | `VPSManager` — Docker container lifecycle, stats, backups, snapshots, health checks, benchmarks |
 | `db.py` | `DatabasePool` — asyncpg connection pool, sync psycopg2 helpers |
 | `integration.py` | `init_database_tables()` — creates all 50+ tables, notification proxying |
 
-### Discord Cogs (`cogs/`)
+### Discord Commands
 
-| Cog | Slash Commands | Purpose |
-|-----|---------------|---------|
-| `vps_commands` | /vpscreate, /vpsstart, /vpsstop, /vpsrestart, /vpsdelete, /vpsstats, /vpslist | VPS lifecycle |
-| `vps_pricing` | /vpscost, /purchasevps | Cost calculation & one-time payment |
-| `vps_billing` | — | Hourly billing loop against player_economy |
-| `prepaid_billing` | /balance, /balance add, /balance history, /balance cost | Prepaid balance & hourly deduction |
-| `monitoring` | /stats, /containerstats | Per-container stats, alerting |
-| `bot_commands` | /servers, /create, /start, /stop, /restart | Legacy text commands |
-| `health_checks` | /health, /health-check | Health check management |
-| `backup_manager` | /backup, /backups, /restore | Backup lifecycle |
-| `resource_manager` | /resources, /pool | Resource pool management |
-| `template_manager` | /template, /templates | Versioned instance templates |
-| `task_scheduler` | /task, /tasks | Cron-based task scheduling |
-| `alert_manager` | /alert, /alerts | User-defined alert rules |
-| `cleanup` | /cleanup | Idle resource reclamation |
-| `database_manager` | /db-create, /db-delete, /db-list | MySQL/MariaDB database provisioning |
-| `modpack_installer` | /modpack | Minecraft modpack installer |
-| `update_manager` | /update, /updates | Container update management |
-| `auto_scaler` | /scaling-rules, /scaling-rule-create, /scaling-rule-delete, /scaling-rule-toggle, /scaling-events | Auto-scaling rule management |
+Discord functionality lives in the unified JavaScript bot at `services/discord-service/` (single bot, all slash commands, no Python cogs).
 
 ## API Endpoints
 

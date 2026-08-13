@@ -30,7 +30,7 @@ def make_request_with_headers(headers: dict, body: bytes = b'{"event":"push"}'):
 
 class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        from main import verify_github_signature
+        from webhook_server import verify_github_signature
 
         self.guard = verify_github_signature
         self.secret = "test-secret"
@@ -116,7 +116,7 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
 
 class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        from main import verify_gitops_token
+        from webhook_server import verify_gitops_token
 
         self.guard = verify_gitops_token
         self.secret = "test-token"
@@ -247,7 +247,7 @@ class FailClosedTest(unittest.IsolatedAsyncioTestCase):
     async def test_github_fails_closed_without_secret(self):
         os.environ.pop("GITHUB_WEBHOOK_SECRET", None)
         os.environ.pop("GITOPS_WEBHOOK_TOKEN", None)
-        from main import verify_github_signature, verify_gitops_token
+        from webhook_server import verify_github_signature, verify_gitops_token
 
         app = web.Application()
         handler = AsyncMock(return_value=web.json_response({"handled": True}))

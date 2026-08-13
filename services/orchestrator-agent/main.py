@@ -1,78 +1,35 @@
-"""Orchestrator Agent entry point - Discord bot with webhook server."""
+"""Orchestrator Agent entry point - webhook and API server.
+
+Discord functionality moved to services/discord-service (single bot).
+Run database migrations, then serve GitOps webhooks, RBAC, federation,
+deployments, metrics and health endpoints.
+"""
 
 import asyncio
 import logging
 import os
 import sys
 
-import discord
-from config import config
-from discord.ext import commands
-from integration import init_database_tables
-from webhook_server import (
-    start_webhook_server,
-    verify_github_signature,
-    verify_gitops_token,
-)
+from integration import init_database_tables, run_db_migrations
+from webhook_server import start_webhook_server
 
 logger = logging.getLogger(__name__)
 
-BOT_PREFIX = "/"
 
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-
-bot = commands.Bot(command_prefix=BOT_PREFIX, intents=intents)
-bot.config = config
-
-CORE_COGS = [
-    "cogs.vps_commands",
-    "cogs.monitoring",
-    "cogs.bot_commands",
-    "cogs.health_checks",
-    "cogs.backup_manager",
-    "cogs.resource_manager",
-    "cogs.template_manager",
-    "cogs.task_scheduler",
-    "cogs.alert_manager",
-    "cogs.cleanup",
-    "cogs.database_manager",
-    "cogs.update_manager",
-]
-
-
-async def load_cogs():
-    """Load all core Discord cogs."""
-    for cog in CORE_COGS:
-        try:
-            await bot.load_extension(cog)
-            logger.info("Loaded cog: %s", cog)
-        except commands.errors.ExtensionAlreadyLoaded:
-            logger.warning("Cog already loaded: %s", cog)
-        except Exception as exc:
-            logger.error("Failed to load cog %s: %s", cog, exc)
-
-
-@bot.event
-async def on_ready():
-    """Handle the bot ready event - initialise DB and sync commands."""
-    logger.info("Bot ready. Logged in as %s", bot.user)
+async def run_server():
+    """Initialize database tables and start the webhook/API server."""
+    try:
+        run_db_migrations()
+        logger.info("Database migrations applied")
+    except Exception as exc:
+        logger.warning("Database migration skipped: %s", exc)
     try:
         await init_database_tables()
         logger.info("Database tables initialised")
     except Exception as exc:
         logger.warning("Database initialisation skipped: %s", exc)
 
-    await bot.tree.sync()
-    logger.info("Commands synced")
-
-    asyncio.create_task(start_webhook_server(bot))
-
-
-async def run_health_only():
-    """Run only the health/webhook server without the Discord bot."""
-    await start_webhook_server(bot)
+    await start_webhook_server()
     await asyncio.Event().wait()
 
 
@@ -83,28 +40,8 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler()],
     )
 
-    token_missing = (
-        not config.DISCORD_BOT_TOKEN
-        or config.DISCORD_BOT_TOKEN == "your_discord_bot_token_here"
-    )
-    disabled = os.getenv("ORCHESTRATOR_AGENT_DISABLED", "true").lower() == "true"
-
-    if token_missing or disabled:
-        logger.warning("Discord bot disabled; starting health/webhook server only")
-        try:
-            asyncio.run(run_health_only())
-        except KeyboardInterrupt:
-            logger.info("Server shutting down")
-        sys.exit(0)
-
-    asyncio_loop = None
     try:
-        asyncio_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio_loop)
-        asyncio_loop.run_until_complete(load_cogs())
-        bot.run(config.DISCORD_BOT_TOKEN)
+        asyncio.run(run_server())
     except KeyboardInterrupt:
-        logger.info("Bot shutting down")
-    finally:
-        if asyncio_loop:
-            asyncio_loop.close()
+        logger.info("Server shutting down")
+        sys.exit(0)

@@ -21,7 +21,6 @@ import psutil
 import rbac_store
 from aiohttp import web
 from compute.registry import ProviderRegistry
-from discord.ext import commands
 from manifest.engine import ManifestEngine
 from manifest.schema import InfraFile
 from rbac import Organization, Permission, RBACEngine, Role
@@ -348,11 +347,11 @@ async def verify_gitops_token(
     return await handler(request)
 
 
-async def start_webhook_server(bot_instance: commands.Bot):
+async def start_webhook_server(bot_instance=None):
     """Start the aiohttp webhook server for GitOps and health endpoints.
 
     Args:
-        bot_instance: The Discord bot instance to attach webhook routes from.
+        bot_instance: Optional for backwards compatibility; no longer used.
     """
     await rbac_store.load_rbac_state(rbac_engine)
     app = build_webhook_app(bot_instance)
@@ -364,7 +363,7 @@ async def start_webhook_server(bot_instance: commands.Bot):
     logger.info("Webhook server listening on port %d", port)
 
 
-async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
+async def build_webhook_app(bot_instance=None) -> web.Application:
     """Build the aiohttp application with all webhook and API routes.
 
     Extracted from start_webhook_server so the route table can be tested
@@ -481,10 +480,11 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
             lines.append(f"process_cpu_percent {cpu_percent}")
             lines.append("")
 
-        # VPS instance metrics (from bot if available)
-        vps_cog = bot_instance.get_cog("VPSCommands")
-        if vps_cog and hasattr(vps_cog, "vps_manager"):
-            vm = vps_cog.vps_manager
+        # VPS instance metrics (from VPSManager, no Discord dependency)
+        try:
+            from vps_manager import VPSManager
+
+            vm = VPSManager()
             instances = getattr(vm, "vps_instances", {})
             total = len(instances)
             running = sum(1 for i in instances.values() if i.get("status") == "running")
@@ -503,6 +503,8 @@ async def build_webhook_app(bot_instance: commands.Bot) -> web.Application:
             lines.append("# TYPE orchestrator_vps_instances_stopped gauge")
             lines.append(f"orchestrator_vps_instances_stopped {stopped}")
             lines.append("")
+        except Exception as exc:
+            logger.warning("VPS metrics unavailable: %s", exc)
 
         return web.Response(
             text="\n".join(lines),

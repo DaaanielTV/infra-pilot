@@ -19,6 +19,9 @@ const HealthChecks = require('./modules/healthChecks');
 const BackupScheduler = require('./modules/backupScheduler');
 const AlertManager = require('./modules/alertManager');
 const TaskScheduler = require('./modules/taskScheduler');
+const Maintenance = require('./modules/maintenance');
+const TemplateManager = require('./modules/templateManager');
+const ResourcePools = require('./modules/resourcePools');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -166,6 +169,9 @@ async function registerCommands() {
     ...HealthChecks.toSpec(),
     ...AlertManager.toSpec(),
     ...TaskScheduler.toSpec(),
+    ...Maintenance.toSpec(),
+    ...TemplateManager.toSpec(),
+    ...ResourcePools.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -251,6 +257,33 @@ client.on('interactionCreate', async (interaction) => {
     if (TaskScheduler.isParsed(interaction.commandName)) {
       return TaskScheduler.handle(interaction).catch((error) => {
         console.error(`[TaskScheduler] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (Maintenance.isParsed(interaction.commandName)) {
+      return Maintenance.handle(interaction).catch((error) => {
+        console.error(`[Maintenance] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (TemplateManager.isParsed(interaction.commandName)) {
+      return TemplateManager.handle(interaction).catch((error) => {
+        console.error(`[TemplateManager] ${interaction.commandName} failed:`, error);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
+        }
+        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
+      });
+    }
+    if (ResourcePools.isParsed(interaction.commandName)) {
+      return ResourcePools.handle(interaction).catch((error) => {
+        console.error(`[ResourcePools] ${interaction.commandName} failed:`, error);
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: '❌ An error occurred while running this command.' });
         }

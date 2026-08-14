@@ -29,16 +29,11 @@ export async function buildReport(
     return { metrics: [], backups: [], alerts: [], generated_at, range };
   }
   const appIds = apps.map((a: any) => a.id);
-  const [metricsRes, backupsRes, alertConfigsRes] = await Promise.all([
+  const [metricsRes, backupsRes, alertsRes] = await Promise.all([
     supabase.from('server_metrics').select('*').in('app_id', appIds).gte('recorded_at', since).lte('recorded_at', until).order('recorded_at', { ascending: false }).limit(500),
     supabase.from('backup_status').select('*, backup_jobs!inner(app_id)').in('backup_jobs.app_id', appIds).gte('started_at', since).lte('started_at', until).order('started_at', { ascending: false }).limit(500),
-    supabase.from('alert_configs').select('id').eq('user_id', userId),
+    supabase.from('alert_history').select('*').gte('triggered_at', since).lte('triggered_at', until).order('triggered_at', { ascending: false }).limit(500),
   ]);
-  const alertConfigIds = (alertConfigsRes.data || []).map((c: any) => c.id);
-  const alertQuery = supabase.from('alert_history').select('*').gte('triggered_at', since).lte('triggered_at', until);
-  const alertsRes = alertConfigIds.length > 0
-    ? await alertQuery.in('alert_config_id', alertConfigIds).order('triggered_at', { ascending: false }).limit(500)
-    : await alertQuery.limit(0);
   return {
     metrics: metricsRes.data || [],
     backups: backupsRes.data || [],
@@ -81,86 +76,82 @@ export function reportToCsv(report: ReportData): string {
 }
 
 function escapePdfText(text: string): string {
-  return text
-    .replace(/[^\x00-\xFF]/g, '?')
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
+  return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
-/** Build a valid multi-page PDF containing the report rows. */
+/** Build a minimal valid single-page PDF containing the report rows. */
 export function reportToPdf(report: ReportData): Buffer {
   const lines: string[] = [];
   lines.push(`Infra Pilot Report`);
   lines.push(`Generated: ${report.generated_at}`);
   lines.push(`Range: ${report.range.since} -> ${report.range.until}`);
   lines.push('');
+  lines.push(`Metrics (${report.metrics.length})`);
+  for (const m of report.metrics.slice(0, 200)) {
+    lines.push(`  ${m.recorded_at}  cpu=${m.cpu_pct ?? 'n/a'}%  mem=${m.memory_pct ?? 'n/a'}%`);
+  }
+  lines.push('');
+  lines.push(`Backups (${report.backups.length})`);
+  for (const b of report.backups.slice(0, 200)) {
+    lines.push(`  ${b.started_at}  ${b.status}  ${b.size_bytes ?? 'n/a'} bytes`);
+  }
+  lines.push('');
+  lines.push(`Alerts (${report.alerts.length})`);
+  for (const a of report.alerts.slice(0, 200)) {
+    lines.push(`  ${a.triggered_at}  ${a.status}  ${a.message ?? a.severity ?? ''}`);
+  }
 
-  const addSection = (title: string, rows: any[], format: (r: any) => string) => {
-    lines.push(title);
-    if (rows.length === 0) {
-      lines.push('  (no rows)');
-    } else {
-      for (const row of rows) lines.push(`  ${format(row)}`);
-    }
-    lines.push('');
-  };
-  addSection(`Metrics (${report.metrics.length})`, report.metrics, (m) => `${m.recorded_at}  cpu=${m.cpu_pct ?? 'n/a'}%  mem=${m.memory_pct ?? 'n/a'}%`);
-  addSection(`Backups (${report.backups.length})`, report.backups, (b) => `${b.started_at}  ${b.status}  ${b.size_bytes ?? 'n/a'} bytes`);
-  addSection(`Alerts (${report.alerts.length})`, report.alerts, (a) => `${a.triggered_at}  ${a.status}  ${a.message ?? a.severity ?? ''}`);
-
-  const linesPerPage = 55;
-  const pageCount = Math.max(1, Math.ceil(lines.length / linesPerPage));
-
-  const objects: string[][] = [
-    ['1 0 obj', '<< /Type /Catalog /Pages 2 0 R >>', 'endobj'],
-    [
-      '2 0 obj',
-      `<< /Type /Pages /Count ${pageCount} /Kids [${Array.from({ length: pageCount }, (_, p) => `${4 + p * 2} 0 R`).join(' ')}] >>`,
-      'endobj',
-    ],
-    ['3 0 obj', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>', 'endobj'],
+  const stream: string[] = [
+    '%PDF-1.4',
+    '1 0 obj',
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    'endobj',
+    '2 0 obj',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    'endobj',
+    '3 0 obj',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    'endobj',
   ];
 
-  for (let p = 0; p < pageCount; p++) {
-    const content = lines
-      .slice(p * linesPerPage, (p + 1) * linesPerPage)
-      .map((line, i) => {
-        const y = 750 - i * 12;
-        if (y < 50) return '';
-        return `BT /F1 10 Tf 72 ${y} Td (${escapePdfText(line)}) Tj ET`;
-      })
-      .filter((s) => s !== '')
-      .join('\n');
-    const pageObjNum = 4 + p * 2;
-    const contentObjNum = 5 + p * 2;
-    objects.push([
-      `${pageObjNum} 0 obj`,
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentObjNum} 0 R /Resources << /Font << /F1 3 0 R >> >> >>`,
-      'endobj',
-    ]);
-    objects.push([
-      `${contentObjNum} 0 obj`,
-      `<< /Length ${Buffer.byteLength(content)} >>`,
-      'stream',
-      content,
-      'endstream',
-      'endobj',
-    ]);
-  }
+  const content = lines
+    .map((line, i) => {
+      const y = 750 - i * 12;
+      if (y < 50) return '';
+      return `BT /F1 10 Tf ${72} ${y} Td (${escapePdfText(line)}) Tj ET`;
+    })
+    .filter((s) => s !== '')
+    .join('\n');
 
-  const body: string[] = [];
-  const offsets: number[] = [0];
-  for (const obj of objects) {
-    offsets.push(Buffer.byteLength(body.join('\n')) + (body.length ? 1 : 0));
-    for (const line of obj) body.push(line);
+  stream.push(
+    '4 0 obj',
+    `<< /Length ${Buffer.byteLength(content)} >>`,
+    'stream',
+    content,
+    'endstream',
+    'endobj',
+    '5 0 obj',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    'endobj',
+  );
+
+  const offset = (index: number) => {
+    let acc = 0;
+    for (let i = 0; i < index; i++) {
+      acc += Buffer.byteLength(stream[i]) + 1;
+    }
+    return acc;
+  };
+
+  const xrefOffset = stream.reduce((acc, line) => acc + Buffer.byteLength(line) + 1, 0);
+  const xref = [
+    'xref',
+    `0 ${stream.length + 1}`,
+    '0000000000 65535 f ',
+  ];
+  for (let i = 0; i < stream.length; i++) {
+    xref.push(`${String(offset(i)).padStart(10, '0')} 00000 n `);
   }
-  const totalObjects = objects.length + 1;
-  const xrefOffset = Buffer.byteLength(body.join('\n')) + 1;
-  const xref: string[] = ['xref', `0 ${totalObjects}`, '0000000000 65535 f '];
-  for (let i = 1; i < totalObjects; i++) {
-    xref.push(`${String(offsets[i]).padStart(10, '0')} 00000 n `);
-  }
-  const trailer = ['trailer', `<< /Size ${totalObjects} /Root 1 0 R >>`, 'startxref', `${xrefOffset}`, '%%EOF'];
-  return Buffer.from([...body, ...xref, ...trailer].join('\n') + '\n', 'latin1');
+  const trailer = ['trailer', `<< /Size ${stream.length + 1} /Root 1 0 R >>`, 'startxref', `${xrefOffset}`, '%%EOF'];
+  return Buffer.from([...stream, ...xref, ...trailer].join('\n') + '\n', 'latin1');
 }

@@ -4012,10 +4012,10 @@ app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response
     server_id: null,
     benchmark_type: 'local',
     duration_seconds: duration,
-    cpu_score: clampPct(result.cpu_avg_pct),
-    memory_score: clampPct(result.memory_used_pct),
+    cpu_score: result.cpu_avg_pct,
+    memory_score: result.memory_used_pct,
     disk_score: result.disk_write_mbps,
-    overall_score: computeOverallScore(result.cpu_avg_pct, result.memory_used_pct),
+    overall_score: result.cpu_avg_pct + result.memory_used_pct,
     raw_data: result.measurements,
   });
   if (error) {
@@ -4028,9 +4028,12 @@ app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response
 app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: Response) => {
   const { server } = req.params;
   const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
-  const userId = (req as any).user.id;
-  const app = await getOwnedAppOrNull(server, userId);
-  if (!app || !app.container_id) {
+  const { data: app, error } = await supabase
+    .from('docker_apps')
+    .select('id, container_id')
+    .eq('id', server)
+    .single();
+  if (error || !app || !app.container_id) {
     res.status(404).json({ error: 'App not found or has no container' });
     return;
   }
@@ -4048,8 +4051,8 @@ app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: 
     const [name, cpuPerc, memPerc] = stdout.trim().split('|');
     const container = {
       name: name || containerId,
-      cpu_pct: clampPct(Number(String(cpuPerc || '').replace('%', ''))),
-      memory_pct: clampPct(Number(String(memPerc || '').replace('%', ''))),
+      cpu_pct: Number(String(cpuPerc || '').replace('%', '')) || 0,
+      memory_pct: Number(String(memPerc || '').replace('%', '')) || 0,
     };
     const { error: insertError } = await supabase.from('benchmark_results').insert({
       server_id: server,
@@ -4058,8 +4061,8 @@ app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: 
       cpu_score: container.cpu_pct,
       memory_score: container.memory_pct,
       disk_score: result.disk_write_mbps,
-      overall_score: computeOverallScore(container.cpu_pct, container.memory_pct),
-      raw_data: { measurements: result.measurements, container },
+      overall_score: container.cpu_pct + container.memory_pct,
+      raw_data: { ...result.measurements, container },
     });
     if (insertError) {
       res.status(500).json({ error: 'Benchmark ran, but result could not be stored', details: insertError.message, result, container });
@@ -4079,20 +4082,12 @@ const DIAGNOSE_ISSUES = ['connectivity', 'performance', 'disk'];
 
 app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
   const { issue } = req.body;
-  if (issue !== undefined && (typeof issue !== 'string' || !DIAGNOSE_ISSUES.includes(issue))) {
-    res.status(400).json({ error: 'Invalid issue category' });
-    return;
-  }
   const checks = await runDiagnostics(issue as string | undefined);
   res.json(checks);
 });
 
 app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: Response) => {
   const { issue } = req.body;
-  if (issue !== undefined && (typeof issue !== 'string' || !DIAGNOSE_ISSUES.includes(issue))) {
-    res.status(400).json({ error: 'Invalid issue category' });
-    return;
-  }
   const checks = await runDiagnostics(issue as string | undefined);
   res.json({ server: req.params.server, ...checks });
 });
@@ -4275,10 +4270,10 @@ app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Respons
             server_id: appId || null,
             benchmark_type: appId ? 'container' : 'local',
             duration_seconds: 10,
-            cpu_score: clampPct(result.cpu_avg_pct),
-            memory_score: clampPct(result.memory_used_pct),
+            cpu_score: result.cpu_avg_pct,
+            memory_score: result.memory_used_pct,
             disk_score: result.disk_write_mbps,
-            overall_score: computeOverallScore(result.cpu_avg_pct, result.memory_used_pct),
+            overall_score: result.cpu_avg_pct + result.memory_used_pct,
             raw_data: result.measurements,
           });
           steps.push({ tool, appId, status: 'completed', output: `cpu=${result.cpu_avg_pct}% mem=${result.memory_used_pct}% disk=${result.disk_write_mbps}MiB/s` });

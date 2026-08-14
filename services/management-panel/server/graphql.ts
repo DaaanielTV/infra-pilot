@@ -65,24 +65,8 @@ function parseFields(inner: string): FieldSelection[] {
     }
 
     if (field.startsWith('__')) continue; // skip introspection requests
-    let alias;
-    let name;
-    if (field.endsWith(':')) {
-      // Standard "alias: field" form: consume the following field name.
-      alias = field.slice(0, -1).trim();
-      while (i < inner.length && /\s/.test(inner[i])) i++;
-      const nameStart = i;
-      while (i < inner.length && !/[\s,(){]/.test(inner[i])) i++;
-      name = inner.slice(nameStart, i);
-    } else if (field.includes(':')) {
-      const parts = field.split(':').map((s) => s.trim());
-      alias = parts[0];
-      name = parts[1] || '';
-    } else {
-      name = field;
-    }
-    if (!name) continue;
-    fields.push({ name, alias: alias || undefined, args, children });
+    const [alias, name] = field.includes(':') ? field.split(':').map((s) => s.trim()) : [undefined, field];
+    fields.push({ name: name || field, alias, args, children });
   }
   return fields;
 }
@@ -114,7 +98,7 @@ export async function executeGraphQL(
     for (const field of selection) {
       const key = field.alias || field.name;
       try {
-        const value = await resolveField(field, ctx);
+        const value = await resolveField(field, ctx, errors);
         results[key] = value;
       } catch (err) {
         errors.push({ message: err instanceof Error ? err.message : String(err) });
@@ -131,6 +115,7 @@ export async function executeGraphQL(
 async function resolveField(
   field: FieldSelection,
   ctx: GraphQLContext,
+  errors: { message: string }[],
 ): Promise<unknown> {
   const { name, args } = field;
 

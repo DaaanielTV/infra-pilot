@@ -2,38 +2,27 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildReport, reportToCsv, reportToPdf } from '../../server/reports.ts';
 
-function fakeData(table: string) {
-  switch (table) {
-    case 'docker_apps':
-      return { data: [{ id: 'app-1' }], error: null };
-    case 'server_metrics':
-      return { data: [{ id: 1, recorded_at: '2026-08-01T00:00:00Z', cpu_pct: 12.5, memory_pct: 44 }], error: null };
-    case 'backup_status':
-      return { data: [{ id: 1, started_at: '2026-08-01T00:00:00Z', status: 'success', size_bytes: 1024 }], error: null };
-    case 'alert_configs':
-      return { data: [{ id: 'cfg-1' }], error: null };
-    default: // alert_history
-      return { data: [{ id: 1, trigger_config_id: 'cfg-1', triggered_at: '2026-08-01T00:00:00Z', status: 'firing', message: 'cpu high' }], error: null };
-  }
-}
-
-// Self-returning builder so every stage of the chain resolves the table's rows.
-function fakeBuilder(table: string): any {
-  const builder: any = {
-    select: () => builder,
-    eq: () => builder,
-    in: () => builder,
-    gte: () => builder,
-    lte: () => builder,
-    order: () => builder,
-    limit: () => builder,
-    then: (resolve: any, reject: any) => Promise.resolve(fakeData(table)).then(resolve, reject),
-  };
-  return builder;
-}
-
 const fakeSupabase = {
-  from: (table: string) => fakeBuilder(table),
+  from: (table: string) => ({
+    select: () => ({
+      eq: () => ({
+        gte: () => ({
+          lte: () => ({
+            order: () => ({
+              limit: async () =>
+                table === 'docker_apps'
+                  ? { data: [{ id: 'app-1' }], error: null }
+                  : table === 'server_metrics'
+                    ? { data: [{ id: 1, recorded_at: '2026-08-01T00:00:00Z', cpu_pct: 12.5, memory_pct: 44 }], error: null }
+                    : table === 'backup_status'
+                      ? { data: [{ id: 1, started_at: '2026-08-01T00:00:00Z', status: 'success', size_bytes: 1024 }], error: null }
+                      : { data: [{ id: 1, triggered_at: '2026-08-01T00:00:00Z', status: 'firing', message: 'cpu high' }], error: null },
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
 } as any;
 
 describe('reports module', () => {

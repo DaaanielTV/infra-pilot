@@ -42,7 +42,7 @@ export function collectSystemInfo(): SystemInfo {
     memory: {
       total_gb: (totalMem / 1024 / 1024 / 1024).toFixed(2),
       free_gb: (freeMem / 1024 / 1024 / 1024).toFixed(2),
-      used_pct: totalMem > 0 ? ((1 - freeMem / totalMem) * 100).toFixed(1) : '0.0',
+      used_pct: ((1 - freeMem / totalMem) * 100).toFixed(1),
     },
     load: {
       '1m': loadAvg[0]?.toFixed(2) ?? '0.00',
@@ -87,7 +87,7 @@ export function checkCpu(): DiagnosticCheck {
 export function checkDisk(target = '/'): DiagnosticCheck {
   try {
     const s = fs.statfsSync(target);
-    if (s.bavail === undefined || !s.blocks) {
+    if (!s.bavail || !s.blocks) {
       return { name: 'Disk', status: 'warn', value: 'unavailable', detail: `no stats for ${target}` };
     }
     const usedPct = Number((100 - (s.bavail / s.blocks) * 100).toFixed(1));
@@ -110,11 +110,7 @@ export function checkDisk(target = '/'): DiagnosticCheck {
 /** Resolve a hostname; callback makes the check testable without network. */
 export async function checkDns(
   hostname = 'api.github.com',
-  resolver: (name: string) => Promise<unknown> = (n) =>
-    Promise.race([
-      dns.resolve(n),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('DNS resolution timed out')), 3000)),
-    ]),
+  resolver: (name: string) => Promise<unknown> = (n) => dns.resolve(n),
 ): Promise<DiagnosticCheck> {
   try {
     const addresses = await resolver(hostname);

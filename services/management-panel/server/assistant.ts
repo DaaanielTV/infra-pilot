@@ -33,7 +33,7 @@ const TOOL_ALIASES: Record<AssistantTool, string[]> = {
   start: ['start', 'launch', 'boot', 'turn on', 'auf', 'starten', 'hochfahren'],
   stop: ['stop', 'halt', 'shut down', 'kill', 'aus', 'stoppen', 'stopp'],
   restart: ['restart', 'reboot', 'reload', 'neustart', 'neu starten', 'restarten'],
-  status: ['status', 'state', 'health', 'läuft', 'running', 'funktioniert'],
+  status: ['status', 'state', 'health', 'läuft', 'running', 'up?', 'funktioniert'],
   logs: ['log', 'logs', 'ausgabe', 'console'],
   benchmark: ['benchmark', 'bench', 'performance', 'messung', 'benchmarken'],
   deploy: ['deploy', 'deployment', 'release', 'installieren', 'deployen'],
@@ -43,19 +43,11 @@ function normalize(text: string): string {
   return text.toLowerCase().replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function wordBoundaryPattern(value: string): RegExp {
-  return new RegExp(`(^|\\s)${escapeRegExp(value)}(\\s|$)`);
-}
-
 function findTool(text: string): AssistantTool | null {
   const matches: { tool: AssistantTool; index: number }[] = [];
   for (const [tool, aliases] of Object.entries(TOOL_ALIASES)) {
     for (const alias of aliases as string[]) {
-      const index = text.search(wordBoundaryPattern(alias));
+      const index = text.indexOf(alias);
       if (index >= 0) {
         matches.push({ tool: tool as AssistantTool, index });
       }
@@ -90,7 +82,7 @@ function resolveTarget(
   }
 
   const byName = apps.find((a) =>
-    wordBoundaryPattern(a.name.toLowerCase()).test(text),
+    text.includes(a.name.toLowerCase()),
   );
   if (byName) return { app: byName, rawTarget: byName.name };
 
@@ -145,9 +137,9 @@ export function buildPlan(
   if (!app && rawTarget && /^[0-9a-f-]{36}$/.test(rawTarget)) {
     return {
       intent: tool,
-      requires_approval: false,
-      actions: [],
-      message: `I couldn't find an app with id "${rawTarget}". I searched your registered apps.`,
+      requires_approval: true,
+      actions: [{ tool, appId, reason: `Run "${tool}" on app ${appId}` }],
+      message: `I found an app by id ${appId}. ${tool} will be executed with your approval.`,
     };
   }
 

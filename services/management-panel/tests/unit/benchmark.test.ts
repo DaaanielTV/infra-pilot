@@ -8,12 +8,16 @@ import {
 } from '../../server/benchmark.ts';
 
 let fakeTime = 0;
+let cpuTick = 0;
 const fakeSampler = {
   now: () => {
-    fakeTime += 1000;
+    fakeTime += 5;
     return fakeTime;
   },
-  cpuTimes: () => [{ idleMs: 10, totalMs: 100 }],
+  cpuTimes: () => {
+    cpuTick++;
+    return [{ idleMs: cpuTick * 10, totalMs: cpuTick * 200 }];
+  },
   randomBytes: (size: number) => Buffer.alloc(size, 0x61),
   writeFile: async () => undefined,
   unlink: async () => undefined,

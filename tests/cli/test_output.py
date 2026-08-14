@@ -26,16 +26,19 @@ class TestFormatOutput:
 
         data = [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
         result = format_output(data, "table")
-        assert "id | name" in result or "id | name" in result
-        assert "A" in result
-        assert "B" in result
+        assert result.splitlines() == [
+            "id | name",
+            "---+-----",
+            "1  | A   ",
+            "2  | B   ",
+        ]
 
     def test_format_output_unknown_format_falls_back(self):
         from cli.ipilot.output import format_output
 
         data = {"key": "val"}
         result = format_output(data, "invalid_format")
-        assert isinstance(result, str)
+        assert result == "key : val"
 
 
 class TestFormatJson:

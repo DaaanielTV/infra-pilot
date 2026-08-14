@@ -61,6 +61,7 @@ class MockContainer:
 
     def update(self, **kwargs):
         self.updated = True
+        self.update_kwargs = kwargs
 
     def commit(self, repository="", **kwargs):
         return MockImage(id=f"{repository}-img-1")

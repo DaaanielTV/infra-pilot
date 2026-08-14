@@ -1,10 +1,12 @@
 const cron = require('node-cron');
-const { execFile } = require('child_process');
 const { EmbedBuilder } = require('discord.js');
 const { query } = require('./db');
 
+const ADMIN_IDS = new Set(String(process.env.WHITELIST_IDS || '').split(',').filter(Boolean));
+
 let clientRef = null;
 const registeredTasks = new Map();
+let reloadPromise = null;
 
 const VALID_TYPES = ['restart', 'command', 'backup', 'custom'];
 
@@ -14,13 +16,19 @@ function init(client) {
 }
 
 async function reloadTasks() {
-  stopAll();
-  const result = await query('SELECT * FROM scheduled_tasks WHERE enabled = TRUE').catch(() => null);
-  if (!result) return;
-  for (const task of result.rows) {
-    registerTask(task);
-  }
-  console.log(`[TaskScheduler] ${registeredTasks.size} cron tasks registered`);
+  if (reloadPromise) return reloadPromise;
+  reloadPromise = (async () => {
+    stopAll();
+    const result = await query('SELECT * FROM scheduled_tasks WHERE enabled = TRUE').catch(() => null);
+    if (!result) return;
+    for (const task of result.rows) {
+      registerTask(task);
+    }
+    console.log(`[TaskScheduler] ${registeredTasks.size} cron tasks registered`);
+  })().finally(() => {
+    reloadPromise = null;
+  });
+  return reloadPromise;
 }
 
 function stop() {
@@ -70,14 +78,9 @@ async function executeTask(taskId) {
         await vpsManager.createBackup(task.target_container_id, 'scheduled');
       }
     } else if (task.task_type === 'custom') {
-      if (task.command) {
-        const output = await new Promise((resolve) => {
-          execFile('sh', ['-c', task.command], { timeout: 120000 }, (err, stdout, stderr) => {
-            if (err) resolve({ code: 1, stderr });
-            else resolve({ code: 0, stderr: '' });
-          });
-        });
-        if (output.code !== 0) { status = 'failed'; error = output.stderr; }
+      if (task.target_container_id && task.command) {
+        const res = await vpsManager.executeCommand(task.target_container_id, task.command);
+        if (!res.success) { status = 'failed'; error = res.error; }
       }
     }
   } catch (err) {
@@ -129,6 +132,9 @@ async function handle(interaction) {
   const command = options.getString('command');
 
   if (action === 'create') {
+    if (!ADMIN_IDS.has(interaction.user.id)) {
+      return interaction.editReply({ content: '❌ Admin only.' });
+    }
     if (!name || !taskType || !cronExpr) {
       return interaction.editReply({ content: '❌ Missing required fields: name, task_type, cron_expr' });
     }
@@ -138,11 +144,20 @@ async function handle(interaction) {
     if (!isValidCron(cronExpr)) {
       return interaction.editReply({ content: '❌ Invalid cron expression' });
     }
+    if (['restart', 'command', 'backup', 'custom'].includes(taskType) && !target) {
+      return interaction.editReply({ content: '❌ target is required for this task type' });
+    }
+    if (['command', 'custom'].includes(taskType) && !command) {
+      return interaction.editReply({ content: '❌ command is required for command tasks' });
+    }
+    const vpsManager = require('./vpsManager');
+    const owned = await vpsManager.resolveContainerForUser(interaction.user.id, target);
+    if (!owned) return interaction.editReply({ content: '❌ VPS not found for your account' });
     try {
       const result = await query(
         `INSERT INTO scheduled_tasks (name, task_type, target_container_id, cron_expression, command, created_by)
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [name, taskType, target, cronExpr, command, interaction.user.id]
+        [name, taskType, owned.container_id, cronExpr, command, interaction.user.id]
       );
       await reloadTasks();
       return interaction.editReply({ content: `✅ Scheduled task '${name}' created (id ${result.rows[0].id})` });
@@ -151,7 +166,10 @@ async function handle(interaction) {
     }
   }
   if (action === 'list') {
-    const result = await query('SELECT * FROM scheduled_tasks ORDER BY created_at DESC').catch(() => null);
+    const isAdmin = ADMIN_IDS.has(interaction.user.id);
+    const result = isAdmin
+      ? await query('SELECT * FROM scheduled_tasks ORDER BY created_at DESC').catch(() => null)
+      : await query('SELECT * FROM scheduled_tasks WHERE created_by = $1 ORDER BY created_at DESC', [interaction.user.id]).catch(() => null);
     const tasks = result ? result.rows : [];
     if (!tasks.length) return interaction.editReply({ content: 'No scheduled tasks configured.' });
     const embed = new EmbedBuilder().setTitle('Scheduled Tasks').setColor(0x3498db);
@@ -171,7 +189,10 @@ async function handle(interaction) {
   if (action === 'delete') {
     if (!name) return interaction.editReply({ content: '❌ Provide task name or ID to delete' });
     try {
-      const result = await query('DELETE FROM scheduled_tasks WHERE name = $1 OR id = $1', [name]);
+      const isAdmin = ADMIN_IDS.has(interaction.user.id);
+      const result = isAdmin
+        ? await query('DELETE FROM scheduled_tasks WHERE name = $1 OR id = $1', [name])
+        : await query('DELETE FROM scheduled_tasks WHERE created_by = $2 AND (name = $1 OR id = $1)', [name, interaction.user.id]);
       await reloadTasks();
       return interaction.editReply({ content: result.rowCount ? `✅ Deleted ${result.rowCount} task(s)` : '⚠️ Task not found' });
     } catch (err) {
@@ -181,9 +202,12 @@ async function handle(interaction) {
   if (action === 'toggle') {
     if (!name) return interaction.editReply({ content: '❌ Provide task name or ID to toggle' });
     try {
-      await query('UPDATE scheduled_tasks SET enabled = NOT enabled WHERE name = $1 OR id = $1', [name]);
+      const isAdmin = ADMIN_IDS.has(interaction.user.id);
+      const result = isAdmin
+        ? await query('UPDATE scheduled_tasks SET enabled = NOT enabled WHERE name = $1 OR id = $1', [name])
+        : await query('UPDATE scheduled_tasks SET enabled = NOT enabled WHERE created_by = $2 AND (name = $1 OR id = $1)', [name, interaction.user.id]);
       await reloadTasks();
-      return interaction.editReply({ content: `✅ Task '${name}' toggled` });
+      return interaction.editReply({ content: result.rowCount ? `✅ Task '${name}' toggled` : '⚠️ Task not found' });
     } catch (err) {
       return interaction.editReply({ content: `❌ Error: ${err.message}` });
     }

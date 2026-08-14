@@ -25,6 +25,20 @@ const ResourcePools = require('./modules/resourcePools');
 const DbManager = require('./modules/dbManager');
 const LegacyCommands = require('./modules/legacyCommands');
 
+const COMMAND_MODULES = [
+  { name: 'VPSCommands', module: VPSCommands },
+  { name: 'Monitoring', module: Monitoring },
+  { name: 'HealthChecks', module: HealthChecks },
+  { name: 'AlertManager', module: AlertManager },
+  { name: 'TaskScheduler', module: TaskScheduler },
+  { name: 'Maintenance', module: Maintenance },
+  { name: 'TemplateManager', module: TemplateManager },
+  { name: 'ResourcePools', module: ResourcePools },
+  { name: 'DbManager', module: DbManager },
+  { name: 'LegacyCommands', module: LegacyCommands },
+];
+const ERROR_TEXT = '❌ An error occurred while running this command.';
+
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
 const SERVER_CREATION_CHANNEL_ID = process.env.SERVER_CREATION_CHANNEL_ID;
@@ -194,8 +208,8 @@ client.once('ready', async () => {
   HealthChecks.init(client);
   BackupScheduler.init(client);
   AlertManager.init(client);
-  TaskScheduler.init(client);
-  Monitoring.updatePresence();
+  TaskScheduler.init(client).catch((err) => console.error('[TaskScheduler] init failed:', err.message));
+  Monitoring.updatePresence().catch(() => {});
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -222,95 +236,22 @@ client.on('interactionCreate', async (interaction) => {
       const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Wähle den Typ des Servers, den du erstellen möchtest:').setColor('#007bff');
       return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
     }
-    if (VPSCommands.isParsed(interaction.commandName)) {
-      return VPSCommands.handle(interaction).catch((error) => {
-        console.error(`[VPSCommands] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (Monitoring.isParsed(interaction.commandName)) {
-      return Monitoring.handle(interaction).catch((error) => {
-        console.error(`[Monitoring] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (HealthChecks.isParsed(interaction.commandName)) {
-      return HealthChecks.handle(interaction).catch((error) => {
-        console.error(`[HealthChecks] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (AlertManager.isParsed(interaction.commandName)) {
-      return AlertManager.handle(interaction).catch((error) => {
-        console.error(`[AlertManager] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (TaskScheduler.isParsed(interaction.commandName)) {
-      return TaskScheduler.handle(interaction).catch((error) => {
-        console.error(`[TaskScheduler] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (Maintenance.isParsed(interaction.commandName)) {
-      return Maintenance.handle(interaction).catch((error) => {
-        console.error(`[Maintenance] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (TemplateManager.isParsed(interaction.commandName)) {
-      return TemplateManager.handle(interaction).catch((error) => {
-        console.error(`[TemplateManager] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (ResourcePools.isParsed(interaction.commandName)) {
-      return ResourcePools.handle(interaction).catch((error) => {
-        console.error(`[ResourcePools] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (DbManager.isParsed(interaction.commandName)) {
-      return DbManager.handle(interaction).catch((error) => {
-        console.error(`[DbManager] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
-    }
-    if (LegacyCommands.isParsed(interaction.commandName)) {
-      return LegacyCommands.handle(interaction).catch((error) => {
-        console.error(`[LegacyCommands] ${interaction.commandName} failed:`, error);
-        if (interaction.deferred || interaction.replied) {
-          return interaction.editReply({ content: '❌ An error occurred while running this command.' });
-        }
-        return interaction.reply({ content: '❌ An error occurred while running this command.', ephemeral: true });
-      });
+    for (const entry of COMMAND_MODULES) {
+      if (entry.module.isParsed(interaction.commandName)) {
+        return entry.module.handle(interaction).catch(async (error) => {
+          console.error(`[${entry.name}] ${interaction.commandName} failed:`, error);
+          try {
+            if (interaction.deferred || interaction.replied) {
+              await interaction.editReply({ content: ERROR_TEXT });
+            } else {
+              await interaction.reply({ content: ERROR_TEXT, ephemeral: true });
+            }
+          } catch (replyError) {
+            console.error(`[${entry.name}] error reply failed:`, replyError);
+          }
+          return null;
+        });
+      }
     }
     ticketCommands.handleCommand(interaction);
     statsCommands.handleCommand(interaction);

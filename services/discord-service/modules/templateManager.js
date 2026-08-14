@@ -10,7 +10,6 @@ const COMMAND_SPECS = [
       { name: 'image', description: 'Docker image', type: 3, required: true },
       { name: 'cpu', description: 'CPU cores', type: 10, required: false },
       { name: 'memory', description: 'Memory MB', type: 4, required: false },
-      { name: 'storage', description: 'Storage GB', type: 4, required: false },
     ],
   },
   {
@@ -39,12 +38,23 @@ async function handle(interaction) {
     const image = options.getString('image');
     const cpu = options.getNumber('cpu') ?? 1;
     const memory = options.getInteger('memory') ?? 1024;
-    const storage = options.getInteger('storage') ?? 20;
     try {
-      await query(
-        'INSERT INTO templates (name, version, config, created_by) VALUES ($1, $2, $3, $4)',
-        [name, 1, JSON.stringify({ image, cpu, memory, storage }), interaction.user.id]
-      );
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const versionResult = await query(
+          'SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM templates WHERE name = $1',
+          [name]
+        );
+        const version = versionResult.rows[0].next_version;
+        try {
+          await query(
+            'INSERT INTO templates (name, version, config, created_by) VALUES ($1, $2, $3, $4)',
+            [name, version, JSON.stringify({ image, cpu, memory }), interaction.user.id]
+          );
+          break;
+        } catch (insertErr) {
+          if (attempt === 2 || !String(insertErr.code).startsWith('23')) throw insertErr;
+        }
+      }
       const embed = new EmbedBuilder()
         .setTitle('Template Created')
         .setColor(0x28a745)
@@ -52,8 +62,7 @@ async function handle(interaction) {
           { name: 'Name', value: name, inline: true },
           { name: 'Image', value: image, inline: true },
           { name: 'CPU', value: String(cpu), inline: true },
-          { name: 'Memory', value: `${memory}MB`, inline: true },
-          { name: 'Storage', value: `${storage}GB`, inline: true }
+          { name: 'Memory', value: `${memory}MB`, inline: true }
         );
       return interaction.reply({ embeds: [embed], ephemeral: true });
     } catch (err) {
@@ -77,10 +86,10 @@ async function handle(interaction) {
       const created = await vpsManager.createVps(interaction.user.id, {
         cpu: cfg.cpu,
         memory: cfg.memory,
-        storage: cfg.storage,
         image: cfg.image,
       });
       if (!created) return interaction.editReply({ content: '❌ Failed to create VPS.' });
+      if (created.error) return interaction.editReply({ content: `❌ ${created.error}` });
       const embed = new EmbedBuilder()
         .setTitle('VPS Created from Template')
         .setColor(0x28a745)
@@ -108,7 +117,7 @@ async function handle(interaction) {
           const cfg = typeof t.config === 'string' ? JSON.parse(t.config) : t.config;
           embed.addFields({
             name: `${t.name} (v${t.version})`,
-            value: `Image: ${cfg.image}\nCPU: ${cfg.cpu} | RAM: ${cfg.memory}MB | Storage: ${cfg.storage}GB`,
+            value: `Image: ${cfg.image}\nCPU: ${cfg.cpu} | RAM: ${cfg.memory}MB`,
             inline: false,
           });
         }

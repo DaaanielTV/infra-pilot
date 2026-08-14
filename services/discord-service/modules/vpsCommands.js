@@ -6,6 +6,7 @@ const {
   EmbedBuilder,
 } = require('discord.js');
 const vpsManager = require('./vpsManager');
+const { docker } = require('./docker');
 
 const COMMAND_SPECS = [
   {
@@ -14,7 +15,6 @@ const COMMAND_SPECS = [
     options: [
       { name: 'cpu', description: 'CPU cores (0.5-4)', type: 10, required: true },
       { name: 'memory', description: 'Memory in MB (512-8192)', type: 4, required: true },
-      { name: 'storage', description: 'Storage in GB (10-100)', type: 4, required: true },
       { name: 'image', description: 'Docker image (default ubuntu:latest)', type: 3, required: false },
     ],
   },
@@ -91,13 +91,10 @@ async function handle(interaction) {
     case 'createvps': {
       const cpu = options.getNumber('cpu');
       const memory = options.getInteger('memory');
-      const storage = options.getInteger('storage');
       const image = options.getString('image') || 'ubuntu:latest';
-      if (cpu < 0.5 || cpu > 4) return interaction.editReply({ content: '❌ CPU cores must be between 0.5 and 4' });
-      if (memory < 512 || memory > 8192) return interaction.editReply({ content: '❌ Memory must be between 512MB and 8GB' });
-      if (storage < 10 || storage > 100) return interaction.editReply({ content: '❌ Storage must be between 10GB and 100GB' });
-      const result = await vpsManager.createVps(interaction.user.id, { cpu, memory, storage, image });
+      const result = await vpsManager.createVps(interaction.user.id, { cpu, memory, image });
       if (!result) return interaction.editReply({ content: '❌ Failed to create VPS instance' });
+      if (result.error) return interaction.editReply({ content: `❌ ${result.error}` });
       const embed = new EmbedBuilder()
         .setTitle('VPS Created Successfully')
         .setColor(0x28a745)
@@ -105,13 +102,12 @@ async function handle(interaction) {
           { name: 'Container ID', value: `\`${result.containerId.slice(0, 12)}\``, inline: true },
           { name: 'CPU Cores', value: String(cpu), inline: true },
           { name: 'Memory', value: `${memory}MB`, inline: true },
-          { name: 'Storage', value: `${storage}GB`, inline: true },
           { name: 'Image', value: image, inline: true }
         );
       return interaction.editReply({ embeds: [embed] });
     }
     case 'listvps': {
-      const instances = await vpsManager.listUserInstances(interaction.user.id);
+      const instances = (await vpsManager.listUserInstances(interaction.user.id)).slice(0, 10);
       if (!instances.length) return interaction.editReply({ content: "You don't have any VPS instances" });
       const embed = new EmbedBuilder().setTitle('Your VPS Instances').setColor(0x3498db);
       for (const instance of instances) {
@@ -183,10 +179,10 @@ async function handle(interaction) {
         .setTitle('VPS Statistics')
         .setColor(0x3498db)
         .addFields(
-          { name: 'Status', value: stats.status, inline: true },
+          { name: 'Status', value: stats.status || 'unknown', inline: true },
           { name: 'CPU Usage', value: `${stats.cpu_usage}%`, inline: true },
           { name: 'Memory Usage', value: `${stats.memory_usage}%`, inline: true },
-          { name: 'Network', value: stats.network.raw, inline: true }
+          { name: 'Network', value: stats.network && stats.network.raw ? stats.network.raw : 'N/A', inline: true }
         );
       return interaction.editReply({ embeds: [embed] });
     }
@@ -239,12 +235,19 @@ async function handle(interaction) {
       if (cpu === null && memory === null) {
         return interaction.editReply({ content: '❌ Provide cpu and/or memory to update' });
       }
+      if (cpu !== null && (cpu < 0.5 || cpu > 4)) {
+        return interaction.editReply({ content: '❌ CPU cores must be between 0.5 and 4' });
+      }
+      if (memory !== null && (memory < 512 || memory > 8192)) {
+        return interaction.editReply({ content: '❌ Memory must be between 512MB and 8192MB' });
+      }
       try {
         const updateArgs = ['update'];
         if (cpu !== null) updateArgs.push('--cpu-period', '100000', '--cpu-quota', String(Math.round(cpu * 100000)));
         if (memory !== null) updateArgs.push('--memory', `${memory}m`);
-        await require('./docker').docker(updateArgs, { timeout: 60000 });
-        await require('./docker').docker(['restart', owned.container_id], { timeout: 60000 });
+        updateArgs.push(owned.container_id);
+        await docker(updateArgs, { timeout: 60000 });
+        await docker(['restart', owned.container_id], { timeout: 60000 });
         return interaction.editReply({ content: '✅ VPS updated successfully' });
       } catch (err) {
         console.error('[VPSCommands] vpsupdate failed:', err.message);

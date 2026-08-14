@@ -39,15 +39,16 @@ async function collectCleanupData(vpsId = null) {
       const out = await exec(vpsId, 'du -sh /var/log/ 2>/dev/null | cut -f1').catch(() => '');
       data.container_logs = out.trim() || 0;
     } else {
-      const images = await docker(['images', '-q']).catch(() => '');
-      const dangling = await docker(['images', '-q', '-f', 'dangling=true']).catch(() => '');
-      const volumes = await docker(['volume', 'ls', '-q']).catch(() => '');
+      const images = await docker(['images', '-q']);
+      const dangling = await docker(['images', '-q', '-f', 'dangling=true']);
+      const volumes = await docker(['volume', 'ls', '-q']);
       data.docker_images = images ? images.split('\n').length : 0;
       data.dangling_images = dangling ? dangling.split('\n').length : 0;
       data.volumes = volumes ? volumes.split('\n').length : 0;
     }
   } catch (err) {
     console.error('[Maintenance] collect data error:', err.message);
+    throw err;
   }
   return data;
 }
@@ -90,9 +91,9 @@ async function handle(interaction) {
         await exec(resolved.container_id, 'rm -rf /var/log/*.log 2>&1');
         results.push('Logs: cleaned');
       } else {
-        const pruneImages = await docker(['image', 'prune', '-f']).catch(() => '');
+        const pruneImages = await docker(['image', 'prune', '-f']);
         results.push(`Dangling images: ${pruneImages ? pruneImages.split('\n').length : 0} removed`);
-        const pruneVolumes = await docker(['volume', 'prune', '-f']).catch(() => '');
+        const pruneVolumes = await docker(['volume', 'prune', '-f']);
         results.push(`Unused volumes: ${pruneVolumes ? pruneVolumes.split('\n').length : 0} removed`);
       }
     } catch (err) {
@@ -130,8 +131,8 @@ async function handle(interaction) {
 
   if (commandName === 'updateapply') {
     try {
-      const out = await exec(resolved.container_id, 'apt update -qq && apt upgrade -y -qq 2>&1 | tail -5');
-      const result = out.trim() || 'Update applied';
+      const out = await exec(resolved.container_id, 'apt update -qq && apt upgrade -y -qq 2>&1');
+      const result = out.trim().split('\n').slice(-5).join('\n') || 'Update applied';
       const embed = new EmbedBuilder()
         .setTitle(`Updates Applied: ${resolved.container_id.slice(0, 12)}`)
         .setColor(0x28a745)

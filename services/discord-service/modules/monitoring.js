@@ -51,7 +51,7 @@ async function collectContainerStats(c) {
       memory_usage: parseFloat(raw.memPerc.replace('%', '')) || 0,
       memory_used: parseRawBytes(raw.memUsage.split('/')[0]),
       memory_total: parseRawBytes(raw.memUsage.split('/')[1]),
-      network: { raw: raw.netIO },
+      network: parseNetIO(raw.netIO),
       disk_usage: diskPercent,
     };
   } catch (err) {
@@ -60,10 +60,23 @@ async function collectContainerStats(c) {
 }
 
 function parseRawBytes(value) {
-  const match = String(value).trim().match(/^([\d.]+)\s*([KMGTP]?i?B)$/);
+  const match = String(value).trim().match(/^([\d.]+)\s*([kKMGTP]?i?B)$/);
   if (!match) return 0;
-  const units = { '': 1, B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3, TiB: 1024 ** 4 };
+  const units = {
+    B: 1,
+    kB: 1024, KB: 1024, KiB: 1024,
+    MB: 1024 ** 2, MiB: 1024 ** 2,
+    GB: 1024 ** 3, GiB: 1024 ** 3,
+    TB: 1024 ** 4, TiB: 1024 ** 4,
+    PB: 1024 ** 5, PiB: 1024 ** 5,
+  };
   return Math.round(parseFloat(match[1]) * (units[match[2]] || 1));
+}
+
+function parseNetIO(value) {
+  if (!value) return { rx: 0, tx: 0 };
+  const [rxRaw, txRaw] = String(value).split('/');
+  return { rx: parseRawBytes(rxRaw), tx: parseRawBytes(txRaw) };
 }
 
 async function diskUsage(containerId) {
@@ -112,11 +125,24 @@ async function updateDbStats(containerId, s) {
   }
 }
 
+const alertState = new Map();
+const ALERT_COOLDOWN_MS = 15 * 60 * 1000;
+
 async function checkAlerts(containerId, s) {
+  const candidates = [];
+  if (s.cpu_usage > alertThresholds.cpu) candidates.push(['cpu', `High CPU: ${s.cpu_usage}%`]);
+  if (s.memory_usage > alertThresholds.memory) candidates.push(['memory', `High Memory: ${s.memory_usage}%`]);
+  if (s.disk_usage > alertThresholds.disk) candidates.push(['disk', `High Disk: ${s.disk_usage}%`]);
+  const now = Date.now();
   const alerts = [];
-  if (s.cpu_usage > alertThresholds.cpu) alerts.push(`High CPU: ${s.cpu_usage}%`);
-  if (s.memory_usage > alertThresholds.memory) alerts.push(`High Memory: ${s.memory_usage}%`);
-  if (s.disk_usage > alertThresholds.disk) alerts.push(`High Disk: ${s.disk_usage}%`);
+  for (const [metric, message] of candidates) {
+    const key = `${containerId}:${metric}`;
+    const lastNotified = alertState.get(key) || 0;
+    if (now - lastNotified >= ALERT_COOLDOWN_MS) {
+      alertState.set(key, now);
+      alerts.push(message);
+    }
+  }
   if (alerts.length) await sendAlert(containerId, alerts);
 }
 
@@ -232,13 +258,10 @@ async function handle(interaction) {
     const containerId = options.getString('container_id');
     const metric = (options.getString('metric') || 'cpu').toLowerCase();
     const period = options.getInteger('period') || 24;
-    const lastMatch = await query(
-      'SELECT container_id FROM vps_containers WHERE user_id = $1',
-      [interaction.user.id]
-    );
-    const mine = lastMatch.rows.some((r) => r.container_id === containerId || r.container_id.startsWith(containerId));
-    if (!mine) return interaction.editReply({ content: '❌ VPS not found for your account' });
-    const file = await renderGraph(containerId, metric, period);
+    const vpsManager = require('./vpsManager');
+    const owned = await vpsManager.resolveContainerForUser(interaction.user.id, containerId);
+    if (!owned) return interaction.editReply({ content: '❌ VPS not found for your account' });
+    const file = await renderGraph(owned.container_id, metric, period);
     if (!file) return interaction.editReply({ content: '❌ No data available for this VPS yet' });
     return interaction.editReply({ files: [file] });
   }

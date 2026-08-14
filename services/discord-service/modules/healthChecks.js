@@ -1,7 +1,6 @@
-const cron = require('node-cron');
 const { EmbedBuilder } = require('discord.js');
 const { query } = require('./db');
-const { exec } = require('./docker');
+const { execArgv } = require('./docker');
 
 const CHECK_TYPES = ['ping', 'port', 'process', 'api'];
 const DEFAULT_PING_TARGET = '8.8.8.8';
@@ -12,27 +11,80 @@ const INTERVAL_SECONDS = parseInt(process.env.HEALTH_CHECK_INTERVAL_SECONDS, 10)
 
 let clientRef = null;
 let loopTask = null;
+let loopRunning = false;
 
 function init(client) {
   clientRef = client;
+  ensureTables().catch((err) => console.error('[HealthChecks] table setup failed:', err.message));
   if (loopTask) return;
-  loopTask = cron.schedule(`*/${Math.max(10, INTERVAL_SECONDS)} * * * * *`, () => {
+  const intervalMs = Math.max(10, INTERVAL_SECONDS) * 1000;
+  loopTask = setInterval(() => {
     runLoop().catch((err) => console.error('[HealthChecks] loop error:', err));
-  });
+  }, intervalMs);
 }
 
 function stop() {
-  if (loopTask) { loopTask.stop(); loopTask = null; }
+  if (loopTask) { clearInterval(loopTask); loopTask = null; }
+}
+
+async function ensureTables() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS health_checks (
+      id SERIAL PRIMARY KEY,
+      container_id VARCHAR(255) NOT NULL,
+      check_type VARCHAR(20) NOT NULL,
+      target VARCHAR(500),
+      interval_seconds INT DEFAULT 60,
+      last_check TIMESTAMP,
+      last_status VARCHAR(20),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS health_check_results (
+      id SERIAL PRIMARY KEY,
+      check_id INT REFERENCES health_checks(id),
+      status VARCHAR(20),
+      response_time_ms INT,
+      error_message TEXT,
+      checked_at TIMESTAMP
+    )
+  `);
 }
 
 async function runLoop() {
-  const result = await query('SELECT * FROM health_checks').catch(() => null);
-  if (!result) return;
-  for (const check of result.rows) {
-    const r = await runHealthCheck(check.container_id, check.check_type, check.target);
-    await updateCheckStatus(check.id, r.status);
-    if (r.status === 'failed') await notifyFailure(check, r);
+  if (loopRunning) return;
+  loopRunning = true;
+  try {
+    const result = await query('SELECT * FROM health_checks').catch(() => null);
+    if (!result) return;
+    for (const check of result.rows) {
+      const r = await runHealthCheck(check.container_id, check.check_type, check.target);
+      await updateCheckStatus(check.id, r.status);
+      if (r.status === 'failed') await notifyFailure(check, r);
+    }
+  } finally {
+    loopRunning = false;
   }
+}
+
+function isValidPingTarget(value) {
+  return /^[a-zA-Z0-9.:-]{1,255}$/.test(value);
+}
+
+function isValidHostPort(value) {
+  const [host, port] = value.split(':');
+  if (!host || !/^[a-zA-Z0-9.:-]{1,255}$/.test(host)) return false;
+  const n = Number(port);
+  return Number.isInteger(n) && n >= 1 && n <= 65535;
+}
+
+function isValidProcessName(value) {
+  return /^[a-zA-Z0-9_-]{1,63}$/.test(value);
+}
+
+function isValidUrl(value) {
+  return /^https?:\/\/[^\s]{1,250}$/.test(value);
 }
 
 async function runHealthCheck(containerId, checkType, target = null) {
@@ -41,23 +93,43 @@ async function runHealthCheck(containerId, checkType, target = null) {
   try {
     if (checkType === 'ping') {
       const pingTarget = target || DEFAULT_PING_TARGET;
-      const ok = await exec(containerId, `ping -c 1 -W 2 ${pingTarget}`).then(() => true).catch(() => false);
-      result.status = ok ? 'passed' : 'failed';
+      if (!isValidPingTarget(pingTarget)) {
+        result.status = 'failed';
+        result.error = 'Invalid ping target';
+      } else {
+        const ok = await execArgv(containerId, ['ping', '-c', '1', '-W', '2', pingTarget]).then(() => true).catch(() => false);
+        result.status = ok ? 'passed' : 'failed';
+      }
     } else if (checkType === 'port') {
       const [host, port] = (target || DEFAULT_PORT_CHECK).split(':');
-      const ok = await exec(containerId, `timeout 2 bash -c 'echo >/dev/tcp/${host}/${port}' 2>/dev/null`)
-        .then(() => true)
-        .catch(() => false);
-      result.status = ok ? 'passed' : 'failed';
+      if (!isValidHostPort(`${host}:${port}`)) {
+        result.status = 'failed';
+        result.error = 'Invalid host:port';
+      } else {
+        const ok = await execArgv(containerId, ['bash', '-c', `echo >/dev/tcp/${host}/${port}`])
+          .then(() => true)
+          .catch(() => false);
+        result.status = ok ? 'passed' : 'failed';
+      }
     } else if (checkType === 'process') {
       const process = target || DEFAULT_PROCESS;
-      const ok = await exec(containerId, `pgrep -x ${process}`).then(() => true).catch(() => false);
-      result.status = ok ? 'passed' : 'failed';
+      if (!isValidProcessName(process)) {
+        result.status = 'failed';
+        result.error = 'Invalid process name';
+      } else {
+        const ok = await execArgv(containerId, ['pgrep', '-x', process]).then(() => true).catch(() => false);
+        result.status = ok ? 'passed' : 'failed';
+      }
     } else if (checkType === 'api') {
       const url = target || DEFAULT_HEALTH_URL;
-      const out = await exec(containerId, `curl -s -o /dev/null -w '%{http_code}' ${url}`)
-        .catch(() => '');
-      result.status = ['200', '201', '204'].includes(out.trim()) ? 'passed' : 'failed';
+      if (!isValidUrl(url)) {
+        result.status = 'failed';
+        result.error = 'Invalid URL';
+      } else {
+        const out = await execArgv(containerId, ['curl', '-s', '-o', '/dev/null', '-w', '%{http_code}', url])
+          .catch(() => '');
+        result.status = ['200', '201', '204'].includes(out.trim()) ? 'passed' : 'failed';
+      }
     } else {
       result.status = 'unknown';
       result.error = `Unknown check type: ${checkType}`;
@@ -67,8 +139,23 @@ async function runHealthCheck(containerId, checkType, target = null) {
     result.error = err.message;
   }
   result.response_time_ms = Date.now() - start;
-  await recordResult(containerId, checkType, result);
+  const checkId = await ensureCheck(containerId, checkType);
+  await recordResult(checkId, result);
   return result;
+}
+
+async function ensureCheck(containerId, checkType) {
+  const found = await query(
+    'SELECT id FROM health_checks WHERE container_id = $1 AND check_type = $2 ORDER BY created_at DESC LIMIT 1',
+    [containerId, checkType]
+  ).catch(() => ({ rows: [] }));
+  if (found.rows.length) return found.rows[0].id;
+  const inserted = await query(
+    `INSERT INTO health_checks (container_id, check_type, interval_seconds)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [containerId, checkType, INTERVAL_SECONDS]
+  ).catch(() => ({ rows: [] }));
+  return inserted.rows.length ? inserted.rows[0].id : null;
 }
 
 async function updateCheckStatus(checkId, status) {
@@ -78,15 +165,13 @@ async function updateCheckStatus(checkId, status) {
   ).catch((err) => console.error('[HealthChecks] status update failed:', err.message));
 }
 
-async function recordResult(containerId, checkType, result) {
+async function recordResult(checkId, result) {
+  if (!checkId) return;
   await query(
     `INSERT INTO health_check_results
      (check_id, status, response_time_ms, error_message, checked_at)
-     VALUES (
-       (SELECT id FROM health_checks WHERE container_id = $1 AND check_type = $2 LIMIT 1),
-       $3, $4, $5, NOW()
-     )`,
-    [containerId, checkType, result.status, result.response_time_ms, result.error]
+     VALUES ($1, $2, $3, $4, NOW())`,
+    [checkId, result.status, result.response_time_ms, result.error]
   ).catch(() => {});
 }
 
@@ -158,6 +243,11 @@ function isParsed(name) {
 
 async function handle(interaction) {
   const { commandName, options } = interaction;
+  try {
+    await ensureTables();
+  } catch (err) {
+    console.error('[HealthChecks] table setup failed:', err.message);
+  }
   if (commandName === 'health') {
     await interaction.deferReply({ ephemeral: true });
     const input = options.getString('container_id');
@@ -176,14 +266,15 @@ async function handle(interaction) {
     return interaction.editReply({ embeds: [embed] });
   }
   if (commandName === 'healthcreate') {
+    await interaction.deferReply({ ephemeral: true });
     const input = options.getString('container_id');
     const checkType = options.getString('check_type').toLowerCase();
     const target = options.getString('target');
     const vpsManager = require('./vpsManager');
     const owned = await vpsManager.resolveContainerForUser(interaction.user.id, input);
-    if (!owned) return interaction.reply({ content: '❌ VPS not found for your account', ephemeral: true });
+    if (!owned) return interaction.editReply({ content: '❌ VPS not found for your account' });
     if (!CHECK_TYPES.includes(checkType)) {
-      return interaction.reply({ content: `❌ Invalid type. Options: ${CHECK_TYPES.join(', ')}`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Invalid type. Options: ${CHECK_TYPES.join(', ')}` });
     }
     try {
       await query(
@@ -191,18 +282,18 @@ async function handle(interaction) {
          VALUES ($1, $2, $3, $4)`,
         [owned.container_id, checkType, target, INTERVAL_SECONDS]
       );
-      return interaction.reply({
+      return interaction.editReply({
         content: `✅ Health check created: ${checkType} on \`${owned.container_id.slice(0, 12)}\``,
-        ephemeral: true,
       });
     } catch (err) {
-      return interaction.reply({ content: `❌ Error: ${err.message}`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Error: ${err.message}` });
     }
   }
   if (commandName === 'healthlist') {
+    await interaction.deferReply({ ephemeral: true });
     const checks = await listForUser(interaction.user.id);
     if (!checks.length) {
-      return interaction.reply({ content: 'No health checks configured.', ephemeral: true });
+      return interaction.editReply({ content: 'No health checks configured.' });
     }
     const embed = new EmbedBuilder().setTitle('Health Checks').setColor(0x3498db);
     for (const c of checks) {
@@ -212,7 +303,7 @@ async function handle(interaction) {
         inline: false,
       });
     }
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.editReply({ embeds: [embed] });
   }
   return null;
 }

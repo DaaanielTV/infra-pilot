@@ -1,5 +1,5 @@
 const { query } = require('./db');
-const { docker, inspect, stats, exec } = require('./docker');
+const { docker, inspect, stats, execArgv } = require('./docker');
 
 async function ensureTables() {
   try {
@@ -14,6 +14,9 @@ async function ensureTables() {
     `);
     await query(
       "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;"
+    );
+    await query(
+      "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS image VARCHAR(255);"
     );
     await query(
       "ALTER TABLE vps_containers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'running';"
@@ -37,14 +40,14 @@ function now() {
   return new Date().toISOString();
 }
 
-async function addToDatabase(userId, containerId, name, sshCommand = '') {
+async function addToDatabase(userId, containerId, name, sshCommand = '', image = '') {
   try {
     await query(
       `INSERT INTO vps_containers
-       (container_id, user_id, container_name, ssh_command, status)
-       VALUES ($1, $2, $3, $4, 'running')
+       (container_id, user_id, container_name, ssh_command, status, image)
+       VALUES ($1, $2, $3, $4, 'running', $5)
        ON CONFLICT (container_id) DO NOTHING`,
-      [containerId, userId, name, sshCommand]
+      [containerId, userId, name, sshCommand, image]
     );
   } catch (err) {
     console.error('[VPSManager] addToDatabase failed:', err.message);
@@ -86,8 +89,27 @@ async function resolveContainerForUser(userId, input) {
   return null;
 }
 
-async function createVps(userId, { cpu, memory, storage, image }) {
+const APPROVED_IMAGES = String(process.env.APPROVED_IMAGES || 'ubuntu:latest,ubuntu:22.04,debian:latest')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+async function createVps(userId, { cpu, memory, image }) {
   try {
+    if (!image || !APPROVED_IMAGES.includes(image)) {
+      return { error: `Image not approved: ${image}. Allowed: ${APPROVED_IMAGES.join(', ')}` };
+    }
+    if (cpu < 0.5 || cpu > 4) {
+      return { error: 'CPU cores must be between 0.5 and 4' };
+    }
+    if (memory < 512 || memory > 8192) {
+      return { error: 'Memory must be between 512MB and 8192MB' };
+    }
+    const serverLimit = parseInt(process.env.SERVER_LIMIT, 10) || 5;
+    const owned = await getContainersForUser(userId);
+    if (owned.length >= serverLimit) {
+      return { error: `Instance limit reached (${serverLimit})` };
+    }
     const name = `vps_${Date.now().toString(36)}`;
     const args = [
       'run', '-d', '--name', name,
@@ -95,12 +117,13 @@ async function createVps(userId, { cpu, memory, storage, image }) {
       '--cpu-quota', String(Math.round(cpu * 100000)),
       '--memory', `${memory}m`,
       '--restart', 'unless-stopped',
+      '--cap-drop=ALL', '--security-opt', 'no-new-privileges',
       image,
     ];
     await docker(args, { timeout: 120000 });
     const info = await inspect(name);
     const containerId = info.Id;
-    await addToDatabase(userId, containerId, name);
+    await addToDatabase(userId, containerId, name, '', image);
     return { containerId, name };
   } catch (err) {
     console.error('[VPSManager] createVps failed:', err.message);
@@ -167,15 +190,25 @@ async function getVpsStats(containerId) {
   try {
     const info = await inspect(containerId);
     const raw = await stats(containerId);
-    const memMatch = raw.memUsage.match(/^([\d.]+)\s*([KMG]?i?B)/);
-    const memLimitMatch = raw.memUsage.match(/\/\s*([\d.]+)\s*([KMG]?i?B)/);
+    const memMatch = raw.memUsage.match(/^([\d.]+)\s*([kKMGTP]?i?B)/);
+    const memLimitMatch = raw.memUsage.match(/\/\s*([\d.]+)\s*([kKMGTP]?i?B)/);
+    const memUnits = {
+      B: 1,
+      kB: 1024, KB: 1024, KiB: 1024,
+      MB: 1024 ** 2, MiB: 1024 ** 2,
+      GB: 1024 ** 3, GiB: 1024 ** 3,
+      TB: 1024 ** 4, TiB: 1024 ** 4,
+      PB: 1024 ** 5, PiB: 1024 ** 5,
+    };
+    const toMiB = (bytes) => Math.round(bytes / (1024 ** 2));
+    const memBytes = (match) => (match ? parseFloat(match[1]) * (memUnits[match[2]] || 1) : 0);
     return {
       status: info.State && info.State.Status,
       cpu_usage: parseFloat(raw.cpu.replace('%', '')) || 0,
       memory_usage: parseFloat(raw.memPerc.replace('%', '')) || 0,
       memory: {
-        usage: memMatch ? parseFloat(memMatch[1]) : 0,
-        limit: memLimitMatch ? parseFloat(memLimitMatch[1]) : 0,
+        usage: toMiB(memBytes(memMatch)),
+        limit: toMiB(memBytes(memLimitMatch)),
       },
       network: { raw: raw.netIO },
     };
@@ -187,21 +220,19 @@ async function getVpsStats(containerId) {
 
 async function listUserInstances(userId) {
   const rows = await getContainersForUser(userId);
-  const out = [];
-  for (const row of rows) {
-    const vstats = await getVpsStats(row.container_id);
-    out.push({
-      container_id: row.container_id,
-      container_name: row.container_name,
-      info: {
-        created_at: row.created_at,
-        status: vstats ? vstats.status : row.status,
-        config: { image: 'unknown' },
-      },
-      stats: vstats,
-    });
-  }
-  return out;
+  const statsResults = await Promise.all(
+    rows.map((row) => getVpsStats(row.container_id).catch(() => null))
+  );
+  return rows.map((row, i) => ({
+    container_id: row.container_id,
+    container_name: row.container_name,
+    info: {
+      created_at: row.created_at,
+      status: statsResults[i] ? statsResults[i].status : row.status,
+      config: { image: row.image || 'unknown' },
+    },
+    stats: statsResults[i],
+  }));
 }
 
 async function createBackup(containerId, retentionType = 'daily') {
@@ -232,12 +263,22 @@ async function applyRetention(containerId) {
     const retention = JSON.parse(process.env.BACKUP_RETENTION || '{"daily": 7, "weekly": 4, "monthly": 6}');
     for (const [type, maxCount] of Object.entries(retention)) {
       const result = await query(
-        'SELECT id FROM backup_rotation WHERE container_id = $1 AND retention_type = $2 ORDER BY created_at DESC',
+        'SELECT id, image_id FROM backup_rotation WHERE container_id = $1 AND retention_type = $2 ORDER BY created_at DESC',
         [containerId, type]
       );
       if (result.rows.length > maxCount) {
-        const ids = result.rows.slice(maxCount).map((r) => r.id);
-        await query('DELETE FROM backup_rotation WHERE id = ANY($1)', [ids]);
+        const expired = result.rows.slice(maxCount);
+        for (const row of expired) {
+          if (row.image_id) {
+            try {
+              await docker(['rmi', row.image_id], { timeout: 60000 });
+            } catch (err) {
+              console.error('[VPSManager] retention image cleanup failed:', err.message);
+              continue;
+            }
+          }
+          await query('DELETE FROM backup_rotation WHERE id = $1', [row.id]);
+        }
       }
     }
   } catch (err) {
@@ -275,20 +316,17 @@ async function restoreBackup(containerId, backupId) {
       if (!result.rows.length) return false;
       imageRef = result.rows[0].image_id;
     }
+    const info = await inspect(imageRef).catch(() => null);
+    if (!info) return false;
     await docker(['stop', containerId], { timeout: 30000 }).catch(() => {});
     await docker(['rm', containerId], { timeout: 60000 }).catch(() => {});
     const args = ['run', '-d', '--name', containerId, '--restart', 'unless-stopped'];
-    const info = await inspect(imageRef).catch(() => null);
-    if (info) {
-      const cfg = info.Config;
-      if (cfg && cfg.Env) {
-        for (const env of cfg.Env) args.push('-e', env);
-      }
-      if (cfg && cfg.ExposedPorts) {
-        for (const port of Object.keys(cfg.ExposedPorts)) {
-          args.push('-P', port.replace('/tcp', ''));
-        }
-      }
+    const cfg = info.Config;
+    if (cfg && cfg.Env) {
+      for (const env of cfg.Env) args.push('-e', env);
+    }
+    if (cfg && cfg.ExposedPorts && Object.keys(cfg.ExposedPorts).length) {
+      args.push('-P');
     }
     args.push(imageRef);
     await docker(args, { timeout: 120000 });
@@ -300,12 +338,12 @@ async function restoreBackup(containerId, backupId) {
 }
 
 async function execInContainer(containerId, command) {
-  return exec(containerId, command);
+  return execArgv(containerId, ['sh', '-c', command]);
 }
 
 async function executeCommand(containerId, command) {
   try {
-    await exec(containerId, command);
+    await execArgv(containerId, ['sh', '-c', command]);
     return { success: true, error: null };
   } catch (err) {
     return { success: false, error: err.message };

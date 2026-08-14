@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { EmbedBuilder } = require('discord.js');
-const { docker, inspect } = require('./docker');
+const { docker, inspect, execArgv } = require('./docker');
 const { query } = require('./db');
 
 const COMMAND_SPECS = [
@@ -42,7 +42,6 @@ async function ensureTable() {
       port INT,
       username VARCHAR(255),
       password VARCHAR(255),
-      root_password VARCHAR(255),
       connection_string TEXT,
       user_id VARCHAR(255) NOT NULL,
       app_id VARCHAR(255),
@@ -50,6 +49,7 @@ async function ensureTable() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await query('ALTER TABLE managed_databases DROP COLUMN IF EXISTS root_password');
 }
 
 function generatePassword(length = 24) {
@@ -57,9 +57,36 @@ function generatePassword(length = 24) {
   return Array.from({ length }, () => chars[crypto.randomInt(0, chars.length)]).join('');
 }
 
+function isValidDbName(dbName) {
+  if (typeof dbName !== 'string' || !dbName.length) return false;
+  if (dbName.length > 64) return false;
+  if (/[/\\\.]/.test(dbName)) return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(dbName);
+}
+
+async function waitForReady(containerName, rootPassword, maxWaitMs = 60000) {
+  const interval = 2000;
+  const attempts = Math.max(1, Math.floor(maxWaitMs / interval));
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const out = await execArgv(containerName, [
+        'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', `-p${rootPassword}`, '--silent',
+      ]);
+      if (out.includes('alive')) return true;
+    } catch (err) {
+      /* not ready yet */
+    }
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+  return false;
+}
+
 async function createDatabase(dbName, userId, appId = null) {
+  if (!isValidDbName(dbName)) {
+    return { error: 'Invalid database name: use letters, digits, _ or - (max 64 chars, no /, \\ or .)' };
+  }
   const dbPassword = generatePassword();
-  const rootPassword = process.env.MYSQL_ROOT_PASSWORD || generatePassword();
+  const rootPassword = generatePassword();
   const containerName = `mysql-${dbName}-${userId.slice(0, 8)}`;
   try {
     const existing = await inspect(containerName).catch(() => null);
@@ -82,7 +109,7 @@ async function createDatabase(dbName, userId, appId = null) {
       '-l', `user_id=${userId}`,
       'mysql:8.0',
     ], { timeout: 120000 });
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    const ready = await waitForReady(containerName, rootPassword);
     const info = await inspect(containerName);
     const port = info.NetworkSettings && info.NetworkSettings.Ports
       && info.NetworkSettings.Ports['3306/tcp']
@@ -91,6 +118,7 @@ async function createDatabase(dbName, userId, appId = null) {
       : '3306';
     const host = process.env.HOST_IP || '127.0.0.1';
     const dbId = `db_${Date.now().toString(36)}`;
+    const status = ready ? 'running' : 'not_ready';
     const record = {
       id: dbId,
       name: dbName,
@@ -100,17 +128,16 @@ async function createDatabase(dbName, userId, appId = null) {
       port: parseInt(port, 10),
       username: dbName,
       password: dbPassword,
-      root_password: rootPassword,
       connection_string: `mysql://${dbName}:${dbPassword}@${host}:${port}/${dbName}`,
       user_id: userId,
       app_id: appId,
-      status: 'running',
+      status,
     };
     await query(
       `INSERT INTO managed_databases
-       (id, name, container_name, container_id, host, port, username, password, root_password, connection_string, user_id, app_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [dbId, dbName, containerName, info.Id, host, record.port, dbName, dbPassword, rootPassword, record.connection_string, userId, appId, 'running']
+       (id, name, container_name, container_id, host, port, username, password, connection_string, user_id, app_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [dbId, dbName, containerName, info.Id, host, record.port, dbName, dbPassword, record.connection_string, userId, appId, status]
     );
     return record;
   } catch (err) {
@@ -125,7 +152,7 @@ async function deleteDatabase(dbId, userId) {
   ).catch(() => ({ rows: [] }));
   if (!result.rows.length) return false;
   const db = result.rows[0];
-  await docker(['rm', '-f', db.container_id]).catch(() => {});
+  await docker(['rm', '-f', db.container_id], { timeout: 60000 });
   await query('DELETE FROM managed_databases WHERE id = $1', [dbId]);
   return true;
 }
@@ -148,6 +175,11 @@ async function getDatabase(dbId, userId) {
 
 async function handle(interaction) {
   await interaction.deferReply({ ephemeral: true });
+  try {
+    await ensureTable();
+  } catch (err) {
+    console.error('[DbManager] table setup failed:', err.message);
+  }
   const sub = interaction.options.getSubcommand();
   if (sub === 'create') {
     const name = interaction.options.getString('name');
@@ -177,8 +209,13 @@ async function handle(interaction) {
   }
   if (sub === 'delete') {
     const dbId = interaction.options.getString('db_id');
-    const ok = await deleteDatabase(dbId, interaction.user.id);
-    return interaction.editReply({ content: ok ? '🗑️ Database deleted successfully.' : '❌ Database not found or access denied.' });
+    try {
+      const ok = await deleteDatabase(dbId, interaction.user.id);
+      return interaction.editReply({ content: ok ? '🗑️ Database deleted successfully.' : '❌ Database not found or access denied.' });
+    } catch (err) {
+      console.error('[DbManager] delete failed:', err.message);
+      return interaction.editReply({ content: `❌ Failed to delete database: ${err.message}` });
+    }
   }
   if (sub === 'info') {
     const dbId = interaction.options.getString('db_id');

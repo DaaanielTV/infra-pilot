@@ -96,13 +96,16 @@ async function handle(interaction) {
     if (!ALERT_TYPES.includes(alertType)) {
       return interaction.reply({ content: `❌ Type must be ${ALERT_TYPES.join('/')}`, ephemeral: true });
     }
-    let containerId = null;
-    if (vpsInput) {
-      const vpsManager = require('./vpsManager');
-      const owned = await vpsManager.resolveContainerForUser(interaction.user.id, vpsInput);
-      if (!owned) return interaction.reply({ content: '❌ VPS not found for your account', ephemeral: true });
-      containerId = owned.container_id;
+    if (channel !== 'dm') {
+      return interaction.reply({ content: '❌ Only dm delivery is supported.', ephemeral: true });
     }
+    if (!vpsInput) {
+      return interaction.reply({ content: '❌ Provide a vps_id to alert on.', ephemeral: true });
+    }
+    const vpsManager = require('./vpsManager');
+    const owned = await vpsManager.resolveContainerForUser(interaction.user.id, vpsInput);
+    if (!owned) return interaction.reply({ content: '❌ VPS not found for your account', ephemeral: true });
+    const containerId = owned.container_id;
     try {
       const result = await query(
         `INSERT INTO alerts (user_id, container_id, alert_type, threshold, channel)

@@ -71,6 +71,27 @@ async function getPool(name) {
   return { ...r, members: typeof r.members === 'string' ? JSON.parse(r.members || '[]') : (r.members || []) };
 }
 
+async function mutateMembers(poolName, userId, mutate) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await query(
+      'SELECT * FROM resource_pools WHERE name = $1 AND created_by = $2',
+      [poolName, userId]
+    ).catch(() => null);
+    if (!result || !result.rows.length) return { status: 'not_found' };
+    const current = typeof result.rows[0].members === 'string'
+      ? JSON.parse(result.rows[0].members || '[]')
+      : (result.rows[0].members || []);
+    const next = mutate(current);
+    if (next && next.status) return next;
+    const write = await query(
+      'UPDATE resource_pools SET members = $2::jsonb WHERE name = $1 AND created_by = $3 AND members = $4::jsonb',
+      [poolName, JSON.stringify(next), userId, JSON.stringify(current)]
+    ).catch(() => null);
+    if (write && write.rowCount === 1) return { status: 'ok', members: next };
+  }
+  return { status: 'conflict' };
+}
+
 async function handle(interaction) {
   const { commandName, options } = interaction;
   const vpsManager = require('./vpsManager');
@@ -96,7 +117,10 @@ async function handle(interaction) {
   }
   if (commandName === 'resourcepooldelete') {
     const name = options.getString('name');
-    const result = await query('DELETE FROM resource_pools WHERE name = $1 RETURNING name', [name]).catch(() => null);
+    const result = await query(
+      'DELETE FROM resource_pools WHERE name = $1 AND created_by = $2 RETURNING name',
+      [name, interaction.user.id]
+    ).catch(() => null);
     if (!result || !result.rows.length) return interaction.reply({ content: '❌ Pool not found.', ephemeral: true });
     return interaction.reply({ content: `✅ Pool '${name}' deleted.`, ephemeral: true });
   }
@@ -118,26 +142,32 @@ async function handle(interaction) {
   if (commandName === 'resourcepooladd') {
     const poolName = options.getString('pool_name');
     const vpsInput = options.getString('vps_id');
-    const pool = await getPool(poolName);
-    if (!pool) return interaction.reply({ content: '❌ Pool not found.', ephemeral: true });
     const owned = await vpsManager.resolveContainerForUser(interaction.user.id, vpsInput);
     if (!owned) return interaction.reply({ content: '❌ VPS not found for your account.', ephemeral: true });
-    if (pool.members.includes(owned.container_id)) {
-      return interaction.reply({ content: '⚠️ Already in pool.', ephemeral: true });
-    }
-    pool.members.push(owned.container_id);
-    await query('UPDATE resource_pools SET members = $2::jsonb WHERE name = $1', [poolName, JSON.stringify(pool.members)]);
+    const res = await mutateMembers(poolName, interaction.user.id, (members) => {
+      if (members.includes(owned.container_id)) return { status: 'duplicate' };
+      members.push(owned.container_id);
+      return members;
+    });
+    if (res.status === 'not_found') return interaction.reply({ content: '❌ Pool not found.', ephemeral: true });
+    if (res.status === 'duplicate') return interaction.reply({ content: '⚠️ Already in pool.', ephemeral: true });
+    if (res.status === 'conflict') return interaction.reply({ content: '❌ Pool changed concurrently, try again.', ephemeral: true });
     return interaction.reply({ content: `✅ VPS \`${owned.container_id.slice(0, 12)}\` added to pool '${poolName}'.`, ephemeral: true });
   }
   if (commandName === 'resourcepoolremove') {
     const poolName = options.getString('pool_name');
     const vpsInput = options.getString('vps_id');
-    const pool = await getPool(poolName);
-    if (!pool) return interaction.reply({ content: '❌ Pool not found.', ephemeral: true });
     const owned = await vpsManager.resolveContainerForUser(interaction.user.id, vpsInput);
     if (!owned) return interaction.reply({ content: '❌ VPS not found for your account.', ephemeral: true });
-    pool.members = pool.members.filter((m) => m !== owned.container_id);
-    await query('UPDATE resource_pools SET members = $2::jsonb WHERE name = $1', [poolName, JSON.stringify(pool.members)]);
+    const res = await mutateMembers(poolName, interaction.user.id, (members) => {
+      const idx = members.indexOf(owned.container_id);
+      if (idx === -1) return { status: 'missing' };
+      members.splice(idx, 1);
+      return members;
+    });
+    if (res.status === 'not_found') return interaction.reply({ content: '❌ Pool not found.', ephemeral: true });
+    if (res.status === 'missing') return interaction.reply({ content: '⚠️ Not in pool.', ephemeral: true });
+    if (res.status === 'conflict') return interaction.reply({ content: '❌ Pool changed concurrently, try again.', ephemeral: true });
     return interaction.reply({ content: `✅ VPS \`${owned.container_id.slice(0, 12)}\` removed from pool '${poolName}'.`, ephemeral: true });
   }
   return null;

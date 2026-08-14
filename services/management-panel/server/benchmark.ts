@@ -19,8 +19,8 @@ export interface Sampler {
   cpuTimes(): CpuSample[];
   randomBytes(size: number): Buffer;
   writeFile(path: string, data: Buffer): Promise<void>;
+  appendFile(path: string, data: Buffer): Promise<void>;
   unlink(path: string): Promise<void>;
-  resolve(hostname: string): Promise<unknown>;
 }
 
 export const defaultSampler: Sampler = {
@@ -33,8 +33,8 @@ export const defaultSampler: Sampler = {
     })),
   randomBytes: (size: number) => randomBytes(size),
   writeFile: (p, data) => fsp.writeFile(p, data),
+  appendFile: (p, data) => fsp.appendFile(p, data),
   unlink: (p) => fsp.unlink(p),
-  resolve: (hostname: string) => import('dns/promises').then((m) => m.resolve(hostname)),
 };
 
 export interface BenchmarkMeasurement {
@@ -95,16 +95,24 @@ export async function measureDiskWriteMbps(
   sampler: Sampler = defaultSampler,
 ): Promise<{ writeMbps: number; bytesWritten: number }> {
   const filePath = path.join(tmpDir, `.infra-pilot-bench-${process.pid}-${sampler.now()}.tmp`);
-  const data = sampler.randomBytes(sizeMb * 1024 * 1024);
+  await sampler.writeFile(filePath, Buffer.alloc(0));
+  const chunk = sampler.randomBytes(Math.min(sizeMb * 1024 * 1024, 4 * 1024 * 1024));
+  const totalBytes = sizeMb * 1024 * 1024;
+  let written = 0;
   const start = sampler.now();
   try {
-    await sampler.writeFile(filePath, data);
+    while (written < totalBytes) {
+      const remaining = totalBytes - written;
+      const data = remaining < chunk.length ? chunk.subarray(0, remaining) : chunk;
+      await sampler.appendFile(filePath, data);
+      written += data.length;
+    }
   } finally {
     await sampler.unlink(filePath).catch(() => undefined);
   }
   const elapsedSec = (sampler.now() - start) / 1000;
-  const writeMbps = elapsedSec > 0 ? Number((data.length / 1024 / 1024 / elapsedSec).toFixed(2)) : 0;
-  return { writeMbps, bytesWritten: data.length };
+  const writeMbps = elapsedSec > 0 ? Number((written / 1024 / 1024 / elapsedSec).toFixed(2)) : 0;
+  return { writeMbps, bytesWritten: written };
 }
 
 /**
@@ -115,15 +123,13 @@ export async function runBenchmark(
   sampler: Sampler = defaultSampler,
 ): Promise<BenchmarkResult> {
   const durationMs = Math.max(1, durationSeconds) * 1000;
-  const [cpu, disk, memInfo] = await Promise.all([
-    measureCpuUsage(durationMs, sampler),
-    measureDiskWriteMbps(64, os.tmpdir(), sampler),
-    Promise.resolve({
-      usedPct: Number(((1 - os.freemem() / os.totalmem()) * 100).toFixed(1)),
-      totalGb: Number((os.totalmem() / 1024 / 1024 / 1024).toFixed(2)),
-      freeGb: Number((os.freemem() / 1024 / 1024 / 1024).toFixed(2)),
-    }),
-  ]);
+  const cpu = await measureCpuUsage(durationMs, sampler);
+  const disk = await measureDiskWriteMbps(64, os.tmpdir(), sampler);
+  const memInfo = {
+    usedPct: Number(((1 - os.freemem() / os.totalmem()) * 100).toFixed(1)),
+    totalGb: Number((os.totalmem() / 1024 / 1024 / 1024).toFixed(2)),
+    freeGb: Number((os.freemem() / 1024 / 1024 / 1024).toFixed(2)),
+  };
   const load1m = os.loadavg()[0] ?? 0;
   return {
     duration_seconds: durationSeconds,

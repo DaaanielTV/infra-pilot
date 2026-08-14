@@ -122,7 +122,13 @@ def test_update_vps_config_changes_limits(monkeypatch, tmp_path):
     assert stored["cpu_limit"] == 2.0
     assert stored["memory_limit"] == 1024
     assert stored["storage_limit"] == 50
-    assert mock_client.containers.by_id[container_id].updated is True
+    container = mock_client.containers.by_id[container_id]
+    assert container.updated is True
+    assert container.update_kwargs == {
+        "cpu_period": 100000,
+        "cpu_quota": 200000,
+        "mem_limit": "1024m",
+    }
 
 
 def test_list_user_instances_scopes_to_user(monkeypatch, tmp_path):
@@ -134,7 +140,13 @@ def test_list_user_instances_scopes_to_user(monkeypatch, tmp_path):
 
     assert len(instances) == 1
     assert instances[0]["container_id"] == "container-1"
-    assert instances[0]["stats"] is not None
+    assert instances[0]["info"]["user_id"] == "user-1"
+    assert instances[0]["stats"] == {
+        "status": "running",
+        "cpu_usage": 40.0,
+        "memory_usage": 25.0,
+        "network": {"rx_bytes": 10, "tx_bytes": 20},
+    }
 
 
 def test_create_backup_commits_container_image(monkeypatch, tmp_path):
@@ -143,11 +155,16 @@ def test_create_backup_commits_container_image(monkeypatch, tmp_path):
 
     image_id = asyncio.run(manager.create_backup(container_id, retention_type="daily"))
 
-    assert image_id is not None
-    assert image_id.endswith("-img-1")
     backups = manager.vps_instances[container_id].get("backups", [])
-    assert backups and backups[0]["retention_type"] == "daily"
-    assert backups[0]["image_id"] == image_id
+    assert backups == [
+        {
+            "image_id": image_id,
+            "created_at": backups[0]["created_at"],
+            "name": "mock-container_backup_" + backups[0]["created_at"],
+            "retention_type": "daily",
+        }
+    ]
+    assert image_id == backups[0]["name"] + "-img-1"
 
 
 def test_list_backups_falls_back_to_in_memory(monkeypatch, tmp_path):
@@ -157,8 +174,15 @@ def test_list_backups_falls_back_to_in_memory(monkeypatch, tmp_path):
 
     backups = asyncio.run(manager.list_backups(container_id))
 
-    assert len(backups) == 1
-    assert backups[0]["retention_type"] == "weekly"
+    assert backups == [
+        {
+            "image_id": backups[0]["image_id"],
+            "created_at": backups[0]["created_at"],
+            "name": "mock-container_backup_" + backups[0]["created_at"],
+            "retention_type": "weekly",
+        }
+    ]
+    assert backups[0]["image_id"] == backups[0]["name"] + "-img-1"
 
 
 def test_container_name_validation_rejects_injection(monkeypatch, tmp_path):
@@ -188,4 +212,7 @@ def test_instances_persist_to_json_fallback(monkeypatch, tmp_path):
     manager, config_type, _mock_client = build_manager(monkeypatch, tmp_path)
     asyncio.run(manager.create_vps("user-1", make_config(config_type)))
 
-    assert (tmp_path / "vps_instances.json").exists()
+    persisted = (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    assert '"container_id": "container-1"' in persisted
+    assert '"user_id": "user-1"' in persisted
+    assert '"TOKEN"' not in persisted

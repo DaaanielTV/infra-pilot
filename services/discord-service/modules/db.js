@@ -11,6 +11,10 @@ function getDbPool() {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'infra_pilot',
       max: 5,
+      connectionTimeoutMillis: 10000,
+    });
+    _dbPool.on('error', (err) => {
+      console.error('[DB] idle client error:', err.message);
     });
   }
   return _dbPool;

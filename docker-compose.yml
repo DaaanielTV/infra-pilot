@@ -170,8 +170,11 @@ services:
       SERVER_LIMIT: ${SERVER_LIMIT:-5}
       CUTTLY_API_KEY: ${CUTTLY_API_KEY:-}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
+      BACKUP_RETENTION: '${BACKUP_RETENTION:-{"daily": 7, "weekly": 4, "monthly": 6}}'
       HOST_IP: ${HOST_IP:-127.0.0.1}
       NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${DISCORD_WEBHOOK_PORT:-3002}:3000"
     healthcheck:

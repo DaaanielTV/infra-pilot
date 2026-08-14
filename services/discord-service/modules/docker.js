@@ -10,8 +10,11 @@ function docker(args, { timeout = 60000, input } = {}) {
       }
       resolve(stdout.trim());
     });
-    if (input !== undefined) child.stdin.write(input);
-    child.stdin.end();
+    if (input !== undefined) {
+      child.stdin.on('error', () => {});
+      child.stdin.write(input);
+      child.stdin.end();
+    }
   });
 }
 
@@ -37,12 +40,23 @@ async function stats(nameOrId) {
     '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}',
     nameOrId,
   ]);
-  const [Name, CPUPerc, MemUsage, MemPerc, NetIO, BlockIO] = out.split('\t');
-  return { name: Name, cpu: CPUPerc, memUsage: MemUsage, memPerc: MemPerc, netIO: NetIO, blockIO: BlockIO };
+  const [Name, CPUPerc, MemUsage, MemPerc, NetIO, BlockIO] = out ? out.split('\t') : [];
+  return {
+    name: Name || '',
+    cpu: CPUPerc || '',
+    memUsage: MemUsage || '',
+    memPerc: MemPerc || '',
+    netIO: NetIO || '',
+    blockIO: BlockIO || '',
+  };
 }
 
 async function exec(nameOrId, cmd) {
   return docker(['exec', nameOrId, 'sh', '-c', cmd], { timeout: 120000 });
 }
 
-module.exports = { docker, containers, inspect, stats, exec };
+async function execArgv(nameOrId, argv) {
+  return docker(['exec', nameOrId, ...argv], { timeout: 120000 });
+}
+
+module.exports = { docker, containers, inspect, stats, exec, execArgv };

@@ -1,6 +1,6 @@
 # Orchestrator Agent
 
-The core orchestration engine. A Python async service that manages Docker-based VPS instances, evaluates GitOps manifests, enforces RBAC, meters usage, runs billing cycles, heals unhealthy instances, auto-scales resources, and federates across datacenters. Exposes a Discord bot and an aiohttp webhook/API server.
+The core orchestration engine. A Python async service that manages Docker-based VPS instances, evaluates GitOps manifests, enforces RBAC, meters usage, runs billing cycles, and federates across datacenters. Exposes an aiohttp webhook/API server. Discord functionality lives in the unified JavaScript bot at `services/discord-service/`.
 
 ## Quick Start
 
@@ -32,7 +32,6 @@ All via environment variables, loaded by `config.py`:
 | `AUTO_SCALE_COOLDOWN_MINUTES` | `5` | Minutes between auto-scale actions |
 | `AUTO_SCALE_CPU_THRESHOLD` | `80.0` | CPU % threshold for auto-scaling |
 | `AUTO_SCALE_MEMORY_THRESHOLD` | `80.0` | Memory % threshold for auto-scaling |
-| `ORCHESTRATOR_AGENT_DISABLED` | `true` | Set `false` to enable the Discord bot |
 | `PUBLIC_IP` | `""` | Public IP for SSH commands |
 | `WHITELIST_IDS` | `""` | Comma-separated allowed user IDs |
 | `SERVER_LIMIT` | `1` | Max VPS per user |
@@ -137,7 +136,7 @@ Rules are managed via the Discord service (JS bot, `/scaling-rules`, `/scaling-r
 
 | File | Purpose |
 |------|---------|
-| `main.py` | Entry point: DB migrations, webhook/API server, auto-scale & healing wiring |
+| `main.py` | Entry point: runs database migrations, then starts the webhook/API server |
 | `config.py` | Central config from environment variables |
 | `vps_manager.py` | `VPSManager` — Docker container lifecycle, stats, backups, snapshots, health checks, benchmarks |
 | `db.py` | `DatabasePool` — asyncpg connection pool, sync psycopg2 helpers |
@@ -145,7 +144,7 @@ Rules are managed via the Discord service (JS bot, `/scaling-rules`, `/scaling-r
 
 ### Discord Commands
 
-Discord functionality lives in the unified JavaScript bot at `services/discord-service/` (single bot, all slash commands, no Python cogs).
+Discord functionality lives in the unified JavaScript bot at `services/discord-service/` (single bot, all slash commands, no Python cogs). The orchestrator does not expose a Discord bot.
 
 ## API Endpoints
 

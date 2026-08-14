@@ -26,7 +26,7 @@ def _get_client(ctx: typer.Context) -> ApiClient:
 def _memory_usage() -> Dict[str, Any]:
     """Return real memory usage without external dependencies."""
     try:
-        with open("/proc/meminfo", "r") as f:
+        with open("/proc/meminfo") as f:
             meminfo = {}
             for line in f:
                 parts = line.split(":")
@@ -41,7 +41,7 @@ def _memory_usage() -> Dict[str, Any]:
                 "available_gb": round(available_kb / 1024 / 1024, 2),
                 "used_pct": round(used_pct, 1),
             }
-    except (OSError, IOError):
+    except OSError:
         pass
     if sys.platform == "win32":
         import ctypes
@@ -171,10 +171,11 @@ def doctor(
 
     load = _load_average()
     if load:
+        cpu_count = os.cpu_count()
         checks.append(
             {
                 "check": "Load Average",
-                "status": "warn" if load["1m"] > os.cpu_count() or 0 else "ok",
+                "status": "warn" if cpu_count is None or load["1m"] > cpu_count else "ok",
                 "detail": f"1m={load['1m']} 5m={load['5m']} 15m={load['15m']}",
             }
         )

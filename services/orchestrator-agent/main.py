@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 
-from integration import init_database_tables, run_db_migrations
+from integration import init_database_tables
 from webhook_server import start_webhook_server
 
 logger = logging.getLogger(__name__)
@@ -18,16 +18,8 @@ logger = logging.getLogger(__name__)
 
 async def run_server():
     """Initialize database tables and start the webhook/API server."""
-    try:
-        run_db_migrations()
-        logger.info("Database migrations applied")
-    except Exception as exc:
-        logger.warning("Database migration skipped: %s", exc)
-    try:
-        await init_database_tables()
-        logger.info("Database tables initialised")
-    except Exception as exc:
-        logger.warning("Database initialisation skipped: %s", exc)
+    await init_database_tables()
+    logger.info("Database tables initialised")
 
     await start_webhook_server()
     await asyncio.Event().wait()

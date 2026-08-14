@@ -354,7 +354,7 @@ async def start_webhook_server(bot_instance=None):
         bot_instance: Optional for backwards compatibility; no longer used.
     """
     await rbac_store.load_rbac_state(rbac_engine)
-    app = build_webhook_app(bot_instance)
+    app = await build_webhook_app(bot_instance)
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.getenv("GITOPS_WEBHOOK_PORT", "8500"))

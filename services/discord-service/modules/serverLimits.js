@@ -4,15 +4,20 @@ const { query, getDbPool } = require('./db');
 
 const SERVER_LIMITS_FILE = path.join(__dirname, '..', 'server_limits.json');
 
+let _ensureTablePromise = null;
+
 async function _ensureTable() {
-  return query(`
-    CREATE TABLE IF NOT EXISTS server_limits (
-      user_id VARCHAR(255) NOT NULL,
-      server_identifier VARCHAR(255) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (user_id, server_identifier)
-    )
-  `);
+  if (!_ensureTablePromise) {
+    _ensureTablePromise = query(`
+      CREATE TABLE IF NOT EXISTS server_limits (
+        user_id VARCHAR(255) NOT NULL,
+        server_identifier VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, server_identifier)
+      )
+    `);
+  }
+  return _ensureTablePromise;
 }
 
 async function loadServerLimits() {

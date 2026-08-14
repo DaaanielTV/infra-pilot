@@ -65,7 +65,7 @@ async function removeFromDatabase(containerId) {
 async function getContainersForUser(userId) {
   try {
     const result = await query(
-      'SELECT container_id, container_name, ssh_command, status, created_at FROM vps_containers WHERE user_id = $1',
+      'SELECT container_id, container_name, ssh_command, status, image, created_at FROM vps_containers WHERE user_id = $1',
       [userId]
     );
     return result.rows;

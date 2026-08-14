@@ -62,7 +62,6 @@ if (-not (Test-Path -LiteralPath $envFile)) {
 
 Set-SecretValue 'POSTGRES_PASSWORD' (New-RandomSecret)
 Set-SecretValue 'JWT_SECRET' (New-RandomSecret)
-Set-SecretValue 'DISCORD_BOT_TOKEN' (New-RandomSecret)
 Set-SecretValue 'DISCORD_TOKEN' (New-RandomSecret)
 Set-SecretValue 'PTERODACTYL_API_KEY' (New-RandomSecret)
 

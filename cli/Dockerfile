@@ -8,7 +8,7 @@ FROM base AS build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential gcc \
     && rm -rf /var/lib/apt/lists/*
-COPY setup.py .
+COPY pyproject.toml .
 COPY ipilot/ ./ipilot/
 RUN pip install --no-cache-dir .
 

@@ -234,6 +234,16 @@ async function getOwnedAppOrNull(appId: string, userId: string) {
   return data;
 }
 
+function clampPct(value: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(Math.max(n, 0), 100);
+}
+
+function computeOverallScore(cpuPct: number, memPct: number): number {
+  return Number(((clampPct(cpuPct) + clampPct(memPct)) / 2).toFixed(1));
+}
+
 function createDefaultSnapshots(appId: string) {
   const now = Date.now();
   return [
@@ -4067,6 +4077,8 @@ app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: 
     res.status(500).json({ error: 'Failed to benchmark container', details: err.message || String(err) });
   }
 });
+
+const DIAGNOSE_ISSUES = ['connectivity', 'performance', 'disk'];
 
 app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
   const { issue } = req.body;

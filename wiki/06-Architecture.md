@@ -62,33 +62,14 @@
 | `healing/` | Self-healing engine. Monitors health checks, applies remediation policies (restart, recreate, migrate, escalate). Rate limited with configurable cooldowns. |
 | `region/` | Multi-datacenter support. `Region`/`Datacenter` capacity models. `Federation` manages peer-to-peer cross-region orchestration with token authentication. |
 | `scaling/` | Auto-scaling engine. Evaluates rules from `scaling_rules` DB table against live CPU/memory stats. Scales up/down via Docker `container.update()`. |
-| `cogs/` | 17 Discord command cogs covering VPS lifecycle, billing, monitoring, backups, DNS, SSL, alerts, scheduling, templates, and more. |
 | `vps_manager.py` | Core Docker container manager. Create, start, stop, restart, delete, stats, backups, snapshots, clone, migrate, health checks, benchmarks. |
 | `db.py` | Async PostgreSQL pool (asyncpg) and sync helpers (psycopg2). |
 | `integration.py` | Database schema (50+ tables) and notification proxying. |
-| `main.py` | Entry point: Discord bot setup, cog loading, aiohttp webhook/API server, lifecycle wiring. |
+| `main.py` | Entry point: DB migrations, aiohttp webhook/API server, lifecycle wiring. |
 
-### Discord Cogs
+### Discord Commands
 
-| Cog | Slash Commands | Purpose |
-|-----|---------------|---------|
-| `vps_commands` | /vpscreate, /vpsstart, /vpsstop, /vpsrestart, /vpsdelete, /vpsstats, /vpslist | Primary VPS lifecycle |
-| `vps_pricing` | /vpscost, /purchasevps | Cost calc & purchase |
-| `vps_billing` | — | Auto-billing loop |
-| `prepaid_billing` | /balance, /balance add, /balance history, /balance cost | Prepaid balance |
-| `monitoring` | /stats, /containerstats | Live stats & charts |
-| `bot_commands` | /servers, /create, /start, /stop, /restart | Legacy commands |
-| `health_checks` | /health | Health check config |
-| `backup_manager` | /backup, /backups, /restore | Backup lifecycle |
-| `resource_manager` | /resources, /pool | Resource pools |
-| `template_manager` | /template, /templates | Instance templates |
-| `task_scheduler` | /task, /tasks | Cron scheduling |
-| `alert_manager` | /alert, /alerts | Alert rules |
-| `cleanup` | /cleanup | Idle reclamation |
-| `database_manager` | /db-create, /db-delete, /db-list | Database provisioning |
-| `modpack_installer` | /modpack | Minecraft modpacks |
-| `update_manager` | /update, /updates | Image updates |
-| `auto_scaler` | /scaling-rules, /scaling-rule-create, /scaling-rule-delete, /scaling-rule-toggle, /scaling-events | Auto-scaling rules |
+All Discord functionality lives in the unified JavaScript bot at `services/discord-service/` (single bot, all slash commands ported from the former Python cogs — VPS lifecycle, billing/credits, monitoring, backups, health checks, alerts, scheduling, templates, resource pools, databases, maintenance).
 
 ## Data Flow
 

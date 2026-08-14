@@ -112,7 +112,6 @@ services:
       target: production
     container_name: infra-pilot-orchestrator
     environment:
-      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
@@ -145,8 +144,6 @@ services:
       app.kubernetes.io/name: infra-pilot
       app.kubernetes.io/component: orchestrator-agent
       app.kubernetes.io/part-of: infra-pilot
-    profiles:
-      - discord
 
   discord-service:
     build:
@@ -166,7 +163,18 @@ services:
       DB_USER: ${POSTGRES_USER:-infra_pilot}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB:-infra_pilot}
+      WHITELIST_IDS: ${WHITELIST_IDS:-}
+      HEALTH_CHECK_INTERVAL_SECONDS: ${HEALTH_CHECK_INTERVAL_SECONDS:-60}
+      DEFAULT_SSH_IMAGE: ${DEFAULT_SSH_IMAGE:-ubuntu:22.04}
+      PUBLIC_IP: ${PUBLIC_IP:-127.0.0.1}
+      SERVER_LIMIT: ${SERVER_LIMIT:-5}
+      CUTTLY_API_KEY: ${CUTTLY_API_KEY:-}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
+      BACKUP_RETENTION: '${BACKUP_RETENTION:-{"daily": 7, "weekly": 4, "monthly": 6}}'
+      HOST_IP: ${HOST_IP:-127.0.0.1}
       NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${DISCORD_WEBHOOK_PORT:-3002}:3000"
     healthcheck:

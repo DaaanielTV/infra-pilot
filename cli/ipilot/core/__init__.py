@@ -15,7 +15,7 @@ from .exceptions import (
 
 
 def __getattr__(name: str) -> Any:
-    if name in {"create_app", "get_client", "LegacyBridge", "legacy_bridge"}:
+    if name in {"create_app", "get_client"}:
         from . import cli
 
         return getattr(cli, name)
@@ -25,8 +25,6 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "create_app",
     "get_client",
-    "LegacyBridge",
-    "legacy_bridge",
     "register",
     "discover_commands",
     "attach_to_app",

@@ -1,40 +1,29 @@
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
+const { query, getDbPool } = require('./db');
 
 const SERVER_LIMITS_FILE = path.join(__dirname, '..', 'server_limits.json');
-let _dbPool = null;
 
-async function _getDbPool() {
-  if (!_dbPool) {
-    _dbPool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT, 10) || 5432,
-      user: process.env.DB_USER || 'infra_pilot',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'infra_pilot',
-      max: 5,
-    });
-    try {
-      await _dbPool.query(`
-        CREATE TABLE IF NOT EXISTS server_limits (
-          user_id VARCHAR(255) NOT NULL,
-          server_identifier VARCHAR(255) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (user_id, server_identifier)
-        )
-      `);
-    } catch (err) {
-      console.error('[DB] server_limits table setup failed:', err.message);
-    }
+let _ensureTablePromise = null;
+
+async function _ensureTable() {
+  if (!_ensureTablePromise) {
+    _ensureTablePromise = query(`
+      CREATE TABLE IF NOT EXISTS server_limits (
+        user_id VARCHAR(255) NOT NULL,
+        server_identifier VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, server_identifier)
+      )
+    `);
   }
-  return _dbPool;
+  return _ensureTablePromise;
 }
 
 async function loadServerLimits() {
   try {
-    const pool = await _getDbPool();
-    const result = await pool.query(
+    await _ensureTable();
+    const result = await query(
       'SELECT user_id, server_identifier FROM server_limits'
     );
     const limits = {};
@@ -59,8 +48,8 @@ async function loadServerLimits() {
 
 async function saveServerLimits(userId, serverIdentifier) {
   try {
-    const pool = await _getDbPool();
-    await pool.query(
+    await _ensureTable();
+    await query(
       'INSERT INTO server_limits (user_id, server_identifier) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [userId, serverIdentifier]
     );

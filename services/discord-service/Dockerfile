@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      ca-certificates curl tini \
+      ca-certificates curl tini docker.io \
       build-essential python3 pkg-config libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
     && rm -rf /var/lib/apt/lists/*
 

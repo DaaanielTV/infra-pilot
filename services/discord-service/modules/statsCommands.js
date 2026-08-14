@@ -36,6 +36,10 @@ class StatsCommands {
                 password: process.env.DB_PASSWORD,
                 database: process.env.DB_NAME,
                 max: 2,
+                connectionTimeoutMillis: 10000,
+            });
+            this.db.on('error', (error) => {
+                console.error('[StatsCommands] idle client error:', error.message);
             });
         } catch (error) {
             console.error('[StatsCommands] Database connection failed:', error.message);

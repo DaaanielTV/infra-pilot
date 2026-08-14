@@ -13,6 +13,31 @@ const TicketSystem = require('./modules/ticketSystem');
 const TicketCommands = require('./modules/ticketCommands');
 const StatsCommands = require('./modules/statsCommands');
 const RoleManager = require('./modules/roleManager');
+const VPSCommands = require('./modules/vpsCommands');
+const Monitoring = require('./modules/monitoring');
+const HealthChecks = require('./modules/healthChecks');
+const BackupScheduler = require('./modules/backupScheduler');
+const AlertManager = require('./modules/alertManager');
+const TaskScheduler = require('./modules/taskScheduler');
+const Maintenance = require('./modules/maintenance');
+const TemplateManager = require('./modules/templateManager');
+const ResourcePools = require('./modules/resourcePools');
+const DbManager = require('./modules/dbManager');
+const LegacyCommands = require('./modules/legacyCommands');
+
+const COMMAND_MODULES = [
+  { name: 'VPSCommands', module: VPSCommands },
+  { name: 'Monitoring', module: Monitoring },
+  { name: 'HealthChecks', module: HealthChecks },
+  { name: 'AlertManager', module: AlertManager },
+  { name: 'TaskScheduler', module: TaskScheduler },
+  { name: 'Maintenance', module: Maintenance },
+  { name: 'TemplateManager', module: TemplateManager },
+  { name: 'ResourcePools', module: ResourcePools },
+  { name: 'DbManager', module: DbManager },
+  { name: 'LegacyCommands', module: LegacyCommands },
+];
+const ERROR_TEXT = '❌ An error occurred while running this command.';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PTERODACTYL_API_URL = process.env.PTERODACTYL_API_URL;
@@ -155,6 +180,16 @@ async function registerCommands() {
     { name: 'status', description: 'Server status commands', type: 1, options: [{ name: 'widget', description: 'Create a status widget', type: 1 }, { name: 'info', description: 'Show live server status', type: 1 }] },
     { name: 'role', description: 'Role management commands', type: 1, options: [{ name: 'info', description: 'Show role hierarchy info', type: 1 }] },
     { name: 'report', description: 'Report bot commands', type: 1, options: [{ name: 'send', description: 'Send a report to this channel', type: 1, options: [{ name: 'type', description: 'Report type', type: 3, required: false, choices: [{ name: 'Executive Summary', value: 'executive-summary' }, { name: 'Cost Report', value: 'cost' }, { name: 'Performance Report', value: 'performance' }, { name: 'Incident Report', value: 'incidents' }] }] }] },
+    ...VPSCommands.toSpec(),
+    ...Monitoring.toSpec(),
+    ...HealthChecks.toSpec(),
+    ...AlertManager.toSpec(),
+    ...TaskScheduler.toSpec(),
+    ...Maintenance.toSpec(),
+    ...TemplateManager.toSpec(),
+    ...ResourcePools.toSpec(),
+    ...DbManager.toSpec(),
+    ...LegacyCommands.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);
@@ -167,7 +202,14 @@ async function registerCommands() {
 client.once('ready', async () => {
   console.log(`[Discord] Bot online as ${client.user.tag}`);
   await registerCommands();
+  vpsManager.ensureTables().catch(() => {});
   serverStatus.initialize(client);
+  Monitoring.init(client);
+  HealthChecks.init(client);
+  BackupScheduler.init(client);
+  AlertManager.init(client);
+  TaskScheduler.init(client).catch((err) => console.error('[TaskScheduler] init failed:', err.message));
+  Monitoring.updatePresence().catch(() => {});
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -193,6 +235,23 @@ client.on('interactionCreate', async (interaction) => {
       );
       const embed = new EmbedBuilder().setTitle('Server-Erstellung').setDescription('Wähle den Typ des Servers, den du erstellen möchtest:').setColor('#007bff');
       return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    }
+    for (const entry of COMMAND_MODULES) {
+      if (entry.module.isParsed(interaction.commandName)) {
+        return entry.module.handle(interaction).catch(async (error) => {
+          console.error(`[${entry.name}] ${interaction.commandName} failed:`, error);
+          try {
+            if (interaction.deferred || interaction.replied) {
+              await interaction.editReply({ content: ERROR_TEXT });
+            } else {
+              await interaction.reply({ content: ERROR_TEXT, ephemeral: true });
+            }
+          } catch (replyError) {
+            console.error(`[${entry.name}] error reply failed:`, replyError);
+          }
+          return null;
+        });
+      }
     }
     ticketCommands.handleCommand(interaction);
     statsCommands.handleCommand(interaction);

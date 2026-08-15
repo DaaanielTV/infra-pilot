@@ -54,7 +54,7 @@ def create(
         None (output is printed via print_output).
     """
     client = _get_client(ctx)
-    result = client.create_backup(server)
+    result = client.create_backup(server, s3_target=s3_target)
     print_output(result, ctx.obj.get("output", "table"))
 
 

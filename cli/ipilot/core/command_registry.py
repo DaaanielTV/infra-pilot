@@ -53,7 +53,8 @@ def discover_commands(package_path: str = "ipilot.commands"):
         try:
             mod = importlib.import_module(modname)
             if hasattr(mod, "app") and isinstance(mod.app, typer.Typer):
-                parts = modname.split(".")[2:]
+                base = package_path.split(".")
+                parts = modname.split(".")[len(base):]
                 name = "_".join(parts) if len(parts) > 1 else parts[0]
                 _registry[name] = (mod.app, mod.app.info.help or "")
         except Exception:

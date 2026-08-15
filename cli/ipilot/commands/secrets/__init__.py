@@ -137,4 +137,7 @@ def roles(
         print_output(result, ctx.obj.get("output", "table"))
         return
     result = client.list_secret_access(key)
-    print_output(result, ctx.obj.get("output", "table"))
+    data = (
+        result if isinstance(result, builtins.list) else result.get("roles", result)
+    )
+    print_output(data, ctx.obj.get("output", "table"))

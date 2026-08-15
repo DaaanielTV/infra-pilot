@@ -52,6 +52,7 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
 
     profile = profile or config.get("profile")
     if profile:
+        config["profile"] = profile
         profile_path = _profile_path(profile)
         if os.path.exists(profile_path):
             try:

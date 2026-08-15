@@ -174,7 +174,7 @@ def doctor(
         checks.append(
             {
                 "check": "Load Average",
-                "status": "warn" if load["1m"] > os.cpu_count() or 0 else "ok",
+                "status": "warn" if load["1m"] > (os.cpu_count() or 0) else "ok",
                 "detail": f"1m={load['1m']} 5m={load['5m']} 15m={load['15m']}",
             }
         )

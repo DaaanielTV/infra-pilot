@@ -249,21 +249,21 @@ class ApiClient:
         path = f"/backup-jobs?app_id={server_id}" if server_id else "/backup-jobs"
         return self._request("GET", path)
 
-    def create_backup(self, server_id: str) -> Any:
+    def create_backup(self, server_id: str, s3_target: Optional[str] = None) -> Any:
         """Create a backup of a server.
 
         Args:
             server_id: The server ID.
+            s3_target: Optional S3/Backblaze target for offsite storage.
         """
-        return self._request(
-            "POST",
-            "/backup-jobs",
-            {
-                "app_id": server_id,
-                "name": f"backup-{server_id}",
-                "schedule_type": "manual",
-            },
-        )
+        data: Dict[str, Any] = {
+            "app_id": server_id,
+            "name": f"backup-{server_id}",
+            "schedule_type": "manual",
+        }
+        if s3_target:
+            data["s3_target"] = s3_target
+        return self._request("POST", "/backup-jobs", data)
 
     def deploy(
         self, server_id: str, branch: str, repo_url: Optional[str] = None
@@ -289,6 +289,26 @@ class ApiClient:
     def health_check(self) -> Any:
         """Check API health."""
         return self._request("GET", "/health")
+
+    def dns_zones(self) -> Any:
+        """List DNS zones."""
+        return self._request("GET", "/dns-zones")
+
+    def dns_records(self, zone_id: str) -> Any:
+        """List DNS records for a zone.
+
+        Args:
+            zone_id: The DNS zone ID.
+        """
+        return self._request("GET", f"/dns-zones/{zone_id}/records")
+
+    def drift_scan(self) -> Any:
+        """Run a new configuration drift scan."""
+        return self._request("POST", "/drift/scan")
+
+    def drift_list(self) -> Any:
+        """List detected configuration drift."""
+        return self._request("GET", "/drift/list")
 
     # ------------------------------------------------------------------
     # SSH Session Management

@@ -98,7 +98,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ inputs.service-path }}
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
 
       - name: Run lint
         if: inputs.run-lint

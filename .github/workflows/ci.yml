@@ -78,6 +78,39 @@ jobs:
             services:
               - 'services/**'
 
+
+  # ── Full Codebase Test Sweep ─────────────────────────────────────
+  all-tests:
+    runs-on: ubuntu-latest
+    name: Full Codebase Tests
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Install Discord service dependencies
+        working-directory: services/discord-service
+        run: npm install --legacy-peer-deps
+      - name: Install management panel dependencies
+        working-directory: services/management-panel
+        run: npm ci --legacy-peer-deps
+      - name: Run every test suite with coverage
+        run: bash scripts/test.sh --coverage
+
   # ── CLI Service (Python) ───────────────────────────────────────────
   cli-lint:
     needs: changes
@@ -135,7 +168,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov
       - name: Run pytest for CLI
         run: |
-          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=40
+          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=100
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -249,7 +282,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd services/management-panel
-          npm ci
+          npm ci --legacy-peer-deps
       - name: Lint
         run: |
           cd services/management-panel

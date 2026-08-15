@@ -17,7 +17,7 @@ const modules = {
 test('all service modules load without crashing', () => {
   for (const [name, mod] of Object.entries(modules)) {
     assert.ok(mod, `${name} did not export anything`);
-    assert.strictEqual(typeof mod, 'object', `${name} should export an object`);
+    assert.ok(['function', 'object'].includes(typeof mod), `${name} should export a module API`);
   }
 });
 

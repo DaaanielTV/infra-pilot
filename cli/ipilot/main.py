@@ -73,15 +73,20 @@ def completion(
     install: bool = typer.Option(False, "--install", help="Install shell completion"),
 ):
     """Set up shell completion for the CLI."""
+    from typer.completion import get_completion_script, install as install_completion
+
+    resolved = shell if shell != "auto" else "bash"
     if install:
-        from typer._completion import install as install_completion
-
-        install_completion()
-        typer.echo(f"Completion installed for {shell}")
+        install_completion(resolved, prog_name="ipilot")
+        typer.echo(f"Completion installed for {resolved}")
     else:
-        from typer._completion import show_callback
-
-        show_callback(shell)
+        typer.echo(
+            get_completion_script(
+                prog_name="ipilot",
+                complete_var="_IPILOT_COMPLETE",
+                shell=resolved,
+            )
+        )
 
 
 @app.command()
@@ -95,6 +100,10 @@ def batch(
             ops: Dict[str, List[Dict[str, Any]]] = yaml.safe_load(f)
     except (FileNotFoundError, yaml.YAMLError) as exc:
         typer.echo(f"Error loading batch file: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    if not ops or "operations" not in ops:
+        typer.echo(f"No operations found in {file}", err=True)
         raise typer.Exit(code=1)
 
     for op in ops.get("operations", []):
@@ -111,13 +120,11 @@ def benchmark(
     """Run performance benchmarks (alias for 'ipilot doctor benchmark')."""
     from typer.testing import CliRunner
 
-    from .commands.doctor import benchmark as benchmark_cmd
-
     runner = CliRunner()
-    args = []
+    args = ["doctor", "benchmark"]
     if server:
         args.extend(["--server", server])
-    result = runner.invoke(benchmark_cmd, args)
+    result = runner.invoke(app, args)
     typer.echo(result.output)
 
 
@@ -132,15 +139,13 @@ def diagnose(
     """Diagnose infrastructure issues (alias for 'ipilot doctor diagnose')."""
     from typer.testing import CliRunner
 
-    from .commands.doctor import diagnose as diagnose_cmd
-
     runner = CliRunner()
-    args = []
+    args = ["doctor", "diagnose"]
     if server:
         args.extend(["--server", server])
     if issue:
         args.extend(["--issue", issue])
-    result = runner.invoke(diagnose_cmd, args)
+    result = runner.invoke(app, args)
     typer.echo(result.output)
 
 

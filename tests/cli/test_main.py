@@ -151,35 +151,16 @@ class TestDocsCommand:
 
 class TestDoctorAliases:
     @staticmethod
-    def _fake_benchmark_command():
-        import typer
+    def _install_fake_client(monkeypatch):
+        from unittest.mock import MagicMock
 
-        calls = []
-        app = typer.Typer()
-
-        @app.command()
-        def fake_benchmark(
-            server: str = typer.Option(None, "--server", "-s"),
-        ):
-            calls.append(server)
-
-        return app, calls
-
-    @staticmethod
-    def _fake_diagnose_command():
-        import typer
-
-        calls = []
-        app = typer.Typer()
-
-        @app.command()
-        def fake_diagnose(
-            server: str = typer.Option(None, "--server", "-s"),
-            issue: str = typer.Option(None, "--issue", "-i"),
-        ):
-            calls.append((server, issue))
-
-        return app, calls
+        client = MagicMock()
+        client.benchmark_server.return_value = {"status": "done"}
+        client.benchmark_system.return_value = {"status": "done"}
+        client.diagnose_server.return_value = {"status": "done"}
+        client.diagnose_system.return_value = {"status": "done"}
+        monkeypatch.setattr("cli.ipilot.commands.doctor._get_client", lambda ctx: client)
+        return client
 
     def test_doctor_dispatches_to_doctor_subcommand(self, runner):
         cli_runner, _ = runner
@@ -191,20 +172,41 @@ class TestDoctorAliases:
 
     def test_benchmark_alias_dispatches_to_benchmark_command(self, runner, monkeypatch):
         cli_runner, _ = runner
-        fake_benchmark, calls = self._fake_benchmark_command()
-        monkeypatch.setattr("cli.ipilot.commands.doctor.benchmark", fake_benchmark)
+        client = self._install_fake_client(monkeypatch)
 
         result = cli_runner.invoke(app, ["benchmark", "--server", "vps-1"])
 
         assert result.exit_code == 0
-        assert calls == ["vps-1"]
+        client.benchmark_server.assert_called_once()
+        assert "vps-1" in client.benchmark_server.call_args.args
+
+    def test_benchmark_alias_without_server_benchmarks_system(
+        self, runner, monkeypatch
+    ):
+        cli_runner, _ = runner
+        client = self._install_fake_client(monkeypatch)
+
+        result = cli_runner.invoke(app, ["benchmark"])
+
+        assert result.exit_code == 0
+        client.benchmark_system.assert_called_once()
 
     def test_diagnose_alias_dispatches_to_diagnose_command(self, runner, monkeypatch):
         cli_runner, _ = runner
-        fake_diagnose, calls = self._fake_diagnose_command()
-        monkeypatch.setattr("cli.ipilot.commands.doctor.diagnose", fake_diagnose)
+        client = self._install_fake_client(monkeypatch)
 
         result = cli_runner.invoke(app, ["diagnose", "--issue", "disk"])
 
         assert result.exit_code == 0
-        assert calls == [(None, "disk")]
+        client.diagnose_system.assert_called_once()
+        assert client.diagnose_system.call_args.kwargs == {"issue": "disk"}
+
+    def test_diagnose_alias_with_server(self, runner, monkeypatch):
+        cli_runner, _ = runner
+        client = self._install_fake_client(monkeypatch)
+
+        result = cli_runner.invoke(app, ["diagnose", "--server", "vps-1"])
+
+        assert result.exit_code == 0
+        client.diagnose_server.assert_called_once()
+        assert client.diagnose_server.call_args.kwargs == {"issue": None}

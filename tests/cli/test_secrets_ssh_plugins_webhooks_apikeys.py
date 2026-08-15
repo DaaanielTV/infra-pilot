@@ -42,6 +42,20 @@ def invoke(runner):
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 
 
+def _real_path_invoke(monkeypatch, tmp_path, module, args):
+    """Invoke a command without the patched _get_client, covering the real one."""
+    monkeypatch.setattr(
+        f"cli.ipilot.commands.{module}.ApiClient", lambda *a, **k: MagicMock()
+    )
+    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot"))
+    monkeypatch.setattr(
+        "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+    )
+    from cli.ipilot.main import app as main_app
+
+    return CliRunner().invoke(main_app, args)
+
+
 class TestSecrets:
     def test_list_no_path(self, client, invoke):
         client.list_secrets.return_value = {"secrets": []}
@@ -127,12 +141,8 @@ class TestSecrets:
         assert result.exit_code == 0
         client.list_secret_access.assert_called_once_with("k1")
 
-    def test_get_client_real_path(self, invoke, monkeypatch):
-        monkeypatch.setattr(
-            "cli.ipilot.commands.secrets.ApiClient",
-            lambda *a, **k: MagicMock(),
-        )
-        result = invoke(["secrets", "list"])
+    def test_get_client_real_path(self, monkeypatch, tmp_path):
+        result = _real_path_invoke(monkeypatch, tmp_path, "secrets", ["secrets", "list"])
         assert result.exit_code == 0
 
 
@@ -251,11 +261,8 @@ class TestSsh:
         assert result.exit_code == 0
         client.list_saved_hosts.assert_called_once()
 
-    def test_get_client_real_path(self, invoke, monkeypatch):
-        monkeypatch.setattr(
-            "cli.ipilot.commands.ssh.ApiClient", lambda *a, **k: MagicMock()
-        )
-        result = invoke(["ssh", "list"])
+    def test_get_client_real_path(self, monkeypatch, tmp_path):
+        result = _real_path_invoke(monkeypatch, tmp_path, "ssh", ["ssh", "list"])
         assert result.exit_code == 0
 
 
@@ -306,11 +313,8 @@ class TestPlugins:
         assert result.exit_code == 0
         client.get_plugin_info.assert_called_once_with("grafana")
 
-    def test_get_client_real_path(self, invoke, monkeypatch):
-        monkeypatch.setattr(
-            "cli.ipilot.commands.plugins.ApiClient", lambda *a, **k: MagicMock()
-        )
-        result = invoke(["plugins", "list"])
+    def test_get_client_real_path(self, monkeypatch, tmp_path):
+        result = _real_path_invoke(monkeypatch, tmp_path, "plugins", ["plugins", "list"])
         assert result.exit_code == 0
 
 
@@ -380,11 +384,8 @@ class TestWebhooks:
         assert result.exit_code == 0
         client.get_webhook_logs.assert_called_once_with(None)
 
-    def test_get_client_real_path(self, invoke, monkeypatch):
-        monkeypatch.setattr(
-            "cli.ipilot.commands.webhooks.ApiClient", lambda *a, **k: MagicMock()
-        )
-        result = invoke(["webhooks", "list"])
+    def test_get_client_real_path(self, monkeypatch, tmp_path):
+        result = _real_path_invoke(monkeypatch, tmp_path, "webhooks", ["webhooks", "list"])
         assert result.exit_code == 0
 
 
@@ -424,9 +425,6 @@ class TestApiKeys:
         assert result.exit_code == 0
         client.revoke_api_key.assert_called_once_with("key-1")
 
-    def test_get_client_real_path(self, invoke, monkeypatch):
-        monkeypatch.setattr(
-            "cli.ipilot.commands.apikeys.ApiClient", lambda *a, **k: MagicMock()
-        )
-        result = invoke(["apikeys", "list"])
+    def test_get_client_real_path(self, monkeypatch, tmp_path):
+        result = _real_path_invoke(monkeypatch, tmp_path, "apikeys", ["apikeys", "list"])
         assert result.exit_code == 0

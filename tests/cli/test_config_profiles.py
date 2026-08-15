@@ -162,6 +162,18 @@ class TestListAndDeleteProfiles:
 
         assert list_profiles() == []
 
+    def test_list_profiles_os_error_logs(self, config_dir, caplog):
+        import logging
+        from unittest.mock import patch
+
+        from cli.ipilot.config import list_profiles
+
+        with patch(
+            "cli.ipilot.config.os.listdir", side_effect=OSError("denied")
+        ), caplog.at_level(logging.ERROR):
+            assert list_profiles() == []
+        assert "Failed to list profiles" in caplog.text
+
     def test_delete_profile_removes_file(self, config_dir):
         from cli.ipilot.config import delete_profile
 

@@ -169,6 +169,15 @@ class TestDoctorCommand:
         assert result.exit_code == 0
         assert "unhealthy" in result.output
 
+    def test_load_average_unavailable_is_reported(self, invoke, monkeypatch):
+        _healthy_helpers(monkeypatch)
+        monkeypatch.setattr(DOCTOR + "._load_average", lambda: None)
+
+        result = invoke(["doctor", "doctor"])
+
+        assert result.exit_code == 0
+        assert "not available on this platform" in result.output
+
     def test_no_ssh_keys_warns(self, invoke, monkeypatch):
         _healthy_helpers(monkeypatch)
         monkeypatch.setattr(DOCTOR + ".os.listdir", lambda p: ["config", "known_hosts"])
@@ -274,6 +283,35 @@ class TestMemoryUsage:
         monkeypatch.setattr("builtins.open", fake_open)
         result = doctor_mod._memory_usage()
         assert result["total_gb"] == 1.0
+
+    def test_windows_memory_status_success_path(self, monkeypatch):
+        import ctypes
+
+        import cli.ipilot.commands.doctor as doctor_mod
+
+        def fail_open(path, *args, **kwargs):
+            raise FileNotFoundError(path)
+
+        class FakeKernel32:
+            def GlobalMemoryStatusEx(self, status_ptr):
+                status = status_ptr._obj
+                status.ullTotalPhys = 8 * 1024 * 1024 * 1024
+                status.ullAvailPhys = 2 * 1024 * 1024 * 1024
+                status.dwMemoryLoad = 75
+                return True
+
+        class FakeWindll:
+            kernel32 = FakeKernel32()
+
+        monkeypatch.setattr("builtins.open", fail_open)
+        monkeypatch.setattr(doctor_mod.sys, "platform", "win32")
+        monkeypatch.setattr(ctypes, "windll", FakeWindll(), raising=False)
+
+        assert doctor_mod._memory_usage() == {
+            "total_gb": 8.0,
+            "available_gb": 2.0,
+            "used_pct": 75,
+        }
 
     def test_windows_unavailable_falls_back(self, monkeypatch):
         import ctypes
@@ -381,9 +419,7 @@ def _install_fake_textual(
     sys.modules["textual.containers"].Vertical = Container
     sys.modules["textual.screen"].Screen = Container
     for w in widgets:
-        make_widget = type(
-            w, (), {"__init__": lambda self, *a, **k: None}
-        )
+        make_widget = type(w, (), {"__init__": lambda self, *a, **k: None})
         sys.modules["textual.widgets"].__dict__[w] = make_widget
     return FakeApp, FakeWidget
 

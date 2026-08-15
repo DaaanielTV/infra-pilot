@@ -24,17 +24,17 @@ Usage: $(basename "$0") [OPTIONS]
 
 Options:
   --coverage  Include coverage reports
-  --offline   Skip Maven tests (offline mode)
+  --offline   Skip network-dependent or unavailable service steps
   --json      Output results as JSON
   --help      Show this help message
 EOF
   exit 0
 }
 
-TEST_SERVICES=(
-  "services/orchestrator-agent"
-  "services/discord-service"
-  "services/management-panel"
+TEST_SUITES=(
+  "python:.:pytest"
+  "node:services/discord-service:npm"
+  "node:services/management-panel:npm"
 )
 
 SHOW_COVERAGE=false
@@ -81,81 +81,80 @@ if [ "$OFFLINE" = true ]; then
   info "Offline mode enabled: network-dependent test steps will be skipped"
 fi
 
-for service in "${TEST_SERVICES[@]}"; do
-  if [ ! -d "$service" ]; then
-    warn "Service not found: $service"
+for suite in "${TEST_SUITES[@]}"; do
+  IFS=":" read -r SUITE_TYPE SUITE_PATH SUITE_RUNNER <<< "$suite"
+
+  if [ ! -d "$SUITE_PATH" ]; then
+    warn "Test suite path not found: $SUITE_PATH"
     SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
     continue
   fi
 
-  SERVICE_NAME=$(basename "$service")
-  section "Testing $SERVICE_NAME"
+  section "Testing $SUITE_PATH"
 
-  pushd "$service" > /dev/null
-
-  if [[ "$SERVICE_NAME" == "orchestrator-agent" ]]; then
-    if command -v python3 &> /dev/null; then
-      if [ -f "venv/bin/activate" ]; then
-        # shellcheck disable=SC1091
-        source venv/bin/activate
-      fi
-
-      if command -v pytest &> /dev/null; then
-        if [ -d "tests" ]; then
-          run_pytest_suite "tests/" "$SERVICE_NAME"
-        else
-          warn "No tests directory found for $SERVICE_NAME"
-          SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-        fi
-      else
-        warn "pytest not installed, skipping tests"
-        SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-      fi
-
-      if [ -f "venv/bin/activate" ]; then
-        deactivate 2>/dev/null || true
-      fi
-    else
-      warn "Python not available, skipping tests"
+  if [ "$SUITE_TYPE" = "python" ]; then
+    if ! command -v pytest &> /dev/null; then
+      warn "pytest not installed, skipping $SUITE_PATH"
       SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+      continue
     fi
 
-  elif [[ "$SERVICE_NAME" == "discord-service" ]] || [[ "$SERVICE_NAME" == "management-panel" ]]; then
-    if [ -f "package.json" ]; then
-      if command -v npm &> /dev/null; then
-        if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1)" 2>/dev/null; then
-          info "Running npm test..."
-          set +e
-          if [ "$SHOW_COVERAGE" = true ]; then
-            npm run test -- --coverage
-          else
-            npm run test
-          fi
-          rc=$?
-          set -e
-
-          if [ "$rc" -eq 0 ]; then
-            success "Tests passed for $SERVICE_NAME"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-          else
-            error "Tests failed for $SERVICE_NAME"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-          fi
-        else
-          warn "No test script defined in package.json"
-          SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-        fi
-      else
-        warn "npm not available, skipping tests"
-        SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
-      fi
+    set +e
+    if [ "$SHOW_COVERAGE" = true ]; then
+      pytest tests/ -q --cov=cli/ipilot --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov-report=term-missing --cov-fail-under=100
     else
-      warn "No package.json found"
-      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+      pytest tests/ -q
     fi
+    rc=$?
+    set -e
+
+  elif [ "$SUITE_TYPE" = "node" ]; then
+    if ! command -v npm &> /dev/null; then
+      warn "npm not available, skipping $SUITE_PATH"
+      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+      continue
+    fi
+    if [ ! -f "$SUITE_PATH/package.json" ]; then
+      warn "No package.json found in $SUITE_PATH"
+      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+      continue
+    fi
+
+    pushd "$SUITE_PATH" > /dev/null
+    if [ ! -d node_modules ]; then
+      info "Installing npm dependencies for $SUITE_PATH..."
+      if [ -f package-lock.json ]; then
+        npm ci --legacy-peer-deps
+      else
+        npm install --legacy-peer-deps
+      fi
+    fi
+
+    set +e
+    if [ "$SHOW_COVERAGE" = true ] && node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['test:coverage'] ? 0 : 1)" 2>/dev/null; then
+      npm run test:coverage
+    else
+      npm test
+    fi
+    rc=$?
+    set -e
+    popd > /dev/null
+  else
+    warn "Unknown test suite type: $SUITE_TYPE"
+    SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+    continue
   fi
 
-  popd > /dev/null
+  if [ "$rc" -eq 0 ]; then
+    success "Tests passed for $SUITE_PATH"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+  elif [ "$rc" -eq 5 ]; then
+    warn "No tests collected for $SUITE_PATH"
+    SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+  else
+    error "Tests failed for $SUITE_PATH"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+  fi
 done
 
 section "Test Summary"

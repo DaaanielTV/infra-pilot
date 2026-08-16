@@ -116,7 +116,10 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
-      GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:-}
+      GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:-loadtest-dev-token}
+      # Bearer token for the /api/ route group. Fails closed when set:
+      # requests without a matching Authorization header get a 401.
+      FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:-loadtest-dev-token}
       PYTHONUNBUFFERED: "1"
     ports:
       - "${ORCHESTRATOR_WEBHOOK_PORT:-8500}:8500"
@@ -295,6 +298,50 @@ services:
           memory: 64M
     profiles:
       - monitoring
+
+  # One-shot k6 load test runner (scenarios in tests/load/k6).
+  # Run:  docker compose --profile loadtest up postgres redis orchestrator-agent management-panel -d
+  #       docker compose --profile loadtest run --rm loadtest
+  # The k6 container waits for the orchestrator healthcheck, executes the
+  # scenario selected via K6_SCENARIO and writes loadtest-results.json
+  # back into tests/load/k6/ (gitignored).
+  loadtest:
+    image: grafana/k6:latest
+    container_name: infra-pilot-loadtest
+    profiles:
+      - loadtest
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        k6 run "/tests/${K6_SCENARIO:-smoke}.js" \
+          --out json=/tests/loadtest-results.json
+    environment:
+      K6_TARGET_ORCHESTRATOR: http://orchestrator-agent:8500
+      K6_TARGET_PANEL: http://management-panel:3001
+      K6_FEDERATION_TOKEN: ${FEDERATION_API_TOKEN:-loadtest-dev-token}
+      K6_GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:-loadtest-dev-token}
+      K6_SOAK_VUS: ${K6_SOAK_VUS:-50}
+      K6_SOAK_DURATION: ${K6_SOAK_DURATION:-30m}
+      K6_SPIKE_MAX_VU: ${K6_SPIKE_MAX_VU:-500}
+      K6_MANIFEST_COUNT: ${K6_MANIFEST_COUNT:-1}
+    volumes:
+      - ./tests/load/k6:/tests:rw
+    depends_on:
+      orchestrator-agent:
+        condition: service_healthy
+    networks:
+      - infra-pilot-net
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: loadtest
+      app.kubernetes.io/part-of: infra-pilot
 
 volumes:
   postgres_data:

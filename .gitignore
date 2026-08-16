@@ -11,6 +11,9 @@ logs/
 .tmp/
 .cache/
 
+# Load test artifacts
+tests/load/k6/loadtest-results.json
+
 # Python
 __pycache__/
 *.pyc

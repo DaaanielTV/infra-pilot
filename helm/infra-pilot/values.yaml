@@ -187,7 +187,6 @@ secrets:
   data:
     DB_PASSWORD: ""  # REQUIRED in production
     REDIS_PASSWORD: ""  # REQUIRED in production
-    JWT_SECRET: ""  # REQUIRED in production - generate via: openssl rand -hex 32
     API_KEY: ""  # REQUIRED in production - generate via: openssl rand -hex 32
 
 networkPolicies:

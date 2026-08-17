@@ -6,7 +6,7 @@ from typing import Optional
 import typer
 
 from ...client import ApiClient
-from ...config import load_config
+from ...config import DEFAULT_API_URL, load_config
 from ...output.formatters import print_output
 
 app = typer.Typer(help="Secret management")
@@ -14,9 +14,7 @@ app = typer.Typer(help="Secret management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(
-        config.get("api_url", "http://localhost:8080"), config.get("token")
-    )
+    return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
 
 
 @app.command()
@@ -137,7 +135,5 @@ def roles(
         print_output(result, ctx.obj.get("output", "table"))
         return
     result = client.list_secret_access(key)
-    data = (
-        result if isinstance(result, builtins.list) else result.get("roles", result)
-    )
+    data = result if isinstance(result, builtins.list) else result.get("roles", result)
     print_output(data, ctx.obj.get("output", "table"))

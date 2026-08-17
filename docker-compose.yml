@@ -116,10 +116,10 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
-      GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:-loadtest-dev-token}
+      GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:?GITOPS_WEBHOOK_TOKEN must be set (see .env.example or scripts/generate-env.sh)}
       # Bearer token for the /api/ route group. Fails closed when set:
       # requests without a matching Authorization header get a 401.
-      FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:-loadtest-dev-token}
+      FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:?FEDERATION_API_TOKEN must be set (see .env.example or scripts/generate-env.sh)}
       PYTHONUNBUFFERED: "1"
     ports:
       - "${ORCHESTRATOR_WEBHOOK_PORT:-8500}:8500"
@@ -318,8 +318,8 @@ services:
     environment:
       K6_TARGET_ORCHESTRATOR: http://orchestrator-agent:8500
       K6_TARGET_PANEL: http://management-panel:3001
-      K6_FEDERATION_TOKEN: ${FEDERATION_API_TOKEN:-loadtest-dev-token}
-      K6_GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN:-loadtest-dev-token}
+      K6_FEDERATION_TOKEN: ${FEDERATION_API_TOKEN}
+      K6_GITOPS_WEBHOOK_TOKEN: ${GITOPS_WEBHOOK_TOKEN}
       K6_SOAK_VUS: ${K6_SOAK_VUS:-50}
       K6_SOAK_DURATION: ${K6_SOAK_DURATION:-30m}
       K6_SPIKE_MAX_VU: ${K6_SPIKE_MAX_VU:-500}

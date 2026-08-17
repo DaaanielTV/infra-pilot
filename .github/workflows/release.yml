@@ -73,11 +73,9 @@ jobs:
             echo ""
             echo "### Services included"
             echo "- CLI Service"
-            echo "- Integration Service"
             echo "- Orchestrator Agent"
             echo "- Management Panel"
             echo "- Discord Service"
-            echo "- Service Core"
           } > changelog.md
 
           EOF_DELIMITER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64 | tr -dc 'a-zA-Z0-9')

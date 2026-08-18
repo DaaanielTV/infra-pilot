@@ -41,7 +41,9 @@ fill() {
 }
 
 fill POSTGRES_PASSWORD "$(gen_secret)"
-fill JWT_SECRET "$(gen_secret)"
+fill GITHUB_WEBHOOK_SECRET "$(gen_secret)"
+fill GITOPS_WEBHOOK_TOKEN "$(gen_secret)"
+fill FEDERATION_API_TOKEN "$(gen_secret)"
 fill DISCORD_TOKEN "$(gen_secret)"
 fill PTERODACTYL_API_KEY "$(gen_secret)"
 

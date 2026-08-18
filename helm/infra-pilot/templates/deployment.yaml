@@ -55,11 +55,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "infra-pilot.fullname" . }}-secrets
                   key: redis-password
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "infra-pilot.fullname" . }}-secrets
-                  key: jwt-secret
           livenessProbe:
             httpGet:
               path: /health

@@ -10,7 +10,7 @@ import typer
 
 from ... import __version__
 from ...client import ApiClient
-from ...config import load_config
+from ...config import DEFAULT_API_URL, load_config
 from ...output.formatters import print_output
 
 app = typer.Typer(help="System diagnostics and health checks")
@@ -18,9 +18,7 @@ app = typer.Typer(help="System diagnostics and health checks")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(
-        config.get("api_url", "http://localhost:8080"), config.get("token")
-    )
+    return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
 
 
 def _memory_usage() -> Dict[str, Any]:
@@ -88,7 +86,11 @@ def _load_average() -> Optional[Dict[str, float]]:
     if hasattr(os, "getloadavg"):
         try:
             load = os.getloadavg()
-            return {"1m": round(load[0], 2), "5m": round(load[1], 2), "15m": round(load[2], 2)}
+            return {
+                "1m": round(load[0], 2),
+                "5m": round(load[1], 2),
+                "15m": round(load[2], 2),
+            }
         except OSError:
             return None
     return None
@@ -158,7 +160,13 @@ def doctor(
             }
         )
     else:
-        checks.append({"check": "Memory", "status": "warn", "detail": "could not read memory info"})
+        checks.append(
+            {
+                "check": "Memory",
+                "status": "warn",
+                "detail": "could not read memory info",
+            }
+        )
 
     disk = _disk_usage("/")
     checks.append(
@@ -179,7 +187,13 @@ def doctor(
             }
         )
     else:
-        checks.append({"check": "Load Average", "status": "warn", "detail": "not available on this platform"})
+        checks.append(
+            {
+                "check": "Load Average",
+                "status": "warn",
+                "detail": "not available on this platform",
+            }
+        )
 
     config = load_config()
     if config:
@@ -199,11 +213,7 @@ def doctor(
             }
         )
 
-    api_url = (
-        config.get("api_url", "http://localhost:8080")
-        if config
-        else "http://localhost:8080"
-    )
+    api_url = config.get("api_url", DEFAULT_API_URL) if config else DEFAULT_API_URL
     token = config.get("token") if config else None
     if token:
         try:

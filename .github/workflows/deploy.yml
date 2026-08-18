@@ -35,7 +35,7 @@ jobs:
       matrix:
         service: [orchestrator-agent, management-panel, discord-service]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4.5.2
         with:
@@ -69,7 +69,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -98,12 +98,12 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://api.infra-pilot.example.com
+      url: ${{ vars.PRODUCTION_URL }}
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -128,9 +128,14 @@ jobs:
             --set orchestrator.env[0].value=production \
             --wait --timeout 15m
       - name: Smoke test
+        env:
+          SMOKE_TEST_URL: ${{ vars.SMOKE_TEST_URL }}
         run: |
-          curl -f --retry 10 --retry-delay 10 \
-            https://api.infra-pilot.example.com/health
+          if [[ -z "${SMOKE_TEST_URL}" ]]; then
+            echo "::error::SMOKE_TEST_URL is not configured for the production environment. Set it as an environment variable in the repository settings."
+            exit 1
+          fi
+          curl -f --retry 10 --retry-delay 10 "${SMOKE_TEST_URL%/}/health"
           echo "Production smoke test passed"
 
   notify:

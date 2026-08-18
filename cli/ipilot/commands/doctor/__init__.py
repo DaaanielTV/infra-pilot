@@ -18,7 +18,7 @@ app = typer.Typer(help="System diagnostics and health checks")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url") or DEFAULT_API_URL, config.get("token"))
+    return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
 
 
 def _memory_usage() -> Dict[str, Any]:
@@ -213,7 +213,7 @@ def doctor(
             }
         )
 
-    api_url = (config.get("api_url") or DEFAULT_API_URL) if config else DEFAULT_API_URL
+    api_url = config.get("api_url", DEFAULT_API_URL) if config else DEFAULT_API_URL
     token = config.get("token") if config else None
     if token:
         try:

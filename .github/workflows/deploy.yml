@@ -35,9 +35,7 @@ jobs:
       matrix:
         service: [orchestrator-agent, management-panel, discord-service]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4.5.2
         with:
@@ -71,9 +69,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -107,9 +103,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -141,7 +135,7 @@ jobs:
             echo "::error::SMOKE_TEST_URL is not configured for the production environment. Set it as an environment variable in the repository settings."
             exit 1
           fi
-          curl -f --connect-timeout 10 --max-time 120 --retry 10 --retry-delay 10 --retry-max-time 600 "${SMOKE_TEST_URL%/}/health"
+          curl -f --retry 10 --retry-delay 10 "${SMOKE_TEST_URL%/}/health"
           echo "Production smoke test passed"
 
   notify:

@@ -21,7 +21,7 @@ Copy the example file and fill it in:
 cp .env.example .env
 ```
 
-Main groups: Discord (`DISCORD_TOKEN`), Database (`DATABASE_URL`), AI/LLM (`AI_API_KEY`, `AI_MODEL`), Security (`CORS_ORIGIN`, `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN`, `FEDERATION_API_TOKEN`).
+Main groups: Discord (`DISCORD_TOKEN`), Database (`DATABASE_URL`), AI/LLM (`AI_API_KEY`, `AI_MODEL`), Security (`CORS_ORIGIN`).
 
 Full list: [`.env.example`](https://github.com/drosemann/infra-pilot/blob/main/.env.example)
 

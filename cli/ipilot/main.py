@@ -31,7 +31,7 @@ def login(
 
     config = load_config(profile=ctx.obj.get("profile"))
     client = ApiClient(
-        config.get("api_url", DEFAULT_API_URL),
+        config.get("api_url") or DEFAULT_API_URL,
         config.get("token"),
     )
     result = client.login(api_key)

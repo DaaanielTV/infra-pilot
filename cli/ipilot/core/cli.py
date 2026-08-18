@@ -65,7 +65,7 @@ def get_client(ctx: typer.Context) -> ApiClient:
     """
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(
-        base_url=config.get("api_url", DEFAULT_API_URL),
+        base_url=config.get("api_url") or DEFAULT_API_URL,
         token=config.get("token"),
     )
 

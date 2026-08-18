@@ -14,7 +14,7 @@ app = typer.Typer(help="API key management")
 
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
-    return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
+    return ApiClient(config.get("api_url") or DEFAULT_API_URL, config.get("token"))
 
 
 @app.command()

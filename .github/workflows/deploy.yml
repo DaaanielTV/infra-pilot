@@ -141,7 +141,7 @@ jobs:
             echo "::error::SMOKE_TEST_URL is not configured for the production environment. Set it as an environment variable in the repository settings."
             exit 1
           fi
-          curl -f --retry 10 --retry-delay 10 "${SMOKE_TEST_URL%/}/health"
+          curl -f --connect-timeout 10 --max-time 120 --retry 10 --retry-delay 10 --retry-max-time 600 "${SMOKE_TEST_URL%/}/health"
           echo "Production smoke test passed"
 
   notify:

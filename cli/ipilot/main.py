@@ -84,6 +84,8 @@ def completion(
             get_completion_script(
                 prog_name="ipilot",
                 complete_var="_IPILOT_COMPLETE",
+                # "shell" is a typer completion API kwarg, not a subprocess call;
+                # B604 is skipped codebase-wide in bandit.yaml
                 shell=resolved,
             )
         )

@@ -12,7 +12,7 @@
  *   const result = await req.cli('server list');
  */
 import { Request, Response, NextFunction } from 'express';
-import { cli, CliResult } from './cli-bridge.js';
+import { cli, CliResult } from './cli-bridge.ts';
 
 declare global {
   namespace Express {

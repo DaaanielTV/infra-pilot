@@ -40,4 +40,4 @@ EXPOSE 5173 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
   CMD curl -fsS http://127.0.0.1:${PORT}/health >/dev/null || exit 1
 ENTRYPOINT ["tini", "--"]
-CMD ["sh", "-c", "node --loader ts-node/esm server/index.ts & npm exec vite -- preview --host 0.0.0.0 --port 5173"]
+CMD ["sh", "-c", "node server/index.ts & npm exec vite -- preview --host 0.0.0.0 --port 5173"]

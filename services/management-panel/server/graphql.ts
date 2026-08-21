@@ -34,6 +34,7 @@ export function parseSelectionSet(body: string): FieldSelection[] {
 
 function parseFields(inner: string): FieldSelection[] {
   const fields: FieldSelection[] = [];
+  let pendingAlias: string | undefined;
   let i = 0;
   while (i < inner.length) {
     while (i < inner.length && /[\s,]/.test(inner[i])) i++; // skip ws/commas
@@ -65,7 +66,34 @@ function parseFields(inner: string): FieldSelection[] {
     }
 
     if (field.startsWith('__')) continue; // skip introspection requests
-    const [alias, name] = field.includes(':') ? field.split(':').map((s) => s.trim()) : [undefined, field];
+
+    // The tokenizer splits on whitespace, so "alias: name" arrives as two
+    // tokens ("alias:" then "name"). Remember the alias and merge it into
+    // the following token.
+    if (field.endsWith(':') && !field.includes(' ')) {
+      pendingAlias = field.slice(0, -1);
+      continue;
+    }
+
+    let alias: string | undefined;
+    let name: string;
+    if (field.includes(':')) {
+      const colon = field.indexOf(':');
+      alias = field.slice(0, colon).trim();
+      name = field.slice(colon + 1).trim();
+    } else {
+      name = field;
+      alias = undefined;
+    }
+    if (!name && pendingAlias) {
+      name = pendingAlias;
+      alias = undefined;
+      pendingAlias = undefined;
+    }
+    if (pendingAlias && !alias) {
+      alias = pendingAlias;
+      pendingAlias = undefined;
+    }
     fields.push({ name: name || field, alias, args, children });
   }
   return fields;

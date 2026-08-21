@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
+# node:22 floats to the newest 22.x, which is always >= 22.18 — the minimum
+# for native TypeScript execution (see "engines" in package.json).
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
 ENV CI=true

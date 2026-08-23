@@ -3,7 +3,8 @@
  * Provides typed methods for all REST endpoints.
  */
 
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';

@@ -1,99 +1,64 @@
 # Architecture
 
-## High-Level Overview
+## Runtime topology
 
 ```
-┌─ Clients ──────────────────────────────────────────┐
-│ CLI (ipilot)   Web Panel (React)   Discord Bot     │
-└────────────────────────┬───────────────────────────┘
-                         ▼
-┌─ Orchestrator Agent (Python, port 8500) ───────────┐
-│                                                     │
-│  ┌──────────────────┐   ┌──────────────────────┐   │
-│  │ Compute Providers│   │ GitOps Manifests     │   │
-│  │ (Docker, AWS...) │   │ (YAML → reconcile)   │   │
-│  └──────────────────┘   └──────────────────────┘   │
-│                                                     │
-│  ┌──────────────────┐   ┌──────────────────────┐   │
-│  │ RBAC (org/team)  │   │ Billing & Metering   │   │
-│  └──────────────────┘   └──────────────────────┘   │
-│                                                     │
-│  ┌──────────────────┐   ┌──────────────────────┐   │
-│  │ Self-Healing     │   │ Auto-Scaling         │   │
-│  └──────────────────┘   └──────────────────────┘   │
-│                                                     │
-│  ┌──────────────────┐   ┌──────────────────────┐   │
-│  │ Region/Federation│   │ VPS Manager (Docker) │   │
-│  └──────────────────┘   └──────────────────────┘   │
-└─────────────────────────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
-┌──────────────┐ ┌────────────┐ ┌────────────────┐
-│  PostgreSQL  │ │  Redis     │ │  Prometheus/   │
-│  (metadata)  │ │  (cache)   │ │  Grafana       │
-└──────────────┘ └────────────┘ └────────────────┘
+CLI (ipilot) ───────────────► Management panel API (:3001) ◄── React UI (:5173)
+                                      │
+                                      ├── PostgreSQL (:5432)
+                                      └── Redis (:6379)
+
+GitOps webhook / federation clients ─► Orchestrator agent (:8500)
+                                            │
+                                            ├── PostgreSQL
+                                            └── Docker-backed compute provider
+
+Discord (optional profile) ──────────► Discord service (:3002) ─► Pterodactyl / Docker socket
+Monitoring (optional profile) ───────► Prometheus (:9090) ──────► Grafana (:3000)
 ```
 
-## Service Table
+The panel and orchestrator are separate services. The CLI's default URL is the panel API (`http://localhost:3001`); it does not directly target the orchestrator by default. The Discord and monitoring services are disabled unless their Compose profiles are requested.
 
-| Service | Language | Port | Purpose |
-|---------|----------|------|---------|
-| Orchestrator Agent | Python (discord.py, aiohttp) | 8500 | Core engine: VPS mgmt, GitOps, RBAC, billing, healing, scaling, federation |
-| Integration Service | Python | 9000 | External API integrations, user sync |
-| Management Panel | TS/React/Express | 5173/3001 | Web dashboard |
-| Discord Service | Node.js | 3002 | Standalone Discord bot (legacy) |
-| PostgreSQL | — | 5432 | Primary metadata store |
-| Redis | — | 6379 | Caching, rate limiting |
-| Prometheus | — | 9090 | Metrics collection |
-| Grafana | — | 3000 | Dashboards |
-| CLI (ipilot) | Python (Typer) | — | Terminal client |
+## Service responsibilities
 
-## Orchestrator Agent Internals
+| Service | Implementation | Public interface | Notes |
+|---|---|---|---|
+| Management panel | `services/management-panel` | UI `:5173`, API `:3001` | React frontend with Express/WebSocket backend; exposes OpenAPI and Swagger UI. |
+| Orchestrator agent | `services/orchestrator-agent` | HTTP `:8500` | aiohttp server for probes, signed GitOps callbacks, federation/RBAC APIs, and manifest reconciliation. |
+| Discord service | `services/discord-service` | HTTP health `:3002` | Optional Node.js service for Discord/Pterodactyl workflows. |
+| PostgreSQL / Redis | Compose services | `:5432` / `:6379` | Shared backing services started by the default profile. |
+| Prometheus / Grafana | Compose `monitoring` profile | `:9090` / `:3000` | Optional metrics storage and dashboards. |
 
-### Module Breakdown
+## Orchestrator boundaries
 
-| Module | Purpose |
-|--------|---------|
-| `compute/` | Plugin-based compute provider abstraction. `DockerProvider` wraps VPSManager. Add new providers (Proxmox, AWS, GCP) by implementing `ComputeProvider`. |
-| `manifest/` | GitOps engine. Define infrastructure in `InfraFile` YAML. `ManifestEngine` detects drift between desired and actual state and reconciles. `ManifestWatcher` polls Git repos. |
-| `rbac/` | Multi-tenant RBAC. Org → Project → Team hierarchy. 38 fine-grained `Permission` values. Built-in roles (owner, admin, operator, developer, viewer, billing) plus custom roles. |
-| `billing/` | Usage metering & billing. `UsageMeter` polls providers for resource consumption. `BillingEngine` aggregates into invoices with configurable pricing tiers. |
-| `healing/` | Self-healing engine. Monitors health checks, applies remediation policies (restart, recreate, migrate, escalate). Rate limited with configurable cooldowns. |
-| `region/` | Multi-datacenter support. `Region`/`Datacenter` capacity models. `Federation` manages peer-to-peer cross-region orchestration with token authentication. |
-| `scaling/` | Auto-scaling engine. Evaluates rules from `scaling_rules` DB table against live CPU/memory stats. Scales up/down via Docker `container.update()`. |
-| `vps_manager.py` | Core Docker container manager. Create, start, stop, restart, delete, stats, backups, snapshots, clone, migrate, health checks, benchmarks. |
-| `db.py` | Async PostgreSQL pool (asyncpg) and sync helpers (psycopg2). |
-| `integration.py` | Database schema (50+ tables) and notification proxying. |
-| `main.py` | Entry point: DB migrations, aiohttp webhook/API server, lifecycle wiring. |
+The agent's maintained modules are deliberately small and independently testable:
 
-### Discord Commands
+| Path | Responsibility |
+|---|---|
+| `compute/` | `ComputeProvider` abstraction, registry, and Docker provider implementation. |
+| `manifest/` | YAML infra-file schema and reconciliation engine. |
+| `rbac/`, `rbac_store.py` | Role/organization model, permission evaluation, and persistence helpers. |
+| `webhook_server.py` | aiohttp routes, authentication middleware, GitOps signature verification, and HTTP responses. |
+| `vps_manager.py`, `db.py`, `secrets_manager.py` | Docker lifecycle helpers, PostgreSQL access, and secret-management support. |
 
-All Discord functionality lives in the unified JavaScript bot at `services/discord-service/` (single bot, all slash commands ported from the former Python cogs — VPS lifecycle, billing/credits, monitoring, backups, health checks, alerts, scheduling, templates, resource pools, databases, maintenance).
+The OpenAPI contract in `services/orchestrator-agent/api_docs/openapi.yaml` is verified by the agent test suite and is the route-level source of truth.
 
-## Data Flow
+## Request and deployment flow
 
-1. **User action** comes via CLI, web panel, or Discord slash command
-2. **Orchestrator Agent** validates via RBAC, checks quotas, and acts:
-   - VPS lifecycle → `VPSManager` → Docker SDK
-   - Manifest reconcile → `ManifestEngine` → compute providers
-   - Billing → `BillingEngine` → `usage_records` / `invoices`
-3. **Background loops** run continuously:
-   - Monitoring (60s): stats collection, alert evaluation
-   - Billing (1h): usage metering, invoice generation, prepaid deduction
-   - Healing (30s): health checks, remediation
-   - Auto-scaling (60s): threshold evaluation, resource adjustment
-4. **Metrics** exposed at `/metrics` for Prometheus scraping
-5. **Federation** peers connect via authenticated REST API at `/api/v1/*`
+1. A user operates the panel or CLI; panel API authentication protects operational panel routes.
+2. A GitOps caller sends a signed request to the orchestrator's `/webhook/gitops` endpoint.
+3. The agent validates the signature/timestamp, parses the manifest, and asks a registered compute provider to reconcile desired state.
+4. `/health` and `/metrics` remain probe-facing; `/api/` requires the configured federation bearer token.
+5. Prometheus can scrape metrics, and Grafana reads its provisioned Prometheus data source when the monitoring profile is active.
 
-## Key Design Decisions
+## Authentication and security
 
-- **Plugin providers**: Compute back-ends are hot-pluggable via `ProviderRegistry`. The `ComputeProvider` ABC defines 11 methods that every provider must implement.
-- **GitOps-first**: Infrastructure state is declared in YAML. The engine reconciles desired → actual, not the other way around.
-- **Concurrent breach counting**: Auto-scaling requires N consecutive breaches before acting, preventing flapping.
-- **Cooldown isolation**: Every scaling rule and healing action has an independent cooldown timer.
-- **Async everywhere**: The agent uses asyncio throughout — all provider calls, DB queries, and HTTP requests are non-blocking.
+| Surface | Mechanism |
+|---|---|
+| Panel operational API | Panel authentication middleware (`verifyAuth`). |
+| Orchestrator `/api/` | `Authorization: Bearer <FEDERATION_API_TOKEN>`; fails closed if the token is not configured. |
+| GitOps webhook | HMAC signature and replay-protection headers using `GITOPS_WEBHOOK_TOKEN`. |
+| GitHub webhook | GitHub HMAC secret when that webhook route is enabled. |
+| Health and metrics | Public by design for local probes/scraping; protect exposure at the network layer. |
 
----
-
-*See [Security](08-Security) for data privacy details.*
+Refer to [Auth Matrix](11-Auth-Matrix.md), the orchestrator OpenAPI file, and [Security](08-Security.md) before exposing services outside a trusted network.

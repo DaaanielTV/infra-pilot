@@ -1,42 +1,32 @@
 # Infra Pilot
 
-A multi-hypervisor cloud orchestration platform with GitOps, SSH session management, secret management, deployment templates, and more. Manage everything from CLI, web panel, or Discord.
+Infra Pilot is a learning project for operating Docker-backed infrastructure through a Python CLI, a React/Express management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
 
-## Quick Start
+## Start here
 
 ```bash
 git clone https://github.com/drosemann/infra-pilot.git
-cd infra-pilot && cp .env.example .env
+cd infra-pilot
+cp .env.example .env
+bash scripts/generate-env.sh
 docker compose up -d
-pip install ./cli
-ipilot doctor
 ```
 
-| Service | URL                   |
-|---------|-----------------------|
-| Panel   | http://localhost:5173 |
-| API     | http://localhost:3001 |
+| Service | Default URL | Profile |
+|---|---|---|
+| Management panel | http://localhost:5173 | default |
+| Panel API / Swagger | http://localhost:3001/api/docs | default |
+| Orchestrator health | http://localhost:8500/health | default |
+| Prometheus / Grafana | http://localhost:9090 / http://localhost:3000 | `monitoring` |
+| Discord health | http://localhost:3002/health | `discord` |
 
-## New Features
+## Documentation map
 
-| Feature | Description |
-|---------|-------------|
-| [GitOps (IaC)](05-CLI-Reference.md#gitops) | YAML-based infrastructure as code: `ipilot gitops apply/plan` |
-| [SSH Sessions](05-CLI-Reference.md#ssh) | Jump hosts, session recording, saved hosts |
-| [Server Inventory](05-CLI-Reference.md#inventory) | Metadata, tags, filtering: `ipilot inventory list --tag production` |
-| [Secret Store](05-CLI-Reference.md#secrets) | Encrypted, versioned, auto-rotation, RBAC |
-| [Deployment Templates](05-CLI-Reference.md#templates) | Node.js, Python, Docker Compose, Nginx, PostgreSQL, Redis, Traefik |
-| [Plugin System](05-CLI-Reference.md#plugins) | Extensible via `plugins/`, 9 built-in providers |
-| [Webhooks](05-CLI-Reference.md#webhooks) | Event-driven HTTP callbacks with logs |
-| [API Keys](05-CLI-Reference.md#apikeys) | Role-based programmatic access |
-| [Runbooks](05-CLI-Reference.md#runbooks) | Automated workflows with built-in templates |
-| [AI Assistant](05-CLI-Reference.md#assistant) | Natural language → plan → confirm → execute |
-| [Developer Tools](05-CLI-Reference.md#doctor) | `ipilot doctor --fix`, `benchmark`, `diagnose`, TUI |
+- [Installation](01-Installation) — prerequisites, required secrets, Compose profiles, and shutdown.
+- [Configuration](03-Configuration) — environment variables, CLI configuration, and authentication boundaries.
+- [First Deployment](02-First-Deployment) — a minimal CLI workflow.
+- [Usage Examples](04-Usage-Examples) and [CLI Reference](05-CLI-Reference) — user-facing command guidance.
+- [Architecture](06-Architecture) and [Auth Matrix](11-Auth-Matrix) — service boundaries and protected interfaces.
+- [Backup & Restore](12-Backup-Restore), [Troubleshooting](10-Troubleshooting), and [Security](08-Security) — operational guidance.
 
-## Next Steps
-
-[Installation](01-Installation) · [First Deployment](02-First-Deployment) · [Usage Examples](04-Usage-Examples) · [CLI Reference](05-CLI-Reference) · [Contributing](07-Contributing)
-
----
-
-*[GitHub](https://github.com/drosemann/infra-pilot) · MIT*
+The checked-in source of truth for public APIs is `services/orchestrator-agent/api_docs/openapi.yaml` for the orchestrator and the running panel's `/api/openapi.json` for the panel. Run `ipilot --help` for the CLI installed in your environment.

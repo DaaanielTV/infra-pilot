@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { GitDeployManager } from '../components/GitDeployManager';
 import { DatabaseManager } from '../components/DatabaseManager';
 import { ModpackBrowser } from '../components/ModpackBrowser';
-import ConfigEditor from '../components/ConfigEditor';
+import { ConfigEditor } from '../components/ConfigEditor';
 import { ConfigVersionControl } from '../components/ConfigVersionControl';
 import { LiveLogs } from '../components/LiveLogs';
 import AlertConfig from '../components/AlertConfig';

@@ -13,7 +13,15 @@ async function request(server: http.Server, method: string, path: string, body?:
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await response.text();
-  return { status: response.status, body: text ? JSON.parse(text) : null };
+  let bodyParsed: any = null;
+  if (text) {
+    try {
+      bodyParsed = JSON.parse(text);
+    } catch {
+      bodyParsed = text;
+    }
+  }
+  return { status: response.status, body: bodyParsed };
 }
 
 async function requestWithHeaders(server: http.Server, method: string, path: string, body?: any, token?: string) {
@@ -30,7 +38,15 @@ async function requestWithHeaders(server: http.Server, method: string, path: str
   const text = await response.text();
   const headers: Record<string, string> = {};
   response.headers.forEach((value, key) => { headers[key] = value; });
-  return { status: response.status, body: text ? JSON.parse(text) : null, headers };
+  let bodyParsed: any = null;
+  if (text) {
+    try {
+      bodyParsed = JSON.parse(text);
+    } catch {
+      bodyParsed = text;
+    }
+  }
+  return { status: response.status, body: bodyParsed, headers };
 }
 
 export { request, requestWithHeaders };

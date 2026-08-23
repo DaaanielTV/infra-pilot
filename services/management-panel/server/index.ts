@@ -146,6 +146,7 @@ const customersLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
 });
 
 const generalLimiter = rateLimit({

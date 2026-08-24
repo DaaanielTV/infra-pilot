@@ -87,7 +87,10 @@ function parseFields(inner: string): FieldSelection[] {
       i = depth + 1;
     }
 
-    if (field.startsWith('__')) continue; // skip introspection requests
+    if (field.startsWith('__')) {
+      pendingAlias = undefined;
+      continue; // skip introspection requests
+    }
 
     // The tokenizer splits on whitespace, so "alias: name" arrives as two
     // tokens ("alias:" then "name"). Remember the alias and merge it into
@@ -115,6 +118,11 @@ function parseFields(inner: string): FieldSelection[] {
     if (pendingAlias && !alias) {
       alias = pendingAlias;
       pendingAlias = undefined;
+    }
+    // Skip introspection even when aliased (e.g., myAlias: __typename or alias: __typename)
+    if (name.startsWith('__')) {
+      pendingAlias = undefined;
+      continue;
     }
     fields.push({ name: name || field, alias, args, children });
   }

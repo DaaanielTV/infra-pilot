@@ -15,7 +15,7 @@ from webhook_server import build_webhook_app
 BOT = SimpleNamespace(get_cog=lambda name: None)
 
 # Ensure a clean baseline regardless of what other test modules set.
-_ENV_VARS = ("FEDERATION_API_TOKEN", "NODE_ENV", "ENVIRONMENT")
+_ENV_VARS = ("FEDERATION_API_TOKEN", "NODE_ENV", "ENVIRONMENT", "ALLOW_INSECURE_FEDERATION")
 
 
 class FederationTokenFailClosedTest(unittest.IsolatedAsyncioTestCase):
@@ -68,8 +68,14 @@ class FederationTokenFailClosedTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 401)
 
     async def test_development_without_token_allows_with_warning(self):
+        os.environ["ALLOW_INSECURE_FEDERATION"] = "true"
         resp = await self.client.get("/api/v1/federation/status")
         self.assertEqual(resp.status, 200)
+
+    async def test_development_without_token_without_flag_fails_closed(self):
+        # Fail-closed even in development unless explicitly allowed
+        resp = await self.client.get("/api/v1/federation/status")
+        self.assertEqual(resp.status, 503)
 
     async def test_health_endpoint_never_requires_token(self):
         os.environ["NODE_ENV"] = "production"

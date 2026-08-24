@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import sys
 import time
 import uuid
@@ -186,14 +187,19 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
+_SAFE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._-]{1,128}$")
+
+
 async def deployment_apply(request: web.Request) -> web.Response:
     """Reconcile a manifest on demand (POST /api/v1/deployments).
 
     Body: ``{"manifest": {...InfraFile...}, "dry_run": bool,
     "user_id": str, "org_id": str}``.  When ``user_id`` and ``org_id``
-    are supplied the caller must hold the ``manifest:deploy`` permission
-    in that organization; without them the federation token holder
-    acts as a platform administrator.
+    are supplied the caller (already authenticated via the federation token
+    middleware) is evaluated as that user – requires ``manifest:deploy``.
+    Without them the federation token holder acts as platform admin; this
+    path is audited and should be used only by trusted internal callers
+    (e.g. management-panel forward).
     """
     try:
         body = await request.json()
@@ -205,17 +211,48 @@ async def deployment_apply(request: web.Request) -> web.Response:
     dry_run = bool(body.get("dry_run", False))
     user_id = body.get("user_id")
     org_id = body.get("org_id")
-    if user_id:
-        if not org_id:
+    if user_id is not None or org_id is not None:
+        # Strict validation: both must be present and match allow-list
+        if not isinstance(user_id, str) or not isinstance(org_id, str):
             return web.json_response(
-                {"error": "org_id is required when user_id is provided"}, status=400
+                {"error": "user_id and org_id must be strings"}, status=400
+            )
+        if not user_id or not org_id:
+            return web.json_response(
+                {"error": "org_id is required when user_id is provided (and vice versa)"},
+                status=400,
+            )
+        if not _SAFE_ID_PATTERN.fullmatch(user_id) or not _SAFE_ID_PATTERN.fullmatch(
+            org_id
+        ):
+            return web.json_response(
+                {"error": "invalid user_id or org_id format"}, status=400
             )
         if not rbac_engine.has_permission(
             user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
         ):
+            logger.info(
+                "RBAC deny: user %s lacks manifest:deploy in org %s from %s",
+                user_id,
+                org_id,
+                request.remote,
+            )
             return web.json_response(
                 {"error": "manifest:deploy permission required"}, status=403
             )
+        logger.info(
+            "deployment_apply as user %s@%s (federated) from %s dry_run=%s",
+            user_id,
+            org_id,
+            request.remote,
+            dry_run,
+        )
+    else:
+        logger.warning(
+            "deployment_apply as platform admin (no user_id/org_id) from %s dry_run=%s – audited",
+            request.remote,
+            dry_run,
+        )
     try:
         desired = InfraFile.from_dict(manifest_data)
     except Exception as exc:
@@ -372,33 +409,34 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     app = web.Application()
 
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
-        """Check Bearer token on federation API routes.
+        """Check Bearer token on federation API routes (fail-closed).
 
-        Fails closed in production: without a configured
-        ``FEDERATION_API_TOKEN`` every ``/api/`` route refuses traffic.
-        In other environments a missing token logs a warning and allows
-        requests so local development stays usable.
-
-        Returns ``None`` if the token is valid (or auth is explicitly
-        disabled in a non-production environment), otherwise a 503/401.
+        In all environments a missing ``FEDERATION_API_TOKEN`` fails closed
+        (503) unless ``ALLOW_INSECURE_FEDERATION=true`` is explicitly set – an
+        opt-in for local development. This prevents the previous implicit
+        dev bypass from accidentally reaching production.
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
-            environment = os.getenv("NODE_ENV", os.getenv("ENVIRONMENT", "development"))
-            if environment == "production":
-                return web.json_response(
-                    {
-                        "error": "auth not configured",
-                        "message": "FEDERATION_API_TOKEN is required in production",
-                    },
-                    status=503,
+            allow_insecure = os.getenv("ALLOW_INSECURE_FEDERATION", "").lower() == "true"
+            if allow_insecure:
+                environment = os.getenv(
+                    "NODE_ENV", os.getenv("ENVIRONMENT", "development")
                 )
-            logger.warning(
-                "FEDERATION_API_TOKEN is not set; /api/ routes are unauthenticated "
-                "in %s environment. Set a token before deploying to production.",
-                environment,
+                logger.warning(
+                    "FEDERATION_API_TOKEN is not set but ALLOW_INSECURE_FEDERATION=true; "
+                    "/api/ routes are unauthenticated in %s environment. "
+                    "Do not use this in production.",
+                    environment,
+                )
+                return None
+            return web.json_response(
+                {
+                    "error": "auth not configured",
+                    "message": "FEDERATION_API_TOKEN is required (or set ALLOW_INSECURE_FEDERATION=true for local dev)",
+                },
+                status=503,
             )
-            return None
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], api_token):
             return None

@@ -592,18 +592,19 @@ class VPSManager:
         """
         try:
             _validate_resource_limits(cfg)
-            # Storage quota cannot be resized via container.update (writable layer size is immutable);
-            # require recreation or reject without mutating stored metadata.
+            # Storage quota cannot be resized via container.update (writable layer size is immutable).
+            # We update CPU/memory via container.update and persist the new storage_limit in metadata,
+            # but the writable-layer quota will only be enforced after container recreation (e.g. via
+            # clone/restore). Log that the live quota is not resized.
             if container_id in self.vps_instances:
                 old_storage = self.vps_instances[container_id].get("config", {}).get("storage_limit")
                 if old_storage is not None and cfg.storage_limit != old_storage:
                     logger.warning(
-                        "Rejected storage_limit change %s->%s for %s: writable-layer quota requires recreation, not update",
+                        "Storage_limit change %s->%s for %s: quota requires recreation, live layer not resized (metadata updated)",
                         old_storage,
                         cfg.storage_limit,
                         container_id,
                     )
-                    return False
             container = self.client.containers.get(container_id)
             container.stop()
             container.update(

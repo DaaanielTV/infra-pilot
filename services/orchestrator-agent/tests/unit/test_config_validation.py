@@ -22,7 +22,16 @@ class TestValidateSecrets:
             validate_secrets("production", "", "real-token")
 
     def test_valid_secrets_pass_in_production(self):
-        assert validate_secrets("production", "s3cret", "token") == []
+        assert (
+            validate_secrets(
+                "production",
+                "s3cret",
+                "token",
+                gitops_webhook_token="gitops-token",
+                federation_api_token="federation-token",
+            )
+            == []
+        )
 
     def test_insecure_secrets_only_warn_in_development(self, caplog):
         with caplog.at_level(logging.WARNING, logger="config"):
@@ -54,4 +63,6 @@ class TestConfigValidate:
         monkeypatch.setattr(cfg, "ENVIRONMENT", "production")
         monkeypatch.setattr(cfg, "DB_PASSWORD", "correct horse battery staple")
         monkeypatch.setattr(cfg, "DISCORD_BOT_TOKEN", "bot-token")
+        monkeypatch.setenv("GITOPS_WEBHOOK_TOKEN", "gitops-token")
+        monkeypatch.setenv("FEDERATION_API_TOKEN", "federation-token")
         assert cfg.validate() == []

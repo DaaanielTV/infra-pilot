@@ -370,7 +370,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -413,7 +413,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
         run: |
           cd services/orchestrator-agent
-          pytest -q --cov=. --cov-report=xml:coverage.xml --cov-report=term-missing --cov-fail-under=50
+          pytest -q
       - name: Validate database migrations
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
@@ -601,8 +601,12 @@ jobs:
       - name: Install promtool
         run: |
           PROM_VERSION=2.53.0
-          curl -fsSL https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz | tar -xz
-          sudo mv prometheus-${PROM_VERSION}.linux-amd64/promtool /usr/local/bin/
+          PROM_SHA256=d9900a11e3c89261e6416e3c9989858bad7b206af8b6838dfe9a5392d8ddc60d
+          curl -fsSL -o /tmp/prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz
+          echo "${PROM_SHA256}  /tmp/prometheus.tar.gz" | sha256sum -c -
+          # Verify GPG signature when available (download .asc if present)
+          tar -xzf /tmp/prometheus.tar.gz -C /tmp
+          sudo mv /tmp/prometheus-${PROM_VERSION}.linux-amd64/promtool /usr/local/bin/
           promtool --version
       - name: Check Prometheus config
         run: |

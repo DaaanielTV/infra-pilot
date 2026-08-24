@@ -187,6 +187,47 @@ async def rbac_org_members(request: web.Request) -> web.Response:
     return web.json_response({"members": [_serialize_rbac(m) for m in members]})
 
 
+async def rbac_org_delete(request: web.Request) -> web.Response:
+    """Delete an organization and its persisted state."""
+    org_id = request.match_info["org_id"]
+    if rbac_engine.get_org(org_id) is None:
+        return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
+    rbac_engine.delete_org(org_id)
+    await rbac_store.delete_org(org_id)
+    return web.json_response({"deleted": org_id})
+
+
+async def rbac_role_delete(request: web.Request) -> web.Response:
+    """Delete a custom role (built-ins cannot be deleted)."""
+    role_name = request.match_info["role_name"]
+    if rbac_engine.get_role(role_name) is None:
+        return web.json_response({"error": f"unknown role: {role_name}"}, status=404)
+    if not rbac_engine.delete_role(role_name):
+        return web.json_response({"error": "cannot delete built-in role"}, status=400)
+    await rbac_store.delete_role(role_name)
+    return web.json_response({"deleted": role_name})
+
+
+async def rbac_membership_delete(request: web.Request) -> web.Response:
+    """Revoke a membership (role assignment)."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    user_id = body.get("user_id")
+    org_id = body.get("org_id")
+    project_id = str(body.get("project_id", ""))
+    if not all(isinstance(v, str) and v for v in (user_id, org_id)):
+        return web.json_response(
+            {"error": "user_id and org_id are required"}, status=400
+        )
+    removed = rbac_engine.remove_membership(user_id, org_id, project_id)
+    if not removed:
+        return web.json_response({"error": "membership not found"}, status=404)
+    await rbac_store.delete_membership(user_id, org_id, project_id)
+    return web.json_response({"revoked": {"user_id": user_id, "org_id": org_id, "project_id": project_id}})
+
+
 _SAFE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._-]{1,128}$")
 
 
@@ -560,15 +601,36 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
             }
         )
 
+    async def ready(request: web.Request) -> web.Response:
+        """Readiness probe – requires DB connectivity (distinct from liveness /health)."""
+        from db import get_pool as _get_pool
+
+        try:
+            pool = await _get_pool()
+            conn = await pool.acquire()
+            await conn.execute("SELECT 1")
+            await pool.release(conn)
+            return web.json_response({"status": "ready", "service": "orchestrator-agent"})
+        except Exception as exc:
+            logger.warning("readiness check failed: %s", exc)
+            return web.json_response(
+                {"status": "not_ready", "error": str(exc)}, status=503
+            )
+
     app.router.add_get("/health", health)
     app.router.add_get("/api/health", health)
+    app.router.add_get("/ready", ready)
+    app.router.add_get("/api/ready", ready)
     app.router.add_get("/metrics", metrics)
     app.router.add_get("/api/v1/federation/status", federation_status)
     app.router.add_get("/api/v1/rbac/roles", rbac_roles_list)
     app.router.add_post("/api/v1/rbac/roles", rbac_role_create)
+    app.router.add_delete("/api/v1/rbac/roles/{role_name}", rbac_role_delete)
     app.router.add_post("/api/v1/rbac/orgs", rbac_org_create)
     app.router.add_get("/api/v1/rbac/orgs", rbac_orgs_for_user)
+    app.router.add_delete("/api/v1/rbac/orgs/{org_id}", rbac_org_delete)
     app.router.add_post("/api/v1/rbac/assign", rbac_role_assign)
+    app.router.add_delete("/api/v1/rbac/assign", rbac_membership_delete)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/permissions", rbac_org_permissions)
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
     app.router.add_post("/api/v1/deployments", deployment_apply)

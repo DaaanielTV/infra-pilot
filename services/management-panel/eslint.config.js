@@ -54,16 +54,15 @@ export default tseslint.config(
       // Allow escaping the compiler
       "@typescript-eslint/ban-ts-comment": "error",
 
-      // Allow explicit `any`s
-      "@typescript-eslint/no-explicit-any": "off",
+      // Explicit `any` is now warned – fix incrementally, fail on new `any` in CI via `npm run lint`
+      "@typescript-eslint/no-explicit-any": "warn",
 
-      // START: Allow implicit `any`s
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      // END: Allow implicit `any`s
+      // Implicit `any`s still warned for incremental hardening (previously off)
+      "@typescript-eslint/no-unsafe-argument": "warn",
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-call": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
 
       // Allow async functions without await
       // for consistency (esp. Convex `handler`s)

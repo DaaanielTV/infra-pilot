@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 # Values that indicate a placeholder secret was never replaced. Running with
 # any of these in production is a security risk, so we refuse to start.
-PLACEHOLDER_SECRETS = frozenset(
+PLACEHOLDER_SECRETS = frozenset(  # nosec B105 - placeholder allow-list, not a real secret
     {
         "CHANGE_ME",
         "infra_pilot_dev_password",

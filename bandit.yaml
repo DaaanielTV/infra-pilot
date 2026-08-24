@@ -17,8 +17,11 @@
 #   B311  random.randint for ephemeral container port assignment — not
 #         security material (token/secret generation uses secrets).
 #   B104  binding 0.0.0.0 — required for the public webhook endpoint.
-#   B105  hardcoded password — only placeholder/enum comparisons in
-#         config validation, no real secrets.
+#   B105  hardcoded password — narrowed: only placeholder/enum comparisons
+#         in config validation and alembic.ini. Enforced via per-line
+#         `# nosec B105` there; keep global skip until those are annotated
+#         individually, then remove from this list.
+#         See services/orchestrator-agent/config.py:11 and alembic.ini:6.
 #   B108  /tmp usage — migration scratch dir only.
 #   B110  try/except: pass — error handling is logged by callers.
 #   B112  bare except: pass — logged by callers.

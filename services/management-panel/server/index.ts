@@ -2836,6 +2836,7 @@ const forwardDeploymentToOrchestrator = async (deployment: any): Promise<any | n
       {
         manifest: buildManifestFromDeployment(deployment),
         dry_run: !!deployment.dryRun,
+        as_platform_admin: true,
       },
       {
         headers: { Authorization: `Bearer ${ORCHESTRATOR_API_TOKEN}` },

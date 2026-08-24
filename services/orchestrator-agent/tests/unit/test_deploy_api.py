@@ -166,7 +166,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_dry_run_reconcile_returns_counts(self):
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-dry"), "dry_run": True},
+            json={"manifest": make_manifest("m-dry"), "dry_run": True, "as_platform_admin": True},
             headers=AUTH,
         )
         self.assertEqual(resp.status, 200)
@@ -179,7 +179,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_apply_reconcile_creates_instance(self):
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-apply")},
+            json={"manifest": make_manifest("m-apply"), "as_platform_admin": True},
             headers=AUTH,
         )
         self.assertEqual(resp.status, 200)
@@ -190,7 +190,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_provider_failure_reports_207(self):
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-boom", image="nginx:boom")},
+            json={"manifest": make_manifest("m-boom", image="nginx:boom"), "as_platform_admin": True},
             headers=AUTH,
         )
         self.assertEqual(resp.status, 207)

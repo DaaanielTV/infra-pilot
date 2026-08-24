@@ -25,10 +25,10 @@ class TestValidateSecrets:
         assert (
             validate_secrets(
                 "production",
-                "s3cret",
-                "token",
-                gitops_webhook_token="gitops-token",
-                federation_api_token="federation-token",
+                "s3cret",  # noqa: S106
+                "token",  # noqa: S106
+                gitops_webhook_token="gitops-token",  # noqa: S106
+                federation_api_token="federation-token",  # noqa: S106
             )
             == []
         )
@@ -61,8 +61,8 @@ class TestConfigValidate:
     def test_config_validate_passes_with_real_values(self, monkeypatch):
         cfg = Config()
         monkeypatch.setattr(cfg, "ENVIRONMENT", "production")
-        monkeypatch.setattr(cfg, "DB_PASSWORD", "correct horse battery staple")
-        monkeypatch.setattr(cfg, "DISCORD_BOT_TOKEN", "bot-token")
-        monkeypatch.setenv("GITOPS_WEBHOOK_TOKEN", "gitops-token")
-        monkeypatch.setenv("FEDERATION_API_TOKEN", "federation-token")
+        monkeypatch.setattr(cfg, "DB_PASSWORD", "correct horse battery staple")  # noqa: S106
+        monkeypatch.setattr(cfg, "DISCORD_BOT_TOKEN", "bot-token")  # noqa: S106
+        monkeypatch.setenv("GITOPS_WEBHOOK_TOKEN", "gitops-token")  # noqa: S106
+        monkeypatch.setenv("FEDERATION_API_TOKEN", "federation-token")  # noqa: S106
         assert cfg.validate() == []

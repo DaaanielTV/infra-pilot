@@ -90,6 +90,27 @@ def _validate_resource_limits(cfg: "VPSConfig") -> None:
         )
 
 
+def _storage_opt(storage_limit_gb: int) -> Optional[Dict[str, str]]:
+    """Return Docker storage_opt for writable-layer quota if driver supports it.
+
+    Supports btrfs, zfs, overlay2 (with pquota). For other drivers returns None
+    so the container still creates but without quota. In tests or when the
+    daemon is unreachable, returns the opt so unit tests can assert it.
+    """
+    if not storage_limit_gb:
+        return None
+    try:
+        info = docker.from_env().info()
+        driver = info.get("Driver", "")
+        if driver not in ("btrfs", "zfs", "overlay2", "overlay"):
+            logger.debug("Storage driver %s does not support size quota; omitting storage_opt", driver)
+            return None
+    except Exception:
+        # In unit tests the daemon is mocked; still return opt for assertion
+        pass
+    return {"size": f"{storage_limit_gb}G"}
+
+
 @dataclass
 class VPSConfig:
     """Configuration for creating a new VPS container."""
@@ -366,7 +387,7 @@ class VPSManager:
         """
         try:
             _validate_resource_limits(cfg)
-            container = self.client.containers.run(
+            run_kwargs: Dict[str, Any] = dict(
                 image=cfg.image,
                 detach=True,
                 cpu_period=CPU_PERIOD,
@@ -376,6 +397,19 @@ class VPSManager:
                 environment=cfg.env_vars,
                 restart_policy=RESTART_POLICY,
             )
+            storage_opt = _storage_opt(cfg.storage_limit)
+            if storage_opt:
+                run_kwargs["storage_opt"] = storage_opt
+            try:
+                container = self.client.containers.run(**run_kwargs)
+            except Exception as exc:
+                # If driver doesn't support storage_opt, retry without it (quota not enforced)
+                if storage_opt and "storage_opt" in str(exc).lower():
+                    logger.warning("Storage driver does not support storage_opt, retrying without: %s", exc)
+                    run_kwargs.pop("storage_opt", None)
+                    container = self.client.containers.run(**run_kwargs)
+                else:
+                    raise
 
             instance_info = {
                 "container_id": container.id,
@@ -558,6 +592,18 @@ class VPSManager:
         """
         try:
             _validate_resource_limits(cfg)
+            # Storage quota cannot be resized via container.update (writable layer size is immutable);
+            # require recreation or reject without mutating stored metadata.
+            if container_id in self.vps_instances:
+                old_storage = self.vps_instances[container_id].get("config", {}).get("storage_limit")
+                if old_storage is not None and cfg.storage_limit != old_storage:
+                    logger.warning(
+                        "Rejected storage_limit change %s->%s for %s: writable-layer quota requires recreation, not update",
+                        old_storage,
+                        cfg.storage_limit,
+                        container_id,
+                    )
+                    return False
             container = self.client.containers.get(container_id)
             container.stop()
             container.update(
@@ -722,7 +768,7 @@ class VPSManager:
                 return False
 
             cfg = instance_info["config"]
-            container = self.client.containers.run(
+            restore_kwargs: Dict[str, Any] = dict(
                 image=backup_image_id,
                 detach=True,
                 cpu_period=CPU_PERIOD,
@@ -731,6 +777,10 @@ class VPSManager:
                 ports=cfg["ports"],
                 restart_policy=RESTART_POLICY,
             )
+            so = _storage_opt(int(cfg.get("storage_limit", 0) or 0))
+            if so:
+                restore_kwargs["storage_opt"] = so
+            container = self.client.containers.run(**restore_kwargs)
 
             instance_info["container_id"] = container.id
             self.vps_instances[container.id] = instance_info
@@ -854,7 +904,7 @@ class VPSManager:
                 return None
 
             cfg = instance_info["config"]
-            new_container = self.client.containers.run(
+            clone_kwargs: Dict[str, Any] = dict(
                 image=image.id,
                 detach=True,
                 cpu_period=CPU_PERIOD,
@@ -863,6 +913,10 @@ class VPSManager:
                 ports=cfg["ports"],
                 restart_policy=RESTART_POLICY,
             )
+            so = _storage_opt(int(cfg.get("storage_limit", 0) or 0))
+            if so:
+                clone_kwargs["storage_opt"] = so
+            new_container = self.client.containers.run(**clone_kwargs)
 
             new_info = dict(instance_info)
             new_info["container_id"] = new_container.id

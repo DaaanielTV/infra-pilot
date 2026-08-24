@@ -1,39 +1,43 @@
 # Infra Pilot CLI (`ipilot`)
 
-Command-line client for the Infra Pilot platform.
+Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and supports table or JSON-oriented output.
 
-## Installation
+## Installation and login
 
 ```bash
 pip install ./cli
+ipilot --help
+ipilot login <api-key>
 ```
 
-## Quick Start
+For editable development installation, run `pip install -e ./cli`. Set `IPILOT_API_URL` to target a non-default panel API; `IPILOT_TOKEN` and `IPILOT_OUTPUT` override the stored token and output format for a single command.
+
+## Command groups
+
+| Command | Responsibility |
+|---|---|
+| `server`, `backup`, `deploy`, `logs` | Core infrastructure lifecycle, backups, deployments, and logs. |
+| `gitops`, `ssh`, `inventory`, `secrets` | Declarative operations, remote-access records, metadata, and secret workflows. |
+| `plugins`, `templates`, `webhooks`, `apikeys` | Extensibility and automation configuration. |
+| `doctor`, `tui`, `rollback` | Diagnostics, terminal UI, and change recovery. |
+| `login`, `logout`, `completion`, `interactive`, `batch`, `docs` | Global authentication, shell, interactive, batch, and documentation helpers. |
+
+The installed CLI is the source of truth for flags and availability:
 
 ```bash
-ipilot login <api-key>
-ipilot server list
-ipilot server create myapp --type nodejs --memory 1024
+ipilot --help
+ipilot server --help
+ipilot docs --output docs/cli-reference.md
 ```
 
-## Commands
+`ipilot docs` produces a help-based reference for the current executable. The curated examples are in [wiki/04-Usage-Examples.md](../wiki/04-Usage-Examples.md); configuration precedence is in [wiki/03-Configuration.md](../wiki/03-Configuration.md).
 
-- `server` – VPS lifecycle
-- `backup` – Create, list, restore backups
-- `deploy` – Deploy branches to servers
-- `logs` – Tail server logs
-- `gitops` – YAML-based deployments (`apply`, `plan`, `drift`)
-- `ssh` – SSH sessions, keys, jump hosts
-- `inventory` – Server metadata and tags
-- `secrets` – Encrypted key-value store with rotation
-- `plugins` – Plugin management
-- `doctor` – Benchmark and diagnose
-- `webhooks` – HTTP callbacks
-- `apikeys` – API key management
-- `templates` – Deployment blueprints
-- `tui` – Terminal UI dashboard
-- `rollback` – Undo/rollback changes
+## Configuration files
 
-## Documentation
+The default profile is `~/.ipilot/config.json`; named profiles are stored as `~/.ipilot/config-<profile>.json`. Environment overrides take precedence over persisted values. Do not put credentials in shell history or commit profile files.
 
-See [wiki/05-CLI-Reference.md](../wiki/05-CLI-Reference.md) for full reference.
+## Development checks
+
+```bash
+pytest tests/cli/ -v
+```

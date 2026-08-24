@@ -1,93 +1,61 @@
-# Docker Panel
+# Management Panel
 
-Self-hosted Docker container management panel with personal mode and optional business mode.
+React/TypeScript frontend and Express/WebSocket backend for operating Docker applications, backups, configuration, monitoring, and the panel-facing Infra Pilot API.
 
-## Quick Start
+## Start locally
 
 ```bash
 cd services/management-panel
-cp .env.local.example .env.local
-npm install && npm run dev
+cp .env.example .env.local
+npm install
+npm run dev
 ```
 
-Open http://localhost:5173 — first-time setup guides you through mode selection and admin account creation.
+`npm run dev` starts Vite on `http://localhost:5173` and the backend on `http://localhost:3001`. The first visit uses the setup flow. For the complete dependency stack, start the repository root with `docker compose up -d` instead.
 
-## Overview
+## API and authentication
 
-### Personal Mode (default)
-- Docker app CRUD with container start/stop/restart via real Docker API
-- Dashboard with real-time metrics, live logs via WebSocket
-- Port mapping, env vars, volume mounts, CPU/memory limits
-- Web terminal (browser shell via docker exec)
-- Backup jobs with retention policies, audit trail
-- Notification channels (email, webhook, Telegram)
-- Global search (Cmd+K), PWA support, dark mode
-- 2FA/TOTP, config editor, MySQL provisioning, git deploy webhooks
-- Cron scheduler, modpack installer, prepaid billing
+| Surface | URL | Notes |
+|---|---|---|
+| Health | `GET /health`, `GET /api/health` | Used by Compose health checks. |
+| OpenAPI | `GET /api/openapi.json` | Current panel API contract. |
+| Swagger UI | `GET /api/docs` | Interactive API documentation. |
+| WebSocket | `ws://host:3001?appId=<id>` | Live application logs and metrics. |
 
-### Business Mode (roadmap)
-- Customer management, plans/pricing, white-label, staff RBAC, advanced analytics
+Setup, health, and documentation endpoints are intentionally reachable without an application session. Operational `/api/*` routes are protected by the backend's `verifyAuth` middleware unless explicitly documented otherwise. Treat the OpenAPI document and `server/index.ts` as the authoritative route list.
 
-## Tech Stack
+## Configuration
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React 19 + TypeScript + Tailwind |
-| Backend | Express.js |
-| Database | PostgreSQL + Supabase |
-| Auth | Supabase auth (JWT) |
+Copy `.env.example` to `.env.local` for standalone development. The root `.env.example` controls Compose deployments.
 
-## Key Endpoints
+| Variable | Purpose |
+|---|---|
+| `PORT` | Backend listener (default `3001`). |
+| `VITE_API_URL`, `VITE_ENVIRONMENT` | Frontend API target and environment label. |
+| `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
+| `CORS_ORIGINS` | Comma-separated permitted browser origins. |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional hosted-feature configuration. |
 
-| Group | Routes |
-|-------|--------|
-| Apps | `GET/POST /api/apps`, `GET/PATCH/DELETE /api/apps/:id` |
-| Container | `POST /api/apps/:id/start\|stop\|restart` |
-| WebSocket | `ws://host:3001?appId=<id>` — live logs & metrics |
-| Monitoring | `GET /api/apps/:id/metrics`, `GET /api/metrics/aggregated` |
-| Backups | `GET/POST /api/backup-jobs`, `GET /api/backup-jobs/:id/status` |
-| Billing | `GET /api/billing/balance`, `/topup`, `/transactions`, `/cost-estimate` |
-| Config | `GET/POST /api/apps/:id/config`, `/api/config/validate` |
-| Audit | `GET /api/audit-log` |
-| Notifications | `GET/POST/PATCH/DELETE /api/notification-channels` |
+## Code map
 
-Full OpenAPI spec at `GET /api/openapi.json` or Swagger UI at `GET /api/docs`.
+| Path | Responsibility |
+|---|---|
+| `src/` | React UI, routes, components, hooks, and browser API clients. |
+| `server/index.ts` | Express routes, authentication, WebSocket integration, and service startup. |
+| `server/openapi.ts` | Panel OpenAPI specification. |
+| `server/*.ts` | Focused backend helpers such as reports, GraphQL, assistant, doctor, and audit sanitisation. |
+| `docs/` | Longer-lived design and setup notes. |
 
-## Development
+## Development checks
 
 ```bash
-npm run dev      # Frontend :5173 + Backend :3001
-npm run build    # Production build
-npm run lint     # Lint & type check
+npm run lint
+npm test
+npm run build
 ```
 
-## Docker Integration
+The project also contains Playwright and accessibility tests; see `package.json` and `tests/` for the exact commands.
 
-Manages containers via `docker` CLI calls. Real-time monitoring via:
-- WebSocket streaming (`docker logs -f`, `docker stats`)
-- In-browser terminal (`docker exec` via WebSocket)
-- Server metrics (CPU, memory, TPS, player count)
+## Docker integration
 
-## Project Structure
-
-```
-src/
-├── pages/        # Setup, Dashboard, AppForm, AppDetail, Monitoring, Backups, Reports, Settings, AuditLog, Billing
-├── components/   # Layout, Sidebar, NavBar, OnboardingWizard, GlobalSearch, WebTerminal
-├── lib/          # API client, auth, types
-├── App.tsx       # Router + mode provider
-├── main.tsx      # Entry point + PWA
-server/
-├── index.ts      # Express + WebSocket (70+ routes)
-├── presets.ts    # Server presets
-└── openapi.ts    # OpenAPI spec
-```
-
-## Support
-
-- [Issues](https://github.com/drosemann/infra-pilot/issues)
-- [Discussions](https://github.com/drosemann/infra-pilot/discussions)
-- [Full docs](docs/)
-- [Getting Started Guide](README-DOCKER-PANEL.md)
-
-MIT — see [LICENSE](../../LICENSE)
+The panel invokes Docker operations for application lifecycle actions, logs, stats, and terminal-related features. Give Docker access only to trusted deployments, because the Docker socket is privileged.

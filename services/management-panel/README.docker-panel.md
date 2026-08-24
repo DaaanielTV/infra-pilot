@@ -1,84 +1,37 @@
-# Docker Panel — Getting Started
+# Management Panel Docker guide
 
-Self-hosted Docker management panel with personal and business modes.
+This is the container-oriented companion to [README.md](README.md). The repository root Compose file is the supported way to run the panel with its PostgreSQL and Redis dependencies.
 
-## Requirements
-
-- Node.js 18+, npm
-- Docker daemon (local or remote)
-- Supabase (self-hosted via Docker Compose recommended)
-
-## Installation
+## Start the complete local stack
 
 ```bash
-cd services/management-panel
-npm install
-cp .env.local.example .env.local
+# From the repository root
+cp .env.example .env
+bash scripts/generate-env.sh
+docker compose up -d management-panel
 ```
 
-### Supabase Setup (self-hosted)
-
-Use the [Supabase Docker Compose](https://github.com/supabase/supabase/tree/master/docker):
-```bash
-docker-compose -f docker-compose.yml up -d
-```
-
-Then in `.env.local`:
-```
-VITE_SUPABASE_URL=http://localhost:54321
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
-```
-
-Initialize database via Supabase SQL Editor with `db/schema.sql`.
-
-### Start
+Compose starts dependencies declared for `management-panel` and publishes the Vite frontend on `http://localhost:5173` and the backend on `http://localhost:3001`. Confirm readiness with:
 
 ```bash
-npm run dev
+docker compose ps
+docker compose logs -f management-panel
+curl --fail http://localhost:3001/health
 ```
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
+## Configuration boundary
 
-### Production
+Use the root `.env.example` for Compose values, especially `POSTGRES_PASSWORD`, `MANAGEMENT_FRONTEND_PORT`, `MANAGEMENT_BACKEND_PORT`, and `CORS_ORIGINS`. The service-local `.env.example` is for running `npm run dev` without Compose.
 
-```bash
-npm run build
-# Set VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
-node server/index.ts  # Daemonize with PM2, systemd, or Docker
-```
+Supabase values (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`) are optional hosted-feature settings. They are not a substitute for the PostgreSQL service started by this Compose project.
 
-## Project Structure
+## Production notes
 
-```
-services/management-panel/
-├── public/          # Static assets + PWA manifest + service worker
-├── src/
-│   ├── pages/       # Page components
-│   ├── components/  # Reusable UI components
-│   └── lib/         # API client, auth, types
-├── server/          # Express API
-├── db/              # Schema
-├── docs/            # Architecture & setup docs
-└── tests/           # Unit, integration, Playwright E2E
-```
+Build and deploy the production target with your normal container pipeline, set explicit non-placeholder secrets, and terminate TLS at a reverse proxy or ingress. Do not expose a Docker socket or database port to untrusted users. The backend health endpoint is `GET /health`; current API documentation is at `GET /api/openapi.json` and `GET /api/docs`.
 
-## Features
+## Related documentation
 
-- Docker app CRUD with real container control
-- Dashboard with live metrics, WebSocket logs
-- Server monitoring, health checks, backup jobs
-- Audit trail, global search, web terminal
-- Config editor, MySQL provisioning, git deploy
-- Cron scheduler, modpack installer, prepaid billing
-- 2FA/TOTP, PWA, dark mode, notification channels
-- Business mode: customers, plans, white-label, RBAC
-
-## License
-
-MIT — see [LICENSE](../../../LICENSE)
-
-## Support
-
-- [Issues](https://github.com/drosemann/infra-pilot/issues)
-- [Discussions](https://github.com/drosemann/infra-pilot/discussions)
+- [Panel development README](README.md)
+- [Repository installation guide](../../wiki/01-Installation.md)
+- [Configuration](../../wiki/03-Configuration.md)
+- [Architecture](../../wiki/06-Architecture.md)

@@ -164,12 +164,17 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /app/tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # WARNING: mounts Docker socket – privileged, only run in trusted env
-    # Enable only via --profile discord and restrict host access
+    # WARNING: direct Docker socket mount = host root equivalent.
+    # The :ro suffix only restricts filesystem writes to the socket path;
+    # it does NOT filter Docker Engine API requests – any holder can mutate the daemon.
+    # In production use an allowlisted socket proxy (e.g. tecnativa/docker-socket-proxy)
+    # and set DOCKER_HOST to the proxy (e.g. tcp://socket-proxy:2375). This mount
+    # is for trusted dev/lab only. Enable only via --profile discord.
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:-}
       PTERODACTYL_API_URL: ${PTERODACTYL_API_URL:-http://localhost:8080/api}
@@ -193,7 +198,7 @@ services:
       HOST_IP: ${HOST_IP:-127.0.0.1}
       NODE_ENV: ${NODE_ENV:-development}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${DISCORD_WEBHOOK_PORT:-3002}:3000"
     healthcheck:

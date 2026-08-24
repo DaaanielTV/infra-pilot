@@ -1,6 +1,6 @@
 # Default values for infra-pilot Helm chart
 
-replicaCount: 1
+replicaCount: 2
 
 global:
   environment: production
@@ -80,7 +80,8 @@ postgresql:
   auth:
     database: infrapilot
     username: infrapilot
-    password: ""  # MUST be overridden in production via --set postgresql.auth.password=$DB_PASSWORD or external secret
+    password: ""  # REQUIRED – Helm will fail if not overridden (see templates/secrets.yaml required check)
+    # recommended: --set postgresql.auth.password=$DB_PASSWORD --set secrets.data.DB_PASSWORD=$DB_PASSWORD
   primary:
     persistence:
       size: 50Gi
@@ -93,7 +94,7 @@ redis:
   enabled: true
   auth:
     enabled: true
-    password: ""  # MUST be overridden in production via --set redis.auth.password=$REDIS_PASSWORD or external secret
+    password: ""  # REQUIRED – mirrors secrets.data.REDIS_PASSWORD
   architecture: replication
   replica:
     replicaCount: 2
@@ -159,7 +160,7 @@ prometheus:
 
 grafana:
   enabled: true
-  adminPassword: ""  # MUST be overridden in production via --set grafana.adminPassword=$GRAFANA_PASSWORD or external secret
+  adminPassword: ""  # REQUIRED in production – use --set grafana.adminPassword or external secret
   dashboards:
     enabled: true
   datasources:

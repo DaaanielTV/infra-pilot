@@ -24,8 +24,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '1.0'
           memory: 512M
         reservations:
+          cpus: '0.5'
           memory: 256M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -52,8 +54,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.25'
           memory: 128M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -96,8 +100,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2.0'
           memory: 1G
         reservations:
+          cpus: '0.5'
           memory: 512M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -139,8 +145,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '1.0'
           memory: 512M
         reservations:
+          cpus: '0.5'
           memory: 256M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -153,6 +161,15 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: infra-pilot-discord
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # WARNING: mounts Docker socket – privileged, only run in trusted env
+    # Enable only via --profile discord and restrict host access
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:-}
       PTERODACTYL_API_URL: ${PTERODACTYL_API_URL:-http://localhost:8080/api}
@@ -176,7 +193,7 @@ services:
       HOST_IP: ${HOST_IP:-127.0.0.1}
       NODE_ENV: ${NODE_ENV:-development}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "${DISCORD_WEBHOOK_PORT:-3002}:3000"
     healthcheck:

@@ -43,6 +43,7 @@ class MockContainer:
     started: bool = False
     restarted: bool = False
     updated: bool = False
+    last_exec: object = None
 
     def stop(self):
         self.stopped = True
@@ -65,6 +66,16 @@ class MockContainer:
 
     def commit(self, repository="", **kwargs):
         return MockImage(id=f"{repository}-img-1")
+
+    def exec_run(self, cmd, **kwargs):
+        self.last_exec = cmd
+        # Simulate successful exec for health checks / benchmarks
+        class _Result:
+            exit_code = 0
+            output = b"200"
+
+        # For pgrep / ping / curl / port checks return success by default
+        return _Result()
 
     def stats(self, stream=False):
         return {

@@ -19,6 +19,10 @@ from config import config
 logger = logging.getLogger(__name__)
 
 SAFE_CONTAINER_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
+# Strict allow-lists for health-check targets – rejects shell metacharacters
+# (;, &, |, $, `, '", \n, etc.) to close command-injection via exec_run.
+SAFE_HOST_PATTERN = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9.-]{0,253}[a-zA-Z0-9])?$")
+SAFE_PROCESS_PATTERN = re.compile(r"^[a-zA-Z0-9._-]{1,64}$")
 PORT_MIN = 1025
 PORT_MAX = 65535
 CPU_PERIOD = 100000
@@ -28,6 +32,62 @@ DEFAULT_PORT_CHECK = "localhost:22"
 DEFAULT_PROCESS = "sshd"
 DEFAULT_HEALTH_URL = "http://localhost:80/health"
 MIGRATION_TMP_DIR = "/tmp"
+
+
+def _is_safe_host(host: str) -> bool:
+    """Return True iff host is a valid hostname / IPv4 literal (no shell chars)."""
+    if not host or len(host) > 253:
+        return False
+    # IPv4 literal
+    if re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", host):
+        return all(0 <= int(o) <= 255 for o in host.split("."))
+    return bool(SAFE_HOST_PATTERN.fullmatch(host))
+
+
+def _is_safe_process(name: str) -> bool:
+    return bool(SAFE_PROCESS_PATTERN.fullmatch(name))
+
+
+def _is_safe_url(url: str) -> bool:
+    """Allow only http/https URLs without shell metacharacters."""
+    if not url or len(url) > 2048:
+        return False
+    if any(c in url for c in " ;&|`$'\"\n\r\t"):
+        return False
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:
+        return False
+
+
+def _validate_resource_limits(cfg: "VPSConfig") -> None:
+    """Clamp/validate CPU/memory against config.RESOURCE_LIMITS.
+
+    Raises ValueError if limits are out of bounds.
+    """
+    limits = config.RESOURCE_LIMITS
+    if not (limits["min_cpu"] <= cfg.cpu_limit <= limits["max_cpu"]):
+        raise ValueError(
+            f"cpu_limit {cfg.cpu_limit} out of bounds "
+            f"[{limits['min_cpu']}, {limits['max_cpu']}]"
+        )
+    if not (
+        limits["min_memory_mb"] <= cfg.memory_limit <= limits["max_memory_mb"]
+    ):
+        raise ValueError(
+            f"memory_limit {cfg.memory_limit} out of bounds "
+            f"[{limits['min_memory_mb']}, {limits['max_memory_mb']}]"
+        )
+    if not (
+        limits["min_storage_gb"] <= cfg.storage_limit <= limits["max_storage_gb"]
+    ):
+        raise ValueError(
+            f"storage_limit {cfg.storage_limit} out of bounds "
+            f"[{limits['min_storage_gb']}, {limits['max_storage_gb']}]"
+        )
 
 
 @dataclass
@@ -305,6 +365,7 @@ class VPSManager:
             The container ID on success, or ``None``.
         """
         try:
+            _validate_resource_limits(cfg)
             container = self.client.containers.run(
                 image=cfg.image,
                 detach=True,
@@ -496,6 +557,7 @@ class VPSManager:
             ``True`` on success.
         """
         try:
+            _validate_resource_limits(cfg)
             container = self.client.containers.get(container_id)
             container.stop()
             container.update(
@@ -852,15 +914,8 @@ class VPSManager:
         """Run a health check against a container.
 
         Supported check types: ``ping``, ``port``, ``process``, ``api``.
-
-        Args:
-            container_id: The Docker container ID.
-            check_type: The type of health check to run.
-            target: Optional target override for the check.
-
-        Returns:
-            A dict with ``status``, ``response_time_ms``, and optional
-            ``error``.
+        All user-controlled ``target`` values are strictly validated against
+        allow-lists before any container exec to prevent command injection.
         """
         result: Dict[str, Any] = {
             "status": "unknown",
@@ -874,30 +929,76 @@ class VPSManager:
 
             if check_type == "ping":
                 ping_target = target or DEFAULT_PING_TARGET
-                success, _ = self._exec_in_container(
-                    container, f"ping -c 1 -W 2 {ping_target}"
-                )
-                result["status"] = "passed" if success else "failed"
+                if not _is_safe_host(ping_target):
+                    result["status"] = "failed"
+                    result["error"] = f"Invalid ping target: {ping_target!r}"
+                else:
+                    success, _ = self._exec_in_container(
+                        container, ["ping", "-c", "1", "-W", "2", ping_target]
+                    )
+                    result["status"] = "passed" if success else "failed"
             elif check_type == "port":
-                host, port = (target or DEFAULT_PORT_CHECK).split(":")
-                success, _ = self._exec_in_container(
-                    container,
-                    f"timeout 2 bash -c 'echo >/dev/tcp/{host}/{port}' " f"2>/dev/null",
-                )
-                result["status"] = "passed" if success else "failed"
+                raw = target or DEFAULT_PORT_CHECK
+                try:
+                    host, port_str = raw.split(":", 1)
+                except ValueError:
+                    result["status"] = "failed"
+                    result["error"] = f"Invalid port target: {raw!r} (expected host:port)"
+                    host = port_str = None  # type: ignore
+                if host is not None:
+                    if not _is_safe_host(host):
+                        result["status"] = "failed"
+                        result["error"] = f"Invalid port host: {host!r}"
+                    elif not port_str.isdigit() or not (1 <= int(port_str) <= 65535):
+                        result["status"] = "failed"
+                        result["error"] = f"Invalid port number: {port_str!r}"
+                    else:
+                        # exec_run with list avoids shell; bash tcp check still needs a shell
+                        # but host/port are now strictly validated so no injection is possible.
+                        success, _ = self._exec_in_container(
+                            container,
+                            [
+                                "timeout",
+                                "2",
+                                "bash",
+                                "-c",
+                                f"echo >/dev/tcp/{host}/{port_str}",
+                            ],
+                        )
+                        result["status"] = "passed" if success else "failed"
             elif check_type == "process":
                 process = target or DEFAULT_PROCESS
-                success, _ = self._exec_in_container(container, f"pgrep -x {process}")
-                result["status"] = "passed" if success else "failed"
+                if not _is_safe_process(process):
+                    result["status"] = "failed"
+                    result["error"] = f"Invalid process name: {process!r}"
+                else:
+                    success, _ = self._exec_in_container(
+                        container, ["pgrep", "-x", process]
+                    )
+                    result["status"] = "passed" if success else "failed"
             elif check_type == "api":
                 url = target or DEFAULT_HEALTH_URL
-                success, output = self._exec_in_container(
-                    container,
-                    f"curl -s -o /dev/null -w '%{{http_code}}' {url}",
-                )
-                result["status"] = (
-                    "passed" if output.strip() in ("200", "201", "204") else "failed"
-                )
+                if not _is_safe_url(url):
+                    result["status"] = "failed"
+                    result["error"] = f"Invalid URL: {url!r}"
+                else:
+                    success, output = self._exec_in_container(
+                        container,
+                        [
+                            "curl",
+                            "-s",
+                            "-o",
+                            "/dev/null",
+                            "-w",
+                            "%{http_code}",
+                            url,
+                        ],
+                    )
+                    result["status"] = (
+                        "passed"
+                        if output.strip() in ("200", "201", "204")
+                        else "failed"
+                    )
             else:
                 result["status"] = "unknown"
                 result["error"] = f"Unknown check type: {check_type}"
@@ -910,19 +1011,20 @@ class VPSManager:
         self._record_health_check_result(container_id, check_type, result)
         return result
 
-    def _exec_in_container(self, container, command: str) -> Tuple[bool, str]:
-        """Execute a command inside a container.
-
-        Args:
-            container: The Docker container object.
-            command: The command string to execute.
-
-        Returns:
-            A tuple of ``(success, output_text)``.
-        """
+    def _exec_in_container(
+        self, container, command: "str | List[str]"
+    ) -> Tuple[bool, str]:
+        """Execute a command inside a container (list form avoids shell)."""
         try:
             result = container.exec_run(command)
-            return result.exit_code == 0, result.output.decode()
+            output = result.output
+            if isinstance(output, bytes):
+                output = output.decode()
+            elif output is None:
+                output = ""
+            else:
+                output = str(output)
+            return result.exit_code == 0, output
         except Exception:
             return False, ""
 

@@ -13,11 +13,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // Fallback stub for lucide-react when the real package is not in the lockfile.
-      // This keeps `vite build` green on CI without requiring a lockfile bump.
-      // Remove once lucide-react is properly added to dependencies.
-      "lucide-react": path.resolve(__dirname, "./src/lib/lucide-stub.tsx"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   clearScreen: false,
@@ -33,7 +29,7 @@ export default defineConfig({
   envPrefix: ["VITE_", "TAURI_"],
   build: {
     target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
-    minify: false,
+    minify: process.env.TAURI_ENV_DEBUG ? false : "oxc",
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
   },
 });

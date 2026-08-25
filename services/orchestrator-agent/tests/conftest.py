@@ -115,12 +115,23 @@ class MockContainerCollection:
         return list(self.by_id.values())
 
 
+class _MockImages:
+    """Image collection mock exposing get().save() like docker-py."""
+
+    def get(self, image_id: str):  # pylint: disable=unused-argument
+        class _Img:
+            def save(self, *args, **kwargs):
+                return [b"chunk"]
+
+        return _Img()
+
+
 class MockDockerClient:
+    """Deterministic Docker mock covering containers/images/info for unit tests."""
+
     def __init__(self):
         self.containers = MockContainerCollection()
-        # Fix: inner save lambda must accept bound self (was lambda: ...) else TypeError on instance.save()
-        # Also rename shadowed `id` builtin to `image_id` for lint.
-        self.images = type("obj", (object,), {"get": lambda self, image_id: type("img", (), {"save": lambda _self: [b"chunk"]})()})()
+        self.images = _MockImages()
 
     def info(self):
         return {"Driver": "overlay2"}

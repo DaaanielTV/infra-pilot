@@ -918,7 +918,9 @@ class VPSManager:
             new_name: Name for the cloned container.
 
         Returns:
-            The new container ID on success, or ``None``.
+            The new container ID on success, or ``None``. Storage quota is
+            propagated via _storage_opt with fallback so cloning succeeds even
+            when the host's overlay2 lacks pquota.
         """
         try:
             container = self.client.containers.get(container_id)

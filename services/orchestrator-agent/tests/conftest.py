@@ -81,6 +81,7 @@ class MockContainer:
             output = b"200"
 
         # For pgrep / ping / curl / port checks return success by default
+        # cmd is list-form to avoid shell injection; store for assertion
         return _Result()
 
     def stats(self, stream=False):

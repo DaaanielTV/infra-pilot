@@ -126,9 +126,13 @@ class _MockImages:
     def get(self, image_id: str):  # pylint: disable=unused-argument
         class _Img:
             def save(self, *args, **kwargs):
+                # Must accept bound self; return chunk iterable for migrate_vps
                 return [b"chunk"]
 
         return _Img()
+
+    # Backward-compat alias for earlier inline mock shape
+    __getitem__ = get
 
 
 class MockDockerClient:

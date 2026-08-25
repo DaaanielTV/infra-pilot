@@ -113,7 +113,8 @@ class MockDockerClient:
     def __init__(self):
         self.containers = MockContainerCollection()
         # Fix: inner save lambda must accept bound self (was lambda: ...) else TypeError on instance.save()
-        self.images = type("obj", (object,), {"get": lambda self, id: type("img", (), {"save": lambda self: [b"chunk"]})()})()
+        # Also rename shadowed `id` builtin to `image_id` for lint.
+        self.images = type("obj", (object,), {"get": lambda self, image_id: type("img", (), {"save": lambda _self: [b"chunk"]})()})()
 
     def info(self):
         return {"Driver": "overlay2"}

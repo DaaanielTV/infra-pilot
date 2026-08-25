@@ -48,12 +48,12 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "infra-pilot.fullname" . }}-secrets
+                  name: {{ include "infra-pilot.secretName" . }}
                   key: db-password
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "infra-pilot.fullname" . }}-secrets
+                  name: {{ include "infra-pilot.secretName" . }}
                   key: redis-password
           livenessProbe:
             httpGet:

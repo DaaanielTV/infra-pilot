@@ -119,12 +119,16 @@ def _run_with_storage_opt_fallback(client, run_kwargs: Dict[str, Any]):
     without that support containers.run() raises; this helper retries
     without the quota so the container still creates (quota unenforced)
     instead of leaving callers like restore_backup in a half-stopped state.
+
+    The check is case-insensitive and also matches driver error strings like
+    "Unknown option storage_opt" so fallback triggers reliably across Docker
+    versions.
     """
     try:
         return client.containers.run(**run_kwargs)
     except Exception as exc:
-        # Use lower-case search so both API and driver messages are caught
-        if "storage_opt" in str(exc).lower() and "storage_opt" in run_kwargs:
+        msg = str(exc).lower()
+        if "storage_opt" in msg and "storage_opt" in run_kwargs:
             logger.warning("storage_opt rejected by driver, retrying without quota: %s", exc)
             fallback = dict(run_kwargs)
             fallback.pop("storage_opt", None)

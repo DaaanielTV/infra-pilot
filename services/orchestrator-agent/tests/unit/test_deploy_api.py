@@ -183,6 +183,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["errors"], [])
 
     async def test_apply_reconcile_creates_instance(self):
+        # Explicit admin flag required when no user/org context is supplied.
         resp = await self.client.post(
             "/api/v1/deployments",
             json={"manifest": make_manifest("m-apply"), "as_platform_admin": True},

@@ -74,16 +74,12 @@ def _validate_resource_limits(cfg: "VPSConfig") -> None:
             f"cpu_limit {cfg.cpu_limit} out of bounds "
             f"[{limits['min_cpu']}, {limits['max_cpu']}]"
         )
-    if not (
-        limits["min_memory_mb"] <= cfg.memory_limit <= limits["max_memory_mb"]
-    ):
+    if not (limits["min_memory_mb"] <= cfg.memory_limit <= limits["max_memory_mb"]):
         raise ValueError(
             f"memory_limit {cfg.memory_limit} out of bounds "
             f"[{limits['min_memory_mb']}, {limits['max_memory_mb']}]"
         )
-    if not (
-        limits["min_storage_gb"] <= cfg.storage_limit <= limits["max_storage_gb"]
-    ):
+    if not (limits["min_storage_gb"] <= cfg.storage_limit <= limits["max_storage_gb"]):
         raise ValueError(
             f"storage_limit {cfg.storage_limit} out of bounds "
             f"[{limits['min_storage_gb']}, {limits['max_storage_gb']}]"
@@ -105,7 +101,10 @@ def _storage_opt(storage_limit_gb: int) -> Optional[Dict[str, str]]:
         info = docker.from_env().info()
         driver = info.get("Driver", "")
         if driver not in ("btrfs", "zfs", "overlay2", "overlay"):
-            logger.debug("Storage driver %s does not support size quota; omitting storage_opt", driver)
+            logger.debug(
+                "Storage driver %s does not support size quota; omitting storage_opt",
+                driver,
+            )
             return None
     except Exception:
         # In unit tests the daemon is mocked; still return opt for assertion
@@ -132,7 +131,9 @@ def _run_with_storage_opt_fallback(client, run_kwargs: Dict[str, Any]):
     except Exception as exc:
         msg = str(exc).lower()
         if "storage_opt" in msg and "storage_opt" in run_kwargs:
-            logger.warning("storage_opt rejected by driver, retrying without quota: %s", exc)
+            logger.warning(
+                "storage_opt rejected by driver, retrying without quota: %s", exc
+            )
             fallback = dict(run_kwargs)
             fallback.pop("storage_opt", None)
             return client.containers.run(**fallback)
@@ -616,7 +617,11 @@ class VPSManager:
             # but the writable-layer quota will only be enforced after container recreation (e.g. via
             # clone/restore). Log that the live quota is not resized.
             if container_id in self.vps_instances:
-                old_storage = self.vps_instances[container_id].get("config", {}).get("storage_limit")
+                old_storage = (
+                    self.vps_instances[container_id]
+                    .get("config", {})
+                    .get("storage_limit")
+                )
                 if old_storage is not None and cfg.storage_limit != old_storage:
                     logger.warning(
                         "Storage_limit change %s->%s for %s: quota requires recreation, live layer not resized (metadata updated)",
@@ -1025,7 +1030,9 @@ class VPSManager:
                     host, port_str = raw.split(":", 1)
                 except ValueError:
                     result["status"] = "failed"
-                    result["error"] = f"Invalid port target: {raw!r} (expected host:port)"
+                    result["error"] = (
+                        f"Invalid port target: {raw!r} (expected host:port)"
+                    )
                     host = port_str = None  # type: ignore
                 if host is not None:
                     if not _is_safe_host(host):

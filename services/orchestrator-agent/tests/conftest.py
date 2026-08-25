@@ -76,6 +76,7 @@ class MockContainer:
 
     def exec_run(self, cmd, **kwargs):
         self.last_exec = cmd
+
         # Simulate successful exec for health checks / benchmarks
         class _Result:
             exit_code = 0

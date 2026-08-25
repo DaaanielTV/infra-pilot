@@ -172,7 +172,11 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         # Single json kwarg with both dry_run and explicit admin flag; duplicate json= would be SyntaxError.
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-dry"), "dry_run": True, "as_platform_admin": True},
+            json={
+                "manifest": make_manifest("m-dry"),
+                "dry_run": True,
+                "as_platform_admin": True,
+            },
             headers=AUTH,
         )
         self.assertEqual(resp.status, 200)
@@ -198,7 +202,10 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         # Even failure path requires explicit admin flag (positive path with flag).
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-boom", image="nginx:boom"), "as_platform_admin": True},
+            json={
+                "manifest": make_manifest("m-boom", image="nginx:boom"),
+                "as_platform_admin": True,
+            },
             headers=AUTH,
         )
         self.assertEqual(resp.status, 207)

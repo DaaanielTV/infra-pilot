@@ -777,6 +777,11 @@ class VPSManager:
 
         Returns:
             ``True`` on success.
+
+        Note: stop is performed before the new container is created; storage_opt
+        fallback ensures the replacement still succeeds on hosts without XFS pquota.
+        If creation ultimately fails, the caller sees False and the stopped
+        container remains for manual recovery.
         """
         try:
             await self.stop_vps(container_id)

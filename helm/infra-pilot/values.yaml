@@ -84,8 +84,8 @@ postgresql:
   auth:
     database: infrapilot
     username: infrapilot
-    # Prefer existingSecret (canonical infra-pilot-secrets) over inline password.
-    # See templates/secrets.yaml – credentials are mounted from that Secret.
+    # Prefer existingSecret (stable infra-pilot-secrets via secretName helper) over inline password.
+    # See templates/secrets.yaml and _helpers.tpl – credentials are mounted from that Secret.
     existingSecret: infra-pilot-secrets
     secretKeys:
       userPasswordKey: db-password

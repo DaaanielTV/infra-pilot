@@ -15,7 +15,12 @@ from webhook_server import build_webhook_app
 BOT = SimpleNamespace(get_cog=lambda name: None)
 
 # Ensure a clean baseline regardless of what other test modules set.
-_ENV_VARS = ("FEDERATION_API_TOKEN", "NODE_ENV", "ENVIRONMENT", "ALLOW_INSECURE_FEDERATION")
+_ENV_VARS = (
+    "FEDERATION_API_TOKEN",
+    "NODE_ENV",
+    "ENVIRONMENT",
+    "ALLOW_INSECURE_FEDERATION",
+)
 
 
 class FederationTokenFailClosedTest(unittest.IsolatedAsyncioTestCase):

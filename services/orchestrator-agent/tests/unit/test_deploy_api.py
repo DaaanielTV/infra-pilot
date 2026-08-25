@@ -309,3 +309,13 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(resp.status, 400)
         self.assertIn("as_platform_admin", (await resp.json()).get("error", ""))
+
+    async def test_apply_without_flag_and_without_user_is_rejected(self):
+        """Apply path without flag and without user context is also 400."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-apply-no-flag")},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)
+        self.assertIn("as_platform_admin", (await resp.json()).get("error", ""))

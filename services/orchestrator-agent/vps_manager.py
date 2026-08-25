@@ -421,16 +421,7 @@ class VPSManager:
             storage_opt = _storage_opt(cfg.storage_limit)
             if storage_opt:
                 run_kwargs["storage_opt"] = storage_opt
-            try:
-                container = self.client.containers.run(**run_kwargs)
-            except Exception as exc:
-                # If driver doesn't support storage_opt, retry without it (quota not enforced)
-                if storage_opt and "storage_opt" in str(exc).lower():
-                    logger.warning("Storage driver does not support storage_opt, retrying without: %s", exc)
-                    run_kwargs.pop("storage_opt", None)
-                    container = self.client.containers.run(**run_kwargs)
-                else:
-                    raise
+            container = _run_with_storage_opt_fallback(self.client, run_kwargs)
 
             instance_info = {
                 "container_id": container.id,

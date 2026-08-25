@@ -8,15 +8,17 @@ logger = logging.getLogger(__name__)
 
 # Values that indicate a placeholder secret was never replaced. Running with
 # any of these in production is a security risk, so we refuse to start.
-PLACEHOLDER_SECRETS = frozenset(  # nosec B105 - placeholder allow-list, not a real secret
-    {
-        "CHANGE_ME",
-        "infra_pilot_dev_password",
-        "your_discord_bot_token_here",
-        "your_jwt_secret_key_here",
-        "local-dev-anon-key",
-        "",
-    }
+PLACEHOLDER_SECRETS = (
+    frozenset(  # nosec B105 - placeholder allow-list, not a real secret
+        {
+            "CHANGE_ME",
+            "infra_pilot_dev_password",
+            "your_discord_bot_token_here",
+            "your_jwt_secret_key_here",
+            "local-dev-anon-key",
+            "",
+        }
+    )
 )
 
 
@@ -49,9 +51,7 @@ def validate_secrets(
         checks.append(("GITHUB_WEBHOOK_SECRET", github_webhook_secret))
 
     insecure = [
-        name
-        for name, value in checks
-        if not value or value in PLACEHOLDER_SECRETS
+        name for name, value in checks if not value or value in PLACEHOLDER_SECRETS
     ]
     if insecure:
         message = (

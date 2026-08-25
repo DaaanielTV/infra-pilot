@@ -111,6 +111,27 @@ def _storage_opt(storage_limit_gb: int) -> Optional[Dict[str, str]]:
     return {"size": f"{storage_limit_gb}G"}
 
 
+def _run_with_storage_opt_fallback(client, run_kwargs: Dict[str, Any]):
+    """Run a container with storage_opt fallback.
+
+    Docker accepts ``storage_opt={"size": "..."}`` only when the storage
+    driver is configured with XFS/pquota (overlay2+btrfs/zfs). On hosts
+    without that support containers.run() raises; this helper retries
+    without the quota so the container still creates (quota unenforced)
+    instead of leaving callers like restore_backup in a half-stopped state.
+    """
+    try:
+        return client.containers.run(**run_kwargs)
+    except Exception as exc:
+        # Use lower-case search so both API and driver messages are caught
+        if "storage_opt" in str(exc).lower() and "storage_opt" in run_kwargs:
+            logger.warning("storage_opt rejected by driver, retrying without quota: %s", exc)
+            fallback = dict(run_kwargs)
+            fallback.pop("storage_opt", None)
+            return client.containers.run(**fallback)
+        raise
+
+
 @dataclass
 class VPSConfig:
     """Configuration for creating a new VPS container."""

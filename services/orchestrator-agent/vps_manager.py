@@ -930,7 +930,7 @@ class VPSManager:
             so = _storage_opt(int(cfg.get("storage_limit", 0) or 0))
             if so:
                 clone_kwargs["storage_opt"] = so
-            new_container = self.client.containers.run(**clone_kwargs)
+            new_container = _run_with_storage_opt_fallback(self.client, clone_kwargs)
 
             new_info = dict(instance_info)
             new_info["container_id"] = new_container.id

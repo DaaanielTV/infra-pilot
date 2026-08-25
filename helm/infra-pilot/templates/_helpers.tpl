@@ -43,7 +43,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/* Stable secret name shared by chart-generated Secret and all consumers (postgresql, redis, deployment).
-     Using a literal ensures values.yaml existingSecret and templates stay in sync regardless of fullnameOverride. */}}
+     Using a literal ensures values.yaml existingSecret (infra-pilot-secrets) and templates stay in sync regardless
+     of Release.Name/fullnameOverride. For Bitnami Redis use existingSecretPasswordKey=redis-password (not secretKeys). */}}
 {{- define "infra-pilot.secretName" -}}
 infra-pilot-secrets
 {{- end }}

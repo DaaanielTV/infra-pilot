@@ -793,7 +793,8 @@ class VPSManager:
             so = _storage_opt(int(cfg.get("storage_limit", 0) or 0))
             if so:
                 restore_kwargs["storage_opt"] = so
-            container = self.client.containers.run(**restore_kwargs)
+            # Use shared fallback so XFS/pquota absence doesn't leave VPS stopped without replacement
+            container = _run_with_storage_opt_fallback(self.client, restore_kwargs)
 
             instance_info["container_id"] = container.id
             self.vps_instances[container.id] = instance_info

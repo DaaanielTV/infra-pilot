@@ -102,10 +102,10 @@ redis:
   enabled: true
   auth:
     enabled: true
-    # Use canonical secret; Bitnami Redis chart expects existingSecretPasswordKey (not secretKeys.password)
+    # Use canonical stable secret infra-pilot-secrets (see _helpers.tpl secretName) – Bitnami Redis expects existingSecretPasswordKey.
     existingSecret: infra-pilot-secrets
     existingSecretPasswordKey: redis-password
-    password: ""  # Leave empty when using existingSecret
+    password: ""  # Leave empty when using existingSecret; for dev only
   architecture: replication
   replica:
     replicaCount: 2

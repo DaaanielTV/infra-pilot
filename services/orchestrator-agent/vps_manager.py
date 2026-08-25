@@ -93,9 +93,11 @@ def _validate_resource_limits(cfg: "VPSConfig") -> None:
 def _storage_opt(storage_limit_gb: int) -> Optional[Dict[str, str]]:
     """Return Docker storage_opt for writable-layer quota if driver supports it.
 
-    Supports btrfs, zfs, overlay2 (with pquota). For other drivers returns None
-    so the container still creates but without quota. In tests or when the
-    daemon is unreachable, returns the opt so unit tests can assert it.
+    Supports btrfs, zfs, overlay2 (with pquota) – only those drivers honor
+    the ``size`` quota on XFS backing. For other drivers returns None so the
+    container still creates but without quota (fallback in _run_with_storage_opt_fallback
+    handles the overlay2-without-pquota case). In tests or when the daemon is
+    unreachable, returns the opt so unit tests can assert it and exercise fallback.
     """
     if not storage_limit_gb:
         return None

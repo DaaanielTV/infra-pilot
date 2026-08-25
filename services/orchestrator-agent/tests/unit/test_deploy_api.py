@@ -289,3 +289,5 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
             headers=AUTH,
         )
         self.assertEqual(resp.status, 400)
+        body = await resp.json()
+        self.assertIn("as_platform_admin", body.get("error", ""))

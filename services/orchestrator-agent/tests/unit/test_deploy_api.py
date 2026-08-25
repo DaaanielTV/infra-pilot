@@ -291,3 +291,12 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 400)
         body = await resp.json()
         self.assertIn("as_platform_admin", body.get("error", ""))
+
+    async def test_platform_admin_flag_required_for_dry_run(self):
+        """Dry-run without user context also requires explicit flag."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-dry-no-flag"), "dry_run": True},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)

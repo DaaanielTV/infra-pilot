@@ -196,6 +196,7 @@ configMaps:
 secrets:
   create: true
   # WARNING: In production, use external-secrets or a vault provider instead of plain values
+  # Secret is created as infra-pilot-secrets (stable name via secretName helper) consumed by postgresql/redis/deployment.
   data:
     DB_PASSWORD: ""  # REQUIRED in production
     REDIS_PASSWORD: ""  # REQUIRED in production

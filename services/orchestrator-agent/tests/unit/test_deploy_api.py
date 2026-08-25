@@ -1,4 +1,9 @@
-"""Integration tests for the deployment API on the webhook server."""
+"""Integration tests for the deployment API on the webhook server.
+
+Covers the explicit as_platform_admin gate: deployments without user_id/org_id must
+set as_platform_admin=true, otherwise the server returns HTTP 400. This guards the
+previous implicit platform-admin bypass from accidentally reaching production.
+"""
 
 import hashlib
 import hmac

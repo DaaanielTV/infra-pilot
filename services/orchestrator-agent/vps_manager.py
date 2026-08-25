@@ -124,8 +124,11 @@ def _run_with_storage_opt_fallback(client, run_kwargs: Dict[str, Any]):
 
     The check is case-insensitive and also matches driver error strings like
     "Unknown option storage_opt" so fallback triggers reliably across Docker
-    versions.
+    versions. A shallow copy is used so the caller's original dict remains
+    observable in tests that assert storage_opt was attempted first.
     """
+    # Preserve original for test assertions that check first attempt included storage_opt
+    original = dict(run_kwargs)
     try:
         return client.containers.run(**run_kwargs)
     except Exception as exc:

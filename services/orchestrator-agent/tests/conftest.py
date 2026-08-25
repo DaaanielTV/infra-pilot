@@ -96,9 +96,11 @@ class MockContainer:
 
 
 class MockContainerCollection:
+    """Collects containers.run calls for assertions; get/list mirror docker-py."""
+
     def __init__(self):
-        self.created = []
-        self.by_id = {"container-1": MockContainer()}
+        self.created: list = []
+        self.by_id: dict = {"container-1": MockContainer()}
 
     def run(self, **kwargs):
         container = MockContainer(id=f"container-{len(self.created) + 1}")

@@ -103,6 +103,9 @@ class MockContainerCollection:
         self.by_id: dict = {"container-1": MockContainer()}
 
     def run(self, **kwargs):
+        # Simulate Docker's storage_opt validation: raise if driver mocked to reject (used in quota fallback tests)
+        if kwargs.get("storage_opt") and kwargs.get("_fail_storage_opt"):
+            raise RuntimeError("storage_opt is not supported for this driver")
         container = MockContainer(id=f"container-{len(self.created) + 1}")
         self.created.append((container, kwargs))
         self.by_id[container.id] = container

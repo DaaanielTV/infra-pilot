@@ -195,6 +195,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["instances_created"], 1)
 
     async def test_provider_failure_reports_207(self):
+        # Even failure path requires explicit admin flag (positive path with flag).
         resp = await self.client.post(
             "/api/v1/deployments",
             json={"manifest": make_manifest("m-boom", image="nginx:boom"), "as_platform_admin": True},

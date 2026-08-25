@@ -133,5 +133,6 @@ class MockDockerClient:
         self.containers = MockContainerCollection()
         self.images = _MockImages()
 
-    def info(self):
+    def info(self) -> dict:
+        """Return minimal daemon info; overlay2 supports storage_opt in prod."""
         return {"Driver": "overlay2"}

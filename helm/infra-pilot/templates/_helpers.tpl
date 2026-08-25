@@ -41,3 +41,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/* Stable secret name shared by chart-generated Secret and all consumers (postgresql, redis, deployment).
+     Using a literal ensures values.yaml existingSecret and templates stay in sync regardless of fullnameOverride. */}}
+{{- define "infra-pilot.secretName" -}}
+infra-pilot-secrets
+{{- end }}

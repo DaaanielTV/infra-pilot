@@ -190,7 +190,9 @@ async def rbac_org_members(request: web.Request) -> web.Response:
 _SAFE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._-]{1,128}$")
 
 
-def _require_actor_permission(request: web.Request, org_id: str, permission: Permission) -> Optional[web.Response]:
+def _require_actor_permission(
+    request: web.Request, org_id: str, permission: Permission
+) -> Optional[web.Response]:
     """Check actor_user_id has permission; return error response or None if allowed."""
     # Actor can be supplied via query, header, or JSON body (for DELETE with body)
     actor_user_id = (
@@ -206,12 +208,24 @@ def _require_actor_permission(request: web.Request, org_id: str, permission: Per
             pass
         except Exception:
             pass
-        return web.json_response({"error": "actor_user_id required (query ?actor_user_id=... or header X-Actor-User-Id)"}, status=401)
+        return web.json_response(
+            {
+                "error": "actor_user_id required (query ?actor_user_id=... or header X-Actor-User-Id)"
+            },
+            status=401,
+        )
     if not _SAFE_ID_PATTERN.fullmatch(actor_user_id):
         return web.json_response({"error": "invalid actor_user_id format"}, status=400)
     if not rbac_engine.has_permission(actor_user_id, permission, org_id=org_id):
-        logger.info("RBAC deny: actor %s lacks %s in org %s", actor_user_id, permission.value, org_id)
-        return web.json_response({"error": f"{permission.value} permission required"}, status=403)
+        logger.info(
+            "RBAC deny: actor %s lacks %s in org %s",
+            actor_user_id,
+            permission.value,
+            org_id,
+        )
+        return web.json_response(
+            {"error": f"{permission.value} permission required"}, status=403
+        )
     return None
 
 
@@ -228,8 +242,12 @@ async def rbac_org_delete(request: web.Request) -> web.Response:
     before = rbac_store.rbac_persist_failures
     await rbac_store.delete_org(org_id)
     if rbac_store.rbac_persist_failures > before:
-        logger.error("Failed to persist org delete %s; in-memory state unchanged", org_id)
-        return web.json_response({"error": "persistence failed, org not deleted"}, status=500)
+        logger.error(
+            "Failed to persist org delete %s; in-memory state unchanged", org_id
+        )
+        return web.json_response(
+            {"error": "persistence failed, org not deleted"}, status=500
+        )
     rbac_engine.delete_org(org_id)
     return web.json_response({"deleted": org_id})
 
@@ -240,25 +258,42 @@ async def rbac_role_delete(request: web.Request) -> web.Response:
     if rbac_engine.get_role(role_name) is None:
         return web.json_response({"error": f"unknown role: {role_name}"}, status=404)
     # Role is global – require actor who can manage orgs; use first org of actor or require actor_user_id with any org
-    actor_user_id = request.query.get("actor_user_id") or request.headers.get("X-Actor-User-Id") or request.headers.get("X-User-Id")
+    actor_user_id = (
+        request.query.get("actor_user_id")
+        or request.headers.get("X-Actor-User-Id")
+        or request.headers.get("X-User-Id")
+    )
     if not actor_user_id:
-        return web.json_response({"error": "actor_user_id required for role deletion"}, status=401)
+        return web.json_response(
+            {"error": "actor_user_id required for role deletion"}, status=401
+        )
     if not _SAFE_ID_PATTERN.fullmatch(actor_user_id):
         return web.json_response({"error": "invalid actor_user_id format"}, status=400)
     # Check that actor has at least org:manage in any org they belong to
     actor_orgs = rbac_engine.list_orgs_for_user(actor_user_id)
-    if not any(rbac_engine.has_permission(actor_user_id, Permission.ORG_MANAGE, org_id=o.id) for o in actor_orgs):
+    if not any(
+        rbac_engine.has_permission(actor_user_id, Permission.ORG_MANAGE, org_id=o.id)
+        for o in actor_orgs
+    ):
         # Also allow owner/admin who may not yet have org? Fallback to global check via first org
-        logger.info("RBAC deny: actor %s lacks org:manage for role delete", actor_user_id)
-        return web.json_response({"error": "org:manage permission required"}, status=403)
+        logger.info(
+            "RBAC deny: actor %s lacks org:manage for role delete", actor_user_id
+        )
+        return web.json_response(
+            {"error": "org:manage permission required"}, status=403
+        )
     if not rbac_engine.delete_role(role_name):
         return web.json_response({"error": "cannot delete built-in role"}, status=400)
     before = rbac_store.rbac_persist_failures
     await rbac_store.delete_role(role_name)
     if rbac_store.rbac_persist_failures > before:
         # Restore in-memory if persistence failed (re-seed from store would restore on restart)
-        logger.error("Failed to persist role delete %s; consider manual cleanup", role_name)
-        return web.json_response({"error": "persistence failed, role may reappear on restart"}, status=500)
+        logger.error(
+            "Failed to persist role delete %s; consider manual cleanup", role_name
+        )
+        return web.json_response(
+            {"error": "persistence failed, role may reappear on restart"}, status=500
+        )
     return web.json_response({"deleted": role_name})
 
 
@@ -271,28 +306,46 @@ async def rbac_membership_delete(request: web.Request) -> web.Response:
     user_id = body.get("user_id")
     org_id = body.get("org_id")
     project_id = str(body.get("project_id", ""))
-    actor_user_id = body.get("actor_user_id") or request.query.get("actor_user_id") or request.headers.get("X-Actor-User-Id")
+    actor_user_id = (
+        body.get("actor_user_id")
+        or request.query.get("actor_user_id")
+        or request.headers.get("X-Actor-User-Id")
+    )
     if not all(isinstance(v, str) and v for v in (user_id, org_id)):
         return web.json_response(
             {"error": "user_id and org_id are required"}, status=400
         )
     if not actor_user_id:
-        return web.json_response({"error": "actor_user_id required for revocation"}, status=401)
-    if not _SAFE_ID_PATTERN.fullmatch(actor_user_id) or not _SAFE_ID_PATTERN.fullmatch(user_id):
+        return web.json_response(
+            {"error": "actor_user_id required for revocation"}, status=401
+        )
+    if not _SAFE_ID_PATTERN.fullmatch(actor_user_id) or not _SAFE_ID_PATTERN.fullmatch(
+        user_id
+    ):
         return web.json_response({"error": "invalid user_id format"}, status=400)
-    if not rbac_engine.has_permission(actor_user_id, Permission.MEMBER_REMOVE, org_id=org_id):
-        logger.info("RBAC deny: actor %s lacks member:remove in org %s", actor_user_id, org_id)
-        return web.json_response({"error": "member:remove permission required"}, status=403)
+    if not rbac_engine.has_permission(
+        actor_user_id, Permission.MEMBER_REMOVE, org_id=org_id
+    ):
+        logger.info(
+            "RBAC deny: actor %s lacks member:remove in org %s", actor_user_id, org_id
+        )
+        return web.json_response(
+            {"error": "member:remove permission required"}, status=403
+        )
     # Persist first for atomicity
     before = rbac_store.rbac_persist_failures
     await rbac_store.delete_membership(user_id, org_id, project_id)
     if rbac_store.rbac_persist_failures > before:
         logger.error("Failed to persist membership delete %s@%s", user_id, org_id)
-        return web.json_response({"error": "persistence failed, membership not revoked"}, status=500)
+        return web.json_response(
+            {"error": "persistence failed, membership not revoked"}, status=500
+        )
     removed = rbac_engine.remove_membership(user_id, org_id, project_id)
     if not removed:
         return web.json_response({"error": "membership not found"}, status=404)
-    return web.json_response({"revoked": {"user_id": user_id, "org_id": org_id, "project_id": project_id}})
+    return web.json_response(
+        {"revoked": {"user_id": user_id, "org_id": org_id, "project_id": project_id}}
+    )
 
 
 async def deployment_apply(request: web.Request) -> web.Response:
@@ -324,7 +377,9 @@ async def deployment_apply(request: web.Request) -> web.Response:
             )
         if not user_id or not org_id:
             return web.json_response(
-                {"error": "org_id is required when user_id is provided (and vice versa)"},
+                {
+                    "error": "org_id is required when user_id is provided (and vice versa)"
+                },
                 status=400,
             )
         if not _SAFE_ID_PATTERN.fullmatch(user_id) or not _SAFE_ID_PATTERN.fullmatch(
@@ -537,7 +592,9 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
-            allow_insecure = os.getenv("ALLOW_INSECURE_FEDERATION", "").lower() == "true"
+            allow_insecure = (
+                os.getenv("ALLOW_INSECURE_FEDERATION", "").lower() == "true"
+            )
             if allow_insecure:
                 environment = os.getenv(
                     "NODE_ENV", os.getenv("ENVIRONMENT", "development")
@@ -700,7 +757,9 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
             pool = await _get_pool()
             conn = await pool.acquire()
             await conn.execute("SELECT 1")
-            return web.json_response({"status": "ready", "service": "orchestrator-agent"})
+            return web.json_response(
+                {"status": "ready", "service": "orchestrator-agent"}
+            )
         except Exception as exc:
             # Log full exception server-side, return fixed message to avoid leaking driver details
             logger.warning("readiness check failed: %s", exc, exc_info=True)

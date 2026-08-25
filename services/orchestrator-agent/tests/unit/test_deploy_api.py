@@ -280,3 +280,12 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 200)
         body = await resp.json()
         self.assertEqual(body["manifest_name"], "m-gitops")
+
+    async def test_platform_admin_flag_required_when_no_user_context(self):
+        """Regression: federation deployments without user_id/org_id must set as_platform_admin."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-no-admin")},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)

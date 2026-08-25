@@ -30,7 +30,13 @@ def no_database(monkeypatch):
 
 @dataclass
 class MockImage:
+    """Minimal mock for Docker image used in VPSManager.migrate_vps tests."""
+
     id: str = "image-1"
+
+    def save(self, *args, **kwargs):
+        """Return iterable chunks like docker-py Image.save()."""
+        return [b"chunk"]
 
 
 @dataclass

@@ -169,6 +169,7 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 400)
 
     async def test_dry_run_reconcile_returns_counts(self):
+        # Single json kwarg with both dry_run and explicit admin flag; duplicate json= would be SyntaxError.
         resp = await self.client.post(
             "/api/v1/deployments",
             json={"manifest": make_manifest("m-dry"), "dry_run": True, "as_platform_admin": True},

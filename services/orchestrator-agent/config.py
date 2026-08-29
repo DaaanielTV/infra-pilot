@@ -26,16 +26,20 @@ def validate_secrets(
     environment: str,
     db_password: str,
     discord_bot_token: str,
-    gitops_webhook_token: str = "",
-    federation_api_token: str = "",
-    github_webhook_secret: str = "",
-) -> list:
+    gitops_webhook_token: str = "",  # nosec B107
+    federation_api_token: str = "",  # nosec B107
+    github_webhook_secret: str = "",  # nosec B107
+) -> list:  # nosec B107
     """Reject placeholder or missing secrets.
 
     In production this raises so the process fails fast instead of
     starting with an insecure configuration. In other environments it
     logs a warning and returns the list of insecure settings.
     """
+    # Normalize environment for production checks (handles " Production ", "PRODUCTION", etc.)
+    normalized_env = environment.strip().lower() if isinstance(environment, str) else ""
+    is_production = normalized_env == "production"
+
     # Base secrets always validated
     checks = [
         ("DB_PASSWORD", db_password),
@@ -43,9 +47,9 @@ def validate_secrets(
     ]
     # Webhook/federation secrets are required in production – in dev they
     # only warn if explicitly set to a placeholder value
-    if environment == "production" or gitops_webhook_token:
+    if is_production or gitops_webhook_token:
         checks.append(("GITOPS_WEBHOOK_TOKEN", gitops_webhook_token))
-    if environment == "production" or federation_api_token:
+    if is_production or federation_api_token:
         checks.append(("FEDERATION_API_TOKEN", federation_api_token))
     if github_webhook_secret:
         checks.append(("GITHUB_WEBHOOK_SECRET", github_webhook_secret))
@@ -60,7 +64,7 @@ def validate_secrets(
             + ". Set them via environment variables or a secrets backend "
             "(see secrets_manager.py)."
         )
-        if environment == "production":
+        if is_production:
             raise RuntimeError(message)
         logger.warning(message)
     return insecure

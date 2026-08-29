@@ -86,8 +86,10 @@ postgresql:
     username: infrapilot
     # Prefer existingSecret (stable infra-pilot-secrets via secretName helper) over inline password.
     # See templates/secrets.yaml and _helpers.tpl – credentials are mounted from that Secret.
+    # postgres-password shares DB_PASSWORD (shared-key design) via adminPasswordKey; override if distinct admin password needed.
     existingSecret: infra-pilot-secrets
     secretKeys:
+      adminPasswordKey: postgres-password
       userPasswordKey: db-password
     password: ""  # Leave empty when using existingSecret; for dev only
   primary:
@@ -171,7 +173,14 @@ prometheus:
 
 grafana:
   enabled: true
-  adminPassword: ""  # REQUIRED in production – use --set grafana.adminPassword or external secret
+  # Admin password: do not pass via --set or plain Helm values in production – use existingSecret or external-secrets.
+  # See https://github.com/grafana/helm-charts/blob/main/charts/grafana/README.md#admin-credentials
+  # Example:
+  #   admin:
+  #     existingSecret: grafana-admin-secret
+  #     userKey: admin-user
+  #     passwordKey: admin-password
+  adminPassword: ""  # Leave empty when using existingSecret; provide via external secret in production
   dashboards:
     enabled: true
   datasources:

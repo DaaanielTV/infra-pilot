@@ -593,12 +593,13 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         api_token = os.getenv("FEDERATION_API_TOKEN", "")
         if not api_token:
             allow_insecure = (
-                os.getenv("ALLOW_INSECURE_FEDERATION", "").lower() == "true"
+                os.getenv("ALLOW_INSECURE_FEDERATION", "").strip().lower() == "true"
             )
             if allow_insecure:
-                environment = os.getenv(
+                raw_env = os.getenv(
                     "NODE_ENV", os.getenv("ENVIRONMENT", "development")
                 )
+                environment = raw_env.strip().lower() if isinstance(raw_env, str) else "development"
                 if environment == "production":
                     logger.error(
                         "ALLOW_INSECURE_FEDERATION=true is rejected in production; /api/ routes remain unauthenticated"
